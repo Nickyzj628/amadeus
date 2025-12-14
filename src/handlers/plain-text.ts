@@ -49,6 +49,14 @@ const Nbnhhsh = {
 export const Ai = {
 	// 模型列表，只存放配置过 api key 的模型
 	models: [
+		Bun.env.DEEPSEEK_API_KEY && {
+			name: "DeepSeek",
+			aliases: ["deepseek", "ds"],
+			baseUrl: "https://api.deepseek.com",
+			apiKey: Bun.env.DEEPSEEK_API_KEY,
+			model: "deepseek-chat",
+			maxTokens: 128 * 1000, // 128k
+		},
 		Bun.env.GLM_API_KEY && {
 			name: "智谱清言",
 			aliases: ["chatglm", "glm"],
@@ -61,14 +69,6 @@ export const Ai = {
 					type: "disabled",
 				},
 			},
-		},
-		Bun.env.DEEPSEEK_API_KEY && {
-			name: "DeepSeek",
-			aliases: ["deepseek", "ds"],
-			baseUrl: "https://api.deepseek.com",
-			apiKey: Bun.env.DEEPSEEK_API_KEY,
-			model: "deepseek-chat",
-			maxTokens: 128 * 1000, // 128k
 		},
 		Bun.env.GEMINI_API_KEY && {
 			name: "Gemini",
