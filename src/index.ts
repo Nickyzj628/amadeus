@@ -3,7 +3,7 @@ import { safeParse } from "valibot";
 import { handleCommand } from "./handlers/command";
 import { handlePlainText } from "./handlers/plain-text";
 import { GroupMessageEventSchema } from "./schemas/onebot";
-import { isAtSelfSegment, isCommand, isTextSegment } from "./utils";
+import { isAtSelfSegment, isCommand, isTextSegment, reply } from "./utils";
 
 const server = Bun.serve({
 	port: 7280,
@@ -13,17 +13,17 @@ const server = Bun.serve({
 				const body = await req.json();
 				const validation = safeParse(GroupMessageEventSchema, body);
 				if (!validation.success) {
-					return new Response();
+					return reply();
 				}
 
 				const e = validation.output;
 				if (!isAtSelfSegment(e, 0)) {
-					return new Response();
+					return reply();
 				}
 
 				const textSegment = isTextSegment(e, 1);
 				if (!textSegment) {
-					return new Response();
+					return reply();
 				}
 
 				const { fn, args } = isCommand(textSegment) || {};
@@ -35,7 +35,7 @@ const server = Bun.serve({
 		},
 	},
 	fetch() {
-		return new Response("404 Not Found", { status: 404 });
+		return reply();
 	},
 });
 

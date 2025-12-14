@@ -44,11 +44,20 @@ export const makeTextSegment = (text: string): TextSegment => ({
 
 /** 回复当前发送人 */
 export const reply = (...segments: Segment[] | string[]) => {
-	const isSimpleText = segments.length === 1 && typeof segments[0] === "string";
+	const isEmpty = segments.length === 0;
+	if (isEmpty) {
+		return new Response(undefined, { status: 204 });
+	}
 
+	const normalizedSegments = segments.map((segment) => {
+		if (typeof segment === "string") {
+			return makeTextSegment(segment);
+		}
+		return segment;
+	});
 	return new Response(
 		JSON.stringify({
-			reply: isSimpleText ? segments[0] : segments,
+			reply: normalizedSegments,
 			at_sender: true,
 		}),
 		{
