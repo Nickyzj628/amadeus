@@ -6,7 +6,7 @@ import { GroupMessageEventSchema } from "./schemas/onebot";
 import { isAtSelfSegment, isCommand, isTextSegment, reply } from "./utils";
 
 const server = Bun.serve({
-	port: 7280,
+	port: 8210,
 	routes: {
 		"/": {
 			POST: async (req) => {
