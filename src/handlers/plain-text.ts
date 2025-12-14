@@ -148,6 +148,7 @@ export const Ai = {
 				},
 			),
 		);
+		this._groupPendingMap[groupId] = false;
 		if (error) {
 			messages.pop();
 			return reply(`消息生成失败：${error.message}`);
@@ -167,7 +168,6 @@ export const Ai = {
 			messages.splice(1, Math.floor(messages.length / 3));
 			timeLog("AI聊天上下文过长，已删除前1/3条消息");
 		}
-		this._groupPendingMap[groupId] = false;
 
 		return reply(content);
 	},
