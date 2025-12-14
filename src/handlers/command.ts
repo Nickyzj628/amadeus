@@ -15,7 +15,7 @@ type Command = {
 /** 心知天气 */
 const weather = {
 	description: "查询城市天气",
-	example: "/weather <城市名>",
+	example: "/天气 <城市名>",
 	async handle(city = "上海") {
 		// 检查 api key
 		const key = Bun.env.SENIVERSE_PRIVATE_KEY;
@@ -99,7 +99,7 @@ const weather = {
 /** 切换 AI 模型 */
 const model = {
 	description: "切换 AI 聊天模型",
-	example: "/model <模型名称>",
+	example: "/模型 <模型名称>",
 	handle: async (name: string) => {
 		const nextModel = Ai.changeModel(name);
 		if (!nextModel) {
@@ -121,8 +121,8 @@ const model = {
 // --- 分流处理指令 ---
 
 const commandMap: Record<string, Command> = {
-	weather,
-	model,
+	天气: weather,
+	模型: model,
 };
 
 export const handleCommand = (fn: string, args?: string[]) => {

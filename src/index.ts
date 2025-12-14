@@ -13,21 +13,21 @@ const server = Bun.serve({
 				const body = await req.json();
 				const validation = safeParse(GroupMessageEventSchema, body);
 				if (!validation.success) {
-					return reply();
+					return new Response(null, { status: 204 });
 				}
 
 				const e = validation.output;
 				if (!isAtSelfSegment(e, 0)) {
-					return reply();
+					return new Response(null, { status: 204 });
 				}
 
 				const textSegment = isTextSegment(e, 1);
-				if (!textSegment) {
-					return reply();
+				if (textSegment === false) {
+					return new Response(null, { status: 204 });
 				}
 
 				const { fn, args } = isCommand(textSegment) || {};
-				if (fn) {
+				if (fn !== undefined) {
 					return handleCommand(fn, args);
 				}
 				return handlePlainText(textSegment.data.text, e);
@@ -35,7 +35,7 @@ const server = Bun.serve({
 		},
 	},
 	fetch() {
-		return reply();
+		return new Response();
 	},
 });
 
