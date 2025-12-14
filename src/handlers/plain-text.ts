@@ -11,16 +11,16 @@ import { reply } from "../utils";
 
 /** 能不能好好说话 */
 const Nbnhhsh = {
-	IGNORED_TEXT: ["myspoon", "myfork"],
+	IGNORED_TEXTS: ["myspoon", "myfork"],
 
-	Schema: array(
+	_Schema: array(
 		object({
 			name: string(),
 			trans: optional(array(string())),
 		}),
 	),
 
-	handle: async (text: string) => {
+	async handle(text: string) {
 		const [error, response] = await to(
 			fetcher("https://lab.magiconch.com/api").post("/nbnhhsh/guess", { text }),
 		);
@@ -28,7 +28,7 @@ const Nbnhhsh = {
 			return reply(`调用nbnhhsh出错：${error.message}`);
 		}
 
-		const validation = safeParse(Nbnhhsh.Schema, response);
+		const validation = safeParse(this._Schema, response);
 		if (!validation.success) {
 			return reply(`nbnhhsh返回数据格式有误：${validation.issues[0].message}`);
 		}
@@ -45,33 +45,11 @@ const Nbnhhsh = {
 	},
 };
 
-/** 兼容 OpenAI API 的大模型 */
+/** AI 聊天模型 */
 export const Ai = {
-	messages: [
-		{
-			role: "system",
-			content: SYSTEM_PROMPT,
-		},
-	] as ChatCompletionMessage[],
-
+	// 模型列表，只存放配置过 api key 的模型
 	models: [
-		{
-			name: "DeepSeek",
-			aliases: ["deepseek", "ds"],
-			baseUrl: "https://api.deepseek.com",
-			apiKey: Bun.env.DEEPSEEK_API_KEY,
-			model: "deepseek-chat",
-			maxTokens: 128 * 1000, // 128k
-		},
-		{
-			name: "Gemini",
-			aliases: ["gemini"],
-			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-			apiKey: Bun.env.GEMINI_API_KEY,
-			model: "gemini-2.5-flash",
-			maxTokens: 1000 * 1000, // 100w
-		},
-		{
+		Bun.env.GLM_API_KEY && {
 			name: "智谱清言",
 			aliases: ["chatglm", "glm"],
 			baseUrl: "https://open.bigmodel.cn/api/paas/v4",
@@ -79,20 +57,36 @@ export const Ai = {
 			model: "glm-4.6",
 			maxTokens: 200 * 1000, // 200k
 		},
-	] as Model[],
+		Bun.env.DEEPSEEK_API_KEY && {
+			name: "DeepSeek",
+			aliases: ["deepseek", "ds"],
+			baseUrl: "https://api.deepseek.com",
+			apiKey: Bun.env.DEEPSEEK_API_KEY,
+			model: "deepseek-chat",
+			maxTokens: 128 * 1000, // 128k
+		},
+		Bun.env.GEMINI_API_KEY && {
+			name: "Gemini",
+			aliases: ["gemini"],
+			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+			apiKey: Bun.env.GEMINI_API_KEY,
+			model: "gemini-2.5-flash",
+			maxTokens: 1000 * 1000, // 100w
+		},
+	].filter(Boolean) as Model[],
 
 	// --- 切换模型相关逻辑 ---
 	_currentModelIndex: 0,
 
 	get model() {
-		return this.models[this._currentModelIndex] as Model;
+		return this.models[this._currentModelIndex];
 	},
 
 	changeModel(nameOrAlias = "") {
+		const target = nameOrAlias.toLowerCase();
 		const modelIndex = Ai.models.findIndex(
 			(model) =>
-				model.name.toLowerCase() === nameOrAlias.toLowerCase() ||
-				model.aliases.includes(nameOrAlias.toLowerCase()),
+				model.name.toLowerCase() === target || model.aliases.includes(target),
 		);
 		const model = Ai.models[modelIndex];
 		if (!model) {
@@ -104,63 +98,84 @@ export const Ai = {
 	},
 
 	// --- 请求相关逻辑 ---
-	_isPending: false,
+
+	// 消息列表，按群号划分
+	_groupMessagesMap: {} as Record<string, ChatCompletionMessage[]>,
+	_groupPendingMap: {} as Record<string, boolean>,
 
 	async handle(text: string, e: GroupMessageEvent) {
-		if (this._isPending) {
-			return reply("正在处理上一条消息，请稍候。");
+		const model = this.model;
+		if (!model) {
+			return reply("当前没有运行中的模型，请输入“/模型 <模型名称>”应用一个");
 		}
 
-		this._isPending = true;
-		this.messages.push({
+		const groupId = e.group_id;
+
+		if (this._groupPendingMap[groupId]) {
+			return reply("正在处理上一条消息，请稍候……");
+		}
+		this._groupPendingMap[groupId] = true;
+
+		this._groupMessagesMap[groupId] ||= [
+			{
+				role: "system",
+				content: SYSTEM_PROMPT,
+			},
+		];
+		const messages = this._groupMessagesMap[groupId];
+		messages.push({
 			role: "user",
 			name: `${e.sender.nickname}（${e.sender.user_id}）`,
 			content: text,
 		});
 
 		const [error, response] = await to(
-			fetcher(this.model.baseUrl).post<OpenAIResponse>(
+			fetcher(model.baseUrl).post<OpenAIResponse>(
 				"/chat/completions",
 				{
-					model: this.model.model,
-					messages: this.messages,
+					model: model.model,
+					messages,
+					reasoning_effort: "none",
+					thinking: {
+						type: "disabled",
+					},
 				},
 				{
 					headers: {
-						Authorization: `Bearer ${this.model.apiKey}`,
+						Authorization: `Bearer ${model.apiKey}`,
 					},
 					proxy: "http://127.0.0.1:7890",
 				},
 			),
 		);
 		if (error) {
-			this.messages.pop();
+			messages.pop();
 			return reply(`消息生成失败：${error.message}`);
 		}
 
 		const { content } = response.choices[0]?.message ?? {};
 		if (!content) {
-			this.messages.pop();
+			messages.pop();
+			timeLog("生成的消息为空", JSON.stringify(response, null, 2));
 			return reply("生成的消息为空，快找群主排查！");
 		}
 
 		// 如果当前对话上下文 token 超过最大限制，则截断中间 1/3 的消息数量
-		this.messages.push({ role: "assistant", content });
+		messages.push({ role: "assistant", content });
 		const { total_tokens = 0 } = response.usage ?? {};
 		if (total_tokens >= this.model.maxTokens) {
-			this.messages.splice(1, Math.floor(this.messages.length / 3));
+			messages.splice(1, Math.floor(messages.length / 3));
 			timeLog("AI聊天上下文过长，已删除前1/3条消息");
 		}
-		this._isPending = false;
+		this._groupPendingMap[groupId] = false;
 
 		return reply(content);
 	},
 };
 
-// --- 分流处理文本 ---
-
+// 入口
 export const handlePlainText = (text: string, e: GroupMessageEvent) => {
-	if (/^[A-Za-z]+$/.test(text) && !Nbnhhsh.IGNORED_TEXT.includes(text)) {
+	if (/^[A-Za-z]+$/.test(text) && !Nbnhhsh.IGNORED_TEXTS.includes(text)) {
 		return Nbnhhsh.handle(text);
 	}
 	return Ai.handle(text, e);

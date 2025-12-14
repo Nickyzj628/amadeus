@@ -23,7 +23,7 @@ export const isTextSegment = (e: GroupMessageEvent, segIndex = 0) => {
 	return segment;
 };
 
-export const isCommand = (segment: TextSegment) => {
+export const isCommandText = (segment: TextSegment) => {
 	const { text } = segment.data;
 	if (!text.startsWith("/")) {
 		return false;
