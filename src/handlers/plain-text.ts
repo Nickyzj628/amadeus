@@ -56,6 +56,11 @@ export const Ai = {
 			apiKey: Bun.env.GLM_API_KEY,
 			model: "glm-4.6",
 			maxTokens: 200 * 1000, // 200k
+			extraBody: {
+				thinking: {
+					type: "disabled",
+				},
+			},
 		},
 		Bun.env.DEEPSEEK_API_KEY && {
 			name: "DeepSeek",
@@ -72,6 +77,9 @@ export const Ai = {
 			apiKey: Bun.env.GEMINI_API_KEY,
 			model: "gemini-2.5-flash",
 			maxTokens: 1000 * 1000, // 100w
+			extraBody: {
+				reasoning_effort: "none",
+			},
 		},
 	].filter(Boolean) as Model[],
 
@@ -135,10 +143,6 @@ export const Ai = {
 				{
 					model: model.model,
 					messages,
-					reasoning_effort: "none",
-					thinking: {
-						type: "disabled",
-					},
 				},
 				{
 					headers: {

@@ -7,6 +7,7 @@ export type Model = {
 	apiKey: string;
 	model: string;
 	maxTokens: number;
+	extraBody?: Record<string, any>;
 };
 
 export type ChatCompletionMessage = {
