@@ -80,6 +80,9 @@ export const Ai = {
 			extraBody: {
 				reasoning_effort: "none",
 			},
+			extraOptions: {
+				proxy: "http://127.0.0.1:7890",
+			},
 		},
 	].filter(Boolean) as Model[],
 
@@ -143,12 +146,13 @@ export const Ai = {
 				{
 					model: model.model,
 					messages,
+					...model.extraBody,
 				},
 				{
 					headers: {
 						Authorization: `Bearer ${model.apiKey}`,
 					},
-					proxy: "http://127.0.0.1:7890",
+					...model.extraOptions,
 				},
 			),
 		);
