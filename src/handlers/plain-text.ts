@@ -84,6 +84,20 @@ export const Ai = {
 				proxy: "http://127.0.0.1:7890",
 			},
 		},
+		Bun.env.OLLAMA_MODEL && {
+			name: "Ollama",
+			aliases: ["ollama"],
+			baseUrl: "http://localhost:11434/v1",
+			apiKey: "ollama",
+			model: Bun.env.OLLAMA_MODEL,
+			maxTokens: Bun.env.OLLAMA_MAX_TOKENS || 4 * 1000,
+			extraBody: {
+				enable_thinking: false,
+			},
+			extraOptions: {
+				proxy: "http://127.0.0.1:7890",
+			},
+		},
 	].filter(Boolean) as Model[],
 
 	// --- 切换模型相关逻辑 ---
