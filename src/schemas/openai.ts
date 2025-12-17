@@ -8,6 +8,7 @@ export type Model = {
 	model: string;
 	maxTokens: number;
 	extraBody?: Record<string, any>;
+	extraOptions?: Record<string, any>;
 };
 
 export type ChatCompletionMessage = {

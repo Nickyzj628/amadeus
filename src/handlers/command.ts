@@ -1,5 +1,7 @@
 import { fetcher, timeLog, to } from "@nickyzj2023/utils";
 import { array, object, safeParse, string } from "valibot";
+import type { GroupMessageEvent } from "../schemas/onebot";
+import type { Model } from "../schemas/openai";
 import { makeTextSegment, reply } from "../utils";
 import { Ai } from "./plain-text";
 
@@ -9,14 +11,17 @@ type Command = {
 	/** 指令格式示例 */
 	example: string;
 	/** 运行函数 */
-	handle: (...args: string[]) => Response | Promise<Response>;
+	handle: (
+		e: GroupMessageEvent,
+		...args: string[]
+	) => Response | Promise<Response>;
 };
 
 /** 心知天气 */
-const weather = {
+const seniverse = {
 	description: "查询城市天气",
 	example: "/天气 <城市名>",
-	async handle(city = "上海") {
+	async handle(e: GroupMessageEvent, city = "上海") {
 		// 检查 api key
 		const key = Bun.env.SENIVERSE_PRIVATE_KEY;
 		if (!key) {
@@ -97,10 +102,10 @@ const weather = {
 };
 
 /** 切换 AI 模型 */
-const model = {
+const changeModel = {
 	description: "切换 AI 聊天模型",
 	example: "/模型 <模型名称>",
-	handle: async (name: string) => {
+	handle: async (e: GroupMessageEvent, name: string) => {
 		const nextModel = Ai.changeModel(name);
 		if (!nextModel) {
 			return reply(
@@ -110,7 +115,7 @@ const model = {
 						`\n${index + 1}. ${model.name}（${model.aliases.join("、")}）`,
 					),
 				),
-				makeTextSegment(`\n当前模型：${Ai.model.name}`),
+				makeTextSegment(`\n当前模型：${Ai.model?.name}`),
 			);
 		}
 
@@ -118,14 +123,28 @@ const model = {
 	},
 };
 
+/** 总结一下（调用本地 Ollama Qwen3:0.6b 小模型） */
+const summarize = {
+	description: "归纳总结最近的群聊内容",
+	example: "/总结一下",
+	handle: async (e: GroupMessageEvent) => {
+		return await Ai.summarize(e.group_id);
+	},
+};
+
 // --- 分流处理指令 ---
 
 const commandMap: Record<string, Command> = {
-	天气: weather,
-	模型: model,
+	天气: seniverse,
+	模型: changeModel,
+	总结一下: summarize,
 };
 
-export const handleCommand = (fn: string, args?: string[]) => {
+export const handleCommand = (
+	e: GroupMessageEvent,
+	fn: string,
+	args?: string[],
+) => {
 	const command = commandMap[fn];
 	if (!command) {
 		return reply(
@@ -139,5 +158,5 @@ export const handleCommand = (fn: string, args?: string[]) => {
 	}
 
 	timeLog("执行指令", fn, args);
-	return command.handle(...(args ?? []));
+	return command.handle(e, ...(args ?? []));
 };
