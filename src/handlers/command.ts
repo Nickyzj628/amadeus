@@ -1,8 +1,8 @@
 import { fetcher, timeLog, to } from "@nickyzj2023/utils";
 import { array, object, safeParse, string } from "valibot";
-import type { GroupMessageEvent } from "../schemas/onebot";
-import type { Model } from "../schemas/openai";
-import { makeTextSegment, reply } from "../utils";
+import type { GroupMessageEvent } from "../schemas/onebot/http-post";
+import { reply } from "../utils/action";
+import { makeTextSegment } from "../utils/segment";
 import { Ai } from "./plain-text";
 
 type Command = {
@@ -50,11 +50,15 @@ const seniverse = {
 
 		return reply(
 			makeTextSegment(`${result.location.name}天气：`),
-			...result.daily.map((day) =>
-				makeTextSegment(
-					`\n${this.getRelativeDate(day.date)}：${day.text_day}转${day.text_night}，${day.low}°C ~ ${day.high}°C`,
-				),
-			),
+			...result.daily.map((day) => {
+				const climate =
+					day.text_day === day.text_night
+						? day.text_day
+						: `${day.text_day}转${day.text_night}`;
+				return makeTextSegment(
+					`\n${this.getRelativeDate(day.date)}：${climate}，${day.low}°C ~ ${day.high}°C`,
+				);
+			}),
 			makeTextSegment(
 				`\n数据更新时间：${new Date(result.last_update).toLocaleString()}`,
 			),

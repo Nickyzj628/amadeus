@@ -1,50 +1,35 @@
 import { timeLog } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { handleCommand } from "./handlers/command";
-import { Ai, handlePlainText } from "./handlers/plain-text";
-import { GroupMessageEventSchema } from "./schemas/onebot";
+import { handlePlainText } from "./handlers/plain-text";
+import { GroupMessageEventSchema } from "./schemas/onebot/http-post";
 import type { ChatCompletionMessage } from "./schemas/openai";
-import { isAtSelfSegment, isCommandText, isTextSegment } from "./utils";
+import { reply } from "./utils/action";
+import { saveGroupMessage } from "./utils/data";
+import { isAtSelfSegment, isCommandText, isTextSegment } from "./utils/segment";
 
 const server = Bun.serve({
 	port: 8210,
 	routes: {
 		"/": {
 			POST: async (req) => {
-				// 验证请求体格式
+				// 验证请求体格式，隐式拦截了非文本、@本机器人、转发以外的消息
 				const body = await req.json();
 				const validation = safeParse(GroupMessageEventSchema, body);
 				if (!validation.success) {
-					return new Response(null, { status: 204 });
+					return reply();
 				}
-
-				// 拦截既不是@也不是文本的消息
 				const e = validation.output;
-				const textSegment = isTextSegment(e, 0);
-				const atSegment = isAtSelfSegment(e, 0);
-				if (textSegment === false && atSegment === false) {
-					return new Response(null, { status: 204 });
-				}
 
 				// 记录群友聊天消息，用于“/总结一下”
-				if (textSegment !== false) {
-					let groupFullMessages = Ai.groupFullMessagesMap[
-						e.group_id
-					] as ChatCompletionMessage[];
-					if (!Array.isArray(groupFullMessages)) {
-						groupFullMessages = Ai.groupFullMessagesMap[e.group_id] = [];
-					}
-					groupFullMessages.push({
-						role: "user",
-						name: `${e.sender.nickname}（${e.sender.user_id}）`,
-						content: textSegment.data.text,
-					});
-				}
+				const openAiMeessage =
+				const message = (await saveGroupMessage(e)) as ChatCompletionMessage;
 
 				// 拦截不是“@机器人 <纯文本>”的消息
+				const atSegment = isAtSelfSegment(e, 0);
 				const textSegment2 = isTextSegment(e, 1);
-				if (atSegment === false || textSegment2 === false) {
-					return new Response(null, { status: 204 });
+				if (!atSegment || !textSegment2) {
+					return reply();
 				}
 
 				// 处理指令
@@ -53,12 +38,12 @@ const server = Bun.serve({
 					return handleCommand(e, fn, args);
 				}
 				// 处理纯文本
-				return handlePlainText(e, textSegment2.data.text);
+				return handlePlainText(e, message);
 			},
 		},
 	},
 	fetch() {
-		return new Response(null, { status: 204 });
+		return reply();
 	},
 });
 

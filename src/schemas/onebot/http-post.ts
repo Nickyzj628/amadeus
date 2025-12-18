@@ -1,3 +1,4 @@
+// --- HTTP POST 相关类型，用于接收消息 ---
 // @see https://github.com/botuniverse/onebot-11/blob/master/event/message.md
 
 import {
@@ -29,13 +30,32 @@ export const AtSegmentSchema = object({
 });
 export type AtSegment = InferOutput<typeof AtSegmentSchema>;
 
+/** 合并转发消息 */
+export const ForwardSegmentSchema = object({
+	type: literal("forward"),
+	data: object({
+		/** 合并转发 ID，需通过 get_forward_msg API 获取具体内容 */
+		id: string(),
+	}),
+});
+export type ForwardSegment = InferOutput<typeof ForwardSegmentSchema>;
+
 /** 消息段联合 */
-export const SegmentSchema = union([TextSegmentSchema, AtSegmentSchema]);
+export const SegmentSchema = union([
+	TextSegmentSchema,
+	AtSegmentSchema,
+	ForwardSegmentSchema,
+]);
 export type Segment = InferOutput<typeof SegmentSchema>;
 
-/** 消息段数组 */
-export const MessageSchema = array(SegmentSchema);
-export type Message = InferOutput<typeof MessageSchema>;
+/** 发送人信息 */
+export const SenderSchema = object({
+	/** 发送者 QQ 号 */
+	user_id: number(),
+	/** 昵称 */
+	nickname: string(),
+});
+export type Sender = InferOutput<typeof SenderSchema>;
 
 /** 群消息事件 */
 export const GroupMessageEventSchema = object({
@@ -50,17 +70,8 @@ export const GroupMessageEventSchema = object({
 	/** 消息 ID */
 	message_id: number(),
 	/** 消息段数组 */
-	message: MessageSchema,
+	message: array(SegmentSchema),
 	/** 发送人信息 */
-	sender: object({
-		/** 发送者 QQ 号 */
-		user_id: number(),
-		/** 昵称 */
-		nickname: string(),
-		/** 昵称 */
-		card: string(),
-		/** 角色，owner 或 admin 或 member */
-		role: union([literal("member"), literal("admin"), literal("owner")]),
-	}),
+	sender: SenderSchema,
 });
 export type GroupMessageEvent = InferOutput<typeof GroupMessageEventSchema>;

@@ -1,13 +1,14 @@
 import { fetcher, timeLog, to } from "@nickyzj2023/utils";
 import { array, object, optional, safeParse, string } from "valibot";
 import { SUMMARIZE_SYSTEM_PROMPT, SYSTEM_PROMPT } from "../constants";
-import type { GroupMessageEvent } from "../schemas/onebot";
+import type { GroupMessageEvent } from "../schemas/onebot/http-post";
 import type {
 	ChatCompletionMessage,
 	Model,
 	OpenAIResponse,
 } from "../schemas/openai";
-import { reply } from "../utils";
+import { reply } from "../utils/action";
+import { saveGroupMessage } from "../utils/data";
 
 /** 能不能好好说话 */
 const Nbnhhsh = {
@@ -151,20 +152,6 @@ export const Ai = {
 			throw new Error("正在处理上一条消息，请稍候……");
 		}
 		this._groupPendingMap[groupId] = true;
-		console.log(
-			"/chat/completions",
-			{
-				model: model.model,
-				messages,
-				...model.extraBody,
-			},
-			{
-				headers: {
-					Authorization: `Bearer ${model.apiKey}`,
-				},
-				...model.extraOptions,
-			},
-		);
 		const [error, response] = await to(
 			fetcher(model.baseUrl).post<OpenAIResponse>(
 				"/chat/completions",
@@ -195,11 +182,14 @@ export const Ai = {
 		// 如果当前对话上下文 token 超过最大限制，则截断前半段消息
 		const { total_tokens = 0 } = response.usage ?? {};
 		if (total_tokens >= model.maxTokens) {
-			const systemPrompt = messages.find(
+			const systemPrompts = messages.filter(
 				(message) => message.role === "system",
-			)!;
+			);
+
 			messages.splice(0, Math.floor(messages.length / 2));
-			messages.unshift(systemPrompt);
+			if (systemPrompts.length > 0) {
+				messages.unshift(...systemPrompts);
+			}
 			timeLog("AI聊天上下文过长，已清理前1/2的消息");
 		}
 
@@ -207,7 +197,7 @@ export const Ai = {
 	},
 
 	// 参与群聊
-	async chat(text: string, e: GroupMessageEvent) {
+	async chat(e: GroupMessageEvent, userMessage: ChatCompletionMessage) {
 		const groupId = e.group_id;
 		this._groupMessagesMap[groupId] ||= [
 			{
@@ -215,13 +205,8 @@ export const Ai = {
 				content: SYSTEM_PROMPT,
 			},
 		];
-
 		const messages = this._groupMessagesMap[groupId];
-		messages.push({
-			role: "user",
-			name: `${e.sender.nickname}（${e.sender.user_id}）`,
-			content: text,
-		});
+		messages.push(userMessage);
 
 		const [error, content] = await to(this.sendRequest(groupId, messages));
 		if (error) {
@@ -229,7 +214,10 @@ export const Ai = {
 			return reply(`消息生成失败：${error.message}`);
 		}
 
-		messages.push({ role: "assistant", content });
+		const assistantMessage = { role: "assistant", content };
+		messages.push(assistantMessage);
+		saveGroupMessage(groupId, assistantMessage);
+
 		return reply(content);
 	},
 
@@ -237,7 +225,7 @@ export const Ai = {
 	async summarize(groupId: number) {
 		const model = this.models.find((model) => model.name === "Ollama");
 		if (!model) {
-			return reply("未配置本地模型");
+			return reply("请先配置一个本地模型！");
 		}
 
 		const messages = this.groupFullMessagesMap[groupId] || [];
@@ -256,9 +244,13 @@ export const Ai = {
 };
 
 // 入口
-export const handlePlainText = (e: GroupMessageEvent, text: string) => {
-	if (/^[A-Za-z]+$/.test(text) && !Nbnhhsh.IGNORED_TEXTS.includes(text)) {
-		return Nbnhhsh.handle(text);
+export const handlePlainText = (
+	e: GroupMessageEvent,
+	message: ChatCompletionMessage,
+) => {
+	const { content } = message;
+	if (/^[A-Za-z]+$/.test(content) && !Nbnhhsh.IGNORED_TEXTS.includes(content)) {
+		return Nbnhhsh.handle(content);
 	}
-	return Ai.chat(text, e);
+	return Ai.chat(e, message);
 };

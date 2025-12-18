@@ -1,4 +1,11 @@
-import { array, type InferOutput, number, object, string } from "valibot";
+import {
+	array,
+	type InferOutput,
+	number,
+	object,
+	optional,
+	string,
+} from "valibot";
 
 export type Model = {
 	name: string;
@@ -11,16 +18,12 @@ export type Model = {
 	extraOptions?: Record<string, any>;
 };
 
-export type ChatCompletionMessage = {
-	name?: string;
-	role: string;
-	content: string;
-};
-
 const MessageSchema = object({
+	name: optional(string()),
 	content: string(),
 	role: string(),
 });
+export type ChatCompletionMessage = InferOutput<typeof MessageSchema>;
 
 const ChoiceSchema = object({
 	finish_reason: string(),
