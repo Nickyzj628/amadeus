@@ -1,12 +1,14 @@
 import { timeLog } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
-import { handleCommand } from "./handlers/command";
+import { handleCommand } from "./handlers/commands";
 import { handlePlainText } from "./handlers/plain-text";
 import { GroupMessageEventSchema } from "./schemas/onebot/http-post";
-import type { ChatCompletionMessage } from "./schemas/openai";
-import { reply } from "./utils/action";
-import { saveGroupMessage } from "./utils/data";
-import { isAtSelfSegment, isCommandText, isTextSegment } from "./utils/segment";
+import {
+	isAtSelfSegment,
+	isTextSegment,
+	reply,
+	textSegmentToCommand,
+} from "./utils/onebot";
 
 const server = Bun.serve({
 	port: 8210,
@@ -22,23 +24,22 @@ const server = Bun.serve({
 				const e = validation.output;
 
 				// 记录群友聊天消息，用于“/总结一下”
-				const openAiMeessage =
-				const message = (await saveGroupMessage(e)) as ChatCompletionMessage;
+				// const openAiMeessage =
+				// const message = (await saveGroupMessage(e)) as ChatCompletionMessage;
 
 				// 拦截不是“@机器人 <纯文本>”的消息
-				const atSegment = isAtSelfSegment(e, 0);
-				const textSegment2 = isTextSegment(e, 1);
-				if (!atSegment || !textSegment2) {
+				const [atSegment, textSegment] = e.message;
+				if (!isAtSelfSegment(atSegment, e) || !isTextSegment(textSegment)) {
 					return reply();
 				}
 
 				// 处理指令
-				const { fn, args } = isCommandText(textSegment2) || {};
+				const { fn, args } = textSegmentToCommand(textSegment);
 				if (fn !== undefined) {
-					return handleCommand(e, fn, args);
+					return handleCommand(fn, args, e);
 				}
 				// 处理纯文本
-				return handlePlainText(e, message);
+				return handlePlainText(textSegment.data.text, e);
 			},
 		},
 	},

@@ -3,13 +3,12 @@
 import { Ai } from "../handlers/plain-text";
 import type { GroupMessageEvent } from "../schemas/onebot/http-post";
 import type { ChatCompletionMessage } from "../schemas/openai";
-import { makeChatCompletionMessage } from "./chat";
 import {
-	getForwardMessage,
+	flattenForwardMessage,
 	isAtSelfSegment,
 	isForwardSegment,
 	isTextSegment,
-} from "./segment";
+} from "./onebot";
 
 /**
  * 记录群友聊天消息，可用于“/总结一下”
@@ -44,7 +43,7 @@ export const saveGroupMessage = async (e: GroupMessageEvent) => {
 		else {
 			const forwardSegment = isForwardSegment(e);
 			if (forwardSegment) {
-				messages = await getForwardMessage(forwardSegment.data.id);
+				messages = await flattenForwardMessage(forwardSegment.data.id);
 			}
 		}
 	}
