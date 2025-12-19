@@ -1,6 +1,15 @@
-import type { Model } from "../../schemas/openai";
+import { fetcher, timeLog, to } from "@nickyzj2023/utils";
+import { SUMMARIZE_SYSTEM_PROMPT, SYSTEM_PROMPT } from "../../constants";
+import type { GroupMessageEvent } from "../../schemas/onebot/http-post";
+import type {
+	ChatCompletionMessage,
+	Model,
+	OpenAIResponse,
+} from "../../schemas/openai";
+import { reply } from "../../utils/onebot";
+import { textToMessage } from "../../utils/openai";
 
-// 模型列表，只存放配置过 api key 的模型
+/** 模型列表，全部兼容 OpenAI API */
 const models: Model[] = [
 	Bun.env.GLM_API_KEY && {
 		name: "智谱清言",
@@ -43,82 +52,61 @@ const models: Model[] = [
 		baseUrl: "http://localhost:11434/v1",
 		apiKey: "ollama",
 		model: Bun.env.OLLAMA_MODEL,
-		maxTokens: Bun.env.OLLAMA_MAX_TOKENS || 4 * 1000,
+		maxTokens: Number(Bun.env.OLLAMA_MAX_TOKENS) || 4 * 1000,
 		extraBody: {
 			extra_body: {
 				enable_thinking: false,
 			},
 		},
 	},
-].filter(Boolean) as Model[];
+].filter((model) => !!model);
 
-// --- 切换模型 ---
+let activeModel = models[0];
 
-const currentModelIndex = 0;
-
-const model = models[currentModelIndex];
-
-changeModel((nameOrAlias = ""));
-{
+/** 切换模型，如果不存在则返回 null */
+const changeModel = (nameOrAlias = "") => {
 	const target = nameOrAlias.toLowerCase();
-	const modelIndex = Ai.models.findIndex(
+	const model = models.find(
 		(model) =>
 			model.name.toLowerCase() === target || model.aliases.includes(target),
 	);
-	const model = Ai.models[modelIndex];
 	if (!model) {
 		return null;
 	}
 
-	this._currentModelIndex = modelIndex;
-	return model;
-}
-,
+	activeModel = model;
+	return activeModel;
+};
 
-	// --- 聊天 ---
+// --- 聊天相关逻辑，消息按群号划分 ---
 
-	// 消息列表，按群号划分
-	// 所有消息，后期放到 sqlite 数据表里
-	groupFullMessagesMap:
-{
-}
-as;
-Record<string, ChatCompletionMessage[]>,
-	// 和机器人有关的消息
-	_groupMessagesMap;
-:
-{
-}
-as;
-Record<string, ChatCompletionMessage[]>,
-	// 是否正在生成消息
-	_groupPendingMap;
-:
-{
-}
-as;
-Record<string, boolean>,
-	// 向当前模型发送请求，返回回复内容
-	async;
-sendRequest(
-		groupId: number,
-		messages: ChatCompletionMessage[],
-		options?: {
-			model?: Model;
-},
-	)
-{
-	const model = options?.model || this.model;
+/** 所有消息，后期放到 sqlite 数据表里 */
+const groupFullMessagesMap: Record<string, ChatCompletionMessage[]> = {};
+/** 和机器人有关的消息 */
+const groupMessagesMap: Record<string, ChatCompletionMessage[]> = {};
+/** 是否正在生成消息 */
+const groupPendingMap: Record<string, boolean> = {};
+
+/** 向当前模型发送请求，返回回复内容 */
+const sendRequest = async (
+	groupId: number,
+	messages: ChatCompletionMessage[],
+	options?: {
+		model?: Model;
+	},
+) => {
+	const model = options?.model || activeModel;
 	if (!model) {
 		throw new Error(
 			"当前没有运行中的模型，@我并输入“/模型 <模型名称>”启用一个",
 		);
 	}
 
-	if (this._groupPendingMap[groupId]) {
+	if (groupPendingMap[groupId]) {
 		throw new Error("正在处理上一条消息，请稍候……");
 	}
-	this._groupPendingMap[groupId] = true;
+	groupPendingMap[groupId] = true;
+
 	const [error, response] = await to(
 		fetcher(model.baseUrl).post<OpenAIResponse>(
 			"/chat/completions",
@@ -135,8 +123,8 @@ sendRequest(
 			},
 		),
 	);
+	groupPendingMap[groupId] = false;
 
-	this._groupPendingMap[groupId] = false;
 	if (error) {
 		throw new Error(error.message);
 	}
@@ -161,23 +149,25 @@ sendRequest(
 	}
 
 	return content;
-}
-,
+};
 
-	// 参与群聊
-	async chat(e: GroupMessageEvent, content: string)
-{
+/** 参与群聊 */
+const chat = async (text: string, e: GroupMessageEvent) => {
 	const groupId = e.group_id;
-	this._groupMessagesMap[groupId] ||= [
+	groupMessagesMap[groupId] ||= [
 		{
 			role: "system",
 			content: SYSTEM_PROMPT,
 		},
 	];
-	const messages = this._groupMessagesMap[groupId];
-	messages.push(makeChatCompletionMessage({ content }));
+	const messages = groupMessagesMap[groupId];
+	messages.push(
+		textToMessage(text, {
+			name: `${e.sender.nickname}(${e.sender.user_id})`,
+		}),
+	);
 
-	const [error, response] = await to(this.sendRequest(groupId, messages));
+	const [error, response] = await to(sendRequest(groupId, messages));
 	if (error) {
 		messages.pop();
 		return reply(`消息生成失败：${error.message}`);
@@ -188,20 +178,18 @@ sendRequest(
 	// saveGroupMessage(groupId, assistantMessage);
 
 	return reply(response);
-}
-,
+};
 
-	// 总结群聊
-	async summarize(groupId: number)
-{
-	const model = this.models.find((model) => model.name === "Ollama");
+// 总结群聊
+const summarize = async (groupId: number) => {
+	const model = models.find((model) => model.name === "Ollama");
 	if (!model) {
 		return reply("请先配置一个本地模型！");
 	}
 
-	const messages = this.groupFullMessagesMap[groupId] || [];
+	const messages = groupFullMessagesMap[groupId] || [];
 	const [error, content] = await to(
-		this.sendRequest(
+		sendRequest(
 			groupId,
 			[{ role: "system", content: SUMMARIZE_SYSTEM_PROMPT }, ...messages],
 			{ model },
@@ -211,5 +199,11 @@ sendRequest(
 		return reply(`总结失败：${error.message}`);
 	}
 	return reply(content);
-}
-,
+};
+
+export default {
+	models,
+	changeModel,
+	chat,
+	summarize,
+};
