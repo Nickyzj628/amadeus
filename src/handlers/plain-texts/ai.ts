@@ -46,19 +46,6 @@ const models: Model[] = [
 			proxy: "http://127.0.0.1:7890",
 		},
 	},
-	Bun.env.OLLAMA_MODEL && {
-		name: "Ollama",
-		aliases: ["ollama"],
-		baseUrl: "http://localhost:11434/v1",
-		apiKey: "ollama",
-		model: Bun.env.OLLAMA_MODEL,
-		maxTokens: Number(Bun.env.OLLAMA_MAX_TOKENS) || 4 * 1000,
-		extraBody: {
-			extra_body: {
-				enable_thinking: false,
-			},
-		},
-	},
 ].filter((model) => !!model);
 
 let activeModel = models[0];
@@ -184,8 +171,7 @@ const chat = async (text: string, e: GroupMessageEvent) => {
 
 // 总结群聊
 const summarize = async (groupId: number) => {
-	const model = models.find((model) => model.name === "Ollama");
-	if (!model) {
+	if (!activeModel) {
 		return reply("请先配置一个本地模型！");
 	}
 
@@ -193,8 +179,11 @@ const summarize = async (groupId: number) => {
 	const [error, content] = await to(
 		sendRequest(
 			groupId,
-			[{ role: "system", content: SUMMARIZE_SYSTEM_PROMPT }, ...messages],
-			{ model },
+			[
+				{ role: "system", content: SUMMARIZE_SYSTEM_PROMPT },
+				...messages.slice(-100),
+			],
+			{ model: activeModel },
 		),
 	);
 	if (error) {

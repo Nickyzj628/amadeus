@@ -6,10 +6,13 @@
 
 出门左转[LLBot文档](https://www.llonebot.com/)
 
+使用LLBot登录机器人QQ后，在Bot配置栏目下启用OneBot 11，及其HTTP和HTTP POST服务，记住它们的端口号，后面要填。
+
 ### 配置环境变量
 
 在项目根目录创建 `.env` 文件，并按需配置以下环境变量：
 
+- `ONEBOT_HTTP_PORT`：用于机器人主动交互（即上方开启的OneBot 11 HTTP服务端口号）
 - `SENIVERSE_PRIVATE_KEY`: 心知天气 API密钥（用于查询城市天气）
 - `DEEPSEEK_API_KEY`: DeepSeek API密钥（用于AI聊天）
 - `GEMINI_API_KEY`: Google Gemini API密钥（用于AI聊天）
@@ -22,6 +25,7 @@
 示例 `.env` 文件：
 
 ```env
+ONEBOT_HTTP_PORT=1234
 SENIVERSE_PRIVATE_KEY=qwer
 DEEPSEEK_API_KEY=zxcv
 GEMINI_API_KEY=dfjk
