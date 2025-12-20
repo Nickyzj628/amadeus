@@ -1,6 +1,6 @@
 import { timeLog } from "@nickyzj2023/utils";
 import type { GroupMessageEvent } from "../../schemas/onebot/http-post";
-import { makeTextSegment, reply } from "../../utils/onebot";
+import { reply, textToSegment } from "../../utils/onebot";
 import changeModel from "./change-model";
 import seniverse from "./seniverse";
 import summarize from "./summarize";
@@ -17,7 +17,9 @@ type Command = {
 	) => Response | Promise<Response>;
 };
 
-export const defineCommand = (command: Command) => command;
+export function defineCommand(command: Command) {
+	return command;
+}
 
 const commandMap: Record<string, Command> = {
 	天气: seniverse,
@@ -33,9 +35,9 @@ export const handleCommand = (
 	const command = commandMap[fn];
 	if (!command) {
 		return reply(
-			makeTextSegment("可用的指令有："),
+			textToSegment("可用的指令有："),
 			...Object.values(commandMap).map((command, index) =>
-				makeTextSegment(
+				textToSegment(
 					`\n${index + 1}. ${command.example} - ${command.description}；`,
 				),
 			),

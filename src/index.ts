@@ -1,8 +1,9 @@
 import { timeLog } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { handleCommand } from "./handlers/commands";
-import { handlePlainText } from "./handlers/plain-text";
+import { handlePlainText } from "./handlers/plain-texts";
 import { GroupMessageEventSchema } from "./schemas/onebot/http-post";
+import { saveGroupMessage } from "./utils/data";
 import {
 	isAtSelfSegment,
 	isTextSegment,
@@ -23,9 +24,8 @@ const server = Bun.serve({
 				}
 				const e = validation.output;
 
-				// 记录群友聊天消息，用于“/总结一下”
-				// const openAiMeessage =
-				// const message = (await saveGroupMessage(e)) as ChatCompletionMessage;
+				// 消息转成 OpenAI API 格式再存入数据库
+				saveGroupMessage(e);
 
 				// 拦截不是“@机器人 <纯文本>”的消息
 				const [atSegment, textSegment] = e.message;
@@ -39,7 +39,7 @@ const server = Bun.serve({
 					return handleCommand(fn, args, e);
 				}
 				// 处理纯文本
-				return handlePlainText(textSegment.data.text, e);
+				return handlePlainText(textSegment.data.text.trim(), e);
 			},
 		},
 	},

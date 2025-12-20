@@ -1,7 +1,13 @@
 // --- HTTP 相关类型，用于主动发请求 ---
 
 import { array, type InferOutput, number, object, string } from "valibot";
-import { SegmentSchema, SenderSchema } from "./http-post";
+import {
+	type Segment,
+	SegmentSchema,
+	type Sender,
+	SenderSchema,
+	type TextSegment,
+} from "./http-post";
 
 /** POST /get_forawrd_msg 返回结果 */
 export const GetForwardMessageResponseSchema = object({
@@ -23,3 +29,11 @@ export const GetForwardMessageResponseSchema = object({
 export type GetForwardMessageResponse = InferOutput<
 	typeof GetForwardMessageResponseSchema
 >;
+export type ForwardMessage =
+	GetForwardMessageResponse["data"]["messages"][number];
+export type ForwardMessageSingle = {
+	/** 暂时只支持纯文本消息段 */
+	segment: TextSegment;
+	sender: Sender;
+	time: number;
+};

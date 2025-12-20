@@ -2,7 +2,7 @@
 
 import { fetcher, to } from "@nickyzj2023/utils";
 import { array, object, safeParse, string } from "valibot";
-import { makeTextSegment, reply } from "../../utils/onebot";
+import { reply, textToSegment } from "../../utils/onebot";
 import { defineCommand } from ".";
 
 const Schema = object({
@@ -39,7 +39,11 @@ const Schema = object({
 	),
 });
 
-const api = fetcher("https://api.seniverse.com/v3");
+const api = fetcher("https://api.seniverse.com/v3", {
+	params: {
+		key: Bun.env.SENIVERSE_PRIVATE_KEY,
+	},
+});
 
 const getRelativeDate = (date: string) => {
 	const dates = ["今天", "明天", "后天"];
@@ -58,7 +62,11 @@ const command = defineCommand({
 
 		// 发送请求
 		const [error, response] = await to(
-			api.get(`/weather/daily.json?key=${key}&location=${city}`),
+			api.get(`/weather/daily.json`, {
+				params: {
+					location: city,
+				},
+			}),
 		);
 		if (error) {
 			return reply(`天气预报查询失败：${error.message}`);
@@ -75,17 +83,17 @@ const command = defineCommand({
 		}
 
 		return reply(
-			makeTextSegment(`${result.location.name}天气：`),
+			textToSegment(`${result.location.name}天气：`),
 			...result.daily.map((day) => {
 				const climate =
 					day.text_day === day.text_night
 						? day.text_day
 						: `${day.text_day}转${day.text_night}`;
-				return makeTextSegment(
+				return textToSegment(
 					`\n${getRelativeDate(day.date)}：${climate}，${day.low}°C ~ ${day.high}°C`,
 				);
 			}),
-			makeTextSegment(
+			textToSegment(
 				`\n数据更新时间：${new Date(result.last_update).toLocaleString()}`,
 			),
 		);

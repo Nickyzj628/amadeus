@@ -1,9 +1,14 @@
 // --- OneBot 相关工具 ---
 
-import { camelToSnake, fetcher, timeLog, to } from "@nickyzj2023/utils";
-import type { GetForwardMessageResponse } from "../schemas/onebot/http";
+import { camelToSnake, fetcher, isNil, timeLog, to } from "@nickyzj2023/utils";
+import type {
+	ForwardMessage,
+	ForwardMessageSingle,
+	GetForwardMessageResponse,
+} from "../schemas/onebot/http";
 import type {
 	AtSegment,
+	ForwardSegment,
 	GroupMessageEvent,
 	Segment,
 	TextSegment,
@@ -13,28 +18,27 @@ const http = fetcher(`http://127.0.0.1:${Bun.env.ONEBOT_HTTP_PORT}`);
 
 // --- 消息段 ---
 
+/** 是否为@某人的消息段 */
+export const isAtSegment = (segment?: Segment): segment is AtSegment => {
+	return !isNil(segment) && segment.type === "at";
+};
+
 /** 是否为@当前机器人的消息段 */
 export const isAtSelfSegment = (
 	segment: Segment | undefined,
-	e: Partial<GroupMessageEvent>,
+	e: Pick<GroupMessageEvent, "self_id">,
 ): segment is AtSegment => {
-	return (
-		segment !== undefined &&
-		segment.type === "at" &&
-		Number(segment.data.qq) === e.self_id
-	);
+	return isAtSegment(segment) && Number(segment.data.qq) === e.self_id;
 };
 
 /** 是否为纯文本消息段 */
-export const isTextSegment = (
-	segment: Segment | undefined,
-): segment is TextSegment => {
-	return segment !== undefined && segment.type === "text";
+export const isTextSegment = (segment?: Segment): segment is TextSegment => {
+	return !isNil(segment) && segment.type === "text";
 };
 
 /** 从纯文本消息段中提取出“/<fn> <...args>” */
 export const textSegmentToCommand = (segment: TextSegment) => {
-	const { text } = segment.data;
+	const text = segment.data.text.trim();
 	if (!text.startsWith("/")) {
 		return { fn: undefined, args: [] };
 	}
@@ -44,52 +48,72 @@ export const textSegmentToCommand = (segment: TextSegment) => {
 };
 
 /** 是否为合并转发消息段 */
-export const isForwardSegment = (e: GroupMessageEvent, segIndex = 0) => {
-	const segment = e.message[segIndex];
-	if (segment === undefined || segment.type !== "forward") {
-		return false;
-	}
-	return segment;
+export const isForwardSegment = (segment?: Segment) => {
+	return !isNil(segment) && segment.type === "forward";
 };
 
-/** 递归展开合并转发的消息 */
-export const flattenForwardMessage = async (
-	messageId: string,
-	result: Segment[] = [],
-) => {
-	const [error, response] = await to(
-		http.post<GetForwardMessageResponse>("/get_forward_msg", {
-			[camelToSnake("messageId")]: messageId,
-		}),
-	);
-	if (error) {
-		timeLog(`查询合并转发消息失败：${error.message}`);
-		return result;
-	}
+/**
+ * 递归展开合并转发的消息
+ * @param messageId 合并转发 ID
+ * @param options 可以指定 processMessage 把消息处理成期望的类型
+ */
+export const flattenForwardSegment = async <T = Segment>(
+	messageId: ForwardSegment["data"]["id"],
+	options: {
+		processMessage?: (message: ForwardMessageSingle) => T;
+	} = {},
+): Promise<T[]> => {
+	const resultItems: T[] = [];
+	const {
+		processMessage = ((message: ForwardMessageSingle) => message.segment) as (
+			message: ForwardMessageSingle,
+		) => T,
+	} = options;
 
-	const currentSegments: Segment[] = [];
-	for (const message of response.data.messages) {
-		const e = { message: [segment] } as GroupMessageEvent;
-		const forwardSegment = isForwardSegment(e);
-		const textSegment = isTextSegment(e);
-		if (forwardSegment) {
-			currentSegments.push(
-				...(await flattenForwardMessage(forwardSegment.data.id, result)),
-			);
-		} else if (textSegment) {
-			const message = {
-				role: "user",
-				content: textSegment.data.text,
-			};
-			currentSegments.push(message);
+	const getForwardMessages = async (
+		messageId: string,
+	): Promise<ForwardMessage[]> => {
+		const [error, response] = await to(
+			http.post<GetForwardMessageResponse>("/get_forward_msg", {
+				[camelToSnake("messageId")]: messageId,
+			}),
+		);
+		if (error) {
+			timeLog(`查询合并转发消息失败：${error.message}`);
+			return [];
+		}
+		return response.data.messages;
+	};
+	const forwardMessages = await getForwardMessages(messageId);
+
+	// 把消息转换成期望的格式
+	for (const message of forwardMessages) {
+		const { content, sender, time } = message;
+		for (const segment of content) {
+			if (segment.type === "forward") {
+				const nestedItems = await flattenForwardSegment<T>(
+					segment.data.id,
+					options,
+				);
+				resultItems.push(...nestedItems);
+			} else if (segment.type === "text") {
+				const singleMessage: ForwardMessageSingle = {
+					segment,
+					sender,
+					time,
+				};
+				resultItems.push(processMessage(singleMessage));
+			} else {
+				// 暂不支持图片等类型
+			}
 		}
 	}
 
-	return [...result, ...currentSegments];
+	return resultItems;
 };
 
 /** 构造纯文本消息段 */
-export const makeTextSegment = (text: string): TextSegment => ({
+export const textToSegment = (text: string): TextSegment => ({
 	type: "text",
 	data: { text },
 });
@@ -105,7 +129,7 @@ export const reply = (...segments: Segment[] | string[]) => {
 
 	const normalizedSegments = segments.map((segment) => {
 		if (typeof segment === "string") {
-			return makeTextSegment(segment);
+			return textToSegment(segment);
 		}
 		return segment;
 	});

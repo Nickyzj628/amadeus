@@ -37,7 +37,7 @@ const models: Model[] = [
 		aliases: ["gemini"],
 		baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
 		apiKey: Bun.env.GEMINI_API_KEY,
-		model: "gemini-2.5-flash",
+		model: "gemini-3-flash-preview",
 		maxTokens: 1000 * 1000, // 100w
 		extraBody: {
 			reasoning_effort: "none",
@@ -48,7 +48,7 @@ const models: Model[] = [
 	},
 	Bun.env.OLLAMA_MODEL && {
 		name: "Ollama",
-		aliases: ["ollama", "qwen3:0.6b"],
+		aliases: ["ollama"],
 		baseUrl: "http://localhost:11434/v1",
 		apiKey: "ollama",
 		model: Bun.env.OLLAMA_MODEL,
@@ -68,7 +68,9 @@ const changeModel = (nameOrAlias = "") => {
 	const target = nameOrAlias.toLowerCase();
 	const model = models.find(
 		(model) =>
-			model.name.toLowerCase() === target || model.aliases.includes(target),
+			model.name.toLowerCase() === target ||
+			model.aliases.includes(target) ||
+			model.model === target,
 	);
 	if (!model) {
 		return null;
@@ -81,9 +83,9 @@ const changeModel = (nameOrAlias = "") => {
 // --- 聊天相关逻辑，消息按群号划分 ---
 
 /** 所有消息，后期放到 sqlite 数据表里 */
-const groupFullMessagesMap: Record<string, ChatCompletionMessage[]> = {};
+export const groupFullMessagesMap: Record<string, ChatCompletionMessage[]> = {};
 /** 和机器人有关的消息 */
-const groupMessagesMap: Record<string, ChatCompletionMessage[]> = {};
+export const groupMessagesMap: Record<string, ChatCompletionMessage[]> = {};
 /** 是否正在生成消息 */
 const groupPendingMap: Record<string, boolean> = {};
 
@@ -203,7 +205,12 @@ const summarize = async (groupId: number) => {
 
 export default {
 	models,
+	activeModel,
 	changeModel,
+
+	groupFullMessagesMap,
+	groupMessagesMap,
+
 	chat,
 	summarize,
 };
