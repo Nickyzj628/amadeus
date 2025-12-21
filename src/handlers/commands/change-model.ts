@@ -1,7 +1,7 @@
 // --- 切换 AI 模型 ---
 
 import { reply, textToSegment } from "../../utils/onebot";
-import ai from "../plain-texts/ai";
+import ai from "../non-commands/ai";
 import { defineCommand } from ".";
 
 const command = defineCommand({

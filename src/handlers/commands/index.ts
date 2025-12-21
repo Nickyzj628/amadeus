@@ -24,7 +24,7 @@ export function defineCommand(command: Command) {
 const commandMap: Record<string, Command> = {
 	天气: seniverse,
 	模型: changeModel,
-	总结一下: summarize,
+	// 总结一下: summarize,
 };
 
 export const handleCommand = (

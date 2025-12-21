@@ -10,6 +10,7 @@ import type {
 	AtSegment,
 	ForwardSegment,
 	GroupMessageEvent,
+	ImageSegment,
 	Segment,
 	TextSegment,
 } from "../schemas/onebot/http-post";
@@ -110,6 +111,11 @@ export const flattenForwardSegment = async <T = Segment>(
 	}
 
 	return resultItems;
+};
+
+/** 是否为图片消息段 */
+export const isImageSegment = (segment?: Segment): segment is ImageSegment => {
+	return !isNil(segment) && segment.type === "image";
 };
 
 /** 构造纯文本消息段 */

@@ -7,7 +7,9 @@ import {
 	literal,
 	number,
 	object,
+	pipe,
 	string,
+	transform,
 	union,
 } from "valibot";
 
@@ -40,11 +42,23 @@ export const ForwardSegmentSchema = object({
 });
 export type ForwardSegment = InferOutput<typeof ForwardSegmentSchema>;
 
+export const ImageSegmentSchema = object({
+	type: literal("image"),
+	data: object({
+		file: string(),
+		subType: number(),
+		url: string(),
+		file_size: string(),
+	}),
+});
+export type ImageSegment = InferOutput<typeof ImageSegmentSchema>;
+
 /** 消息段联合 */
 export const SegmentSchema = union([
 	TextSegmentSchema,
 	AtSegmentSchema,
 	ForwardSegmentSchema,
+	ImageSegmentSchema,
 ]);
 export type Segment = InferOutput<typeof SegmentSchema>;
 
@@ -70,7 +84,16 @@ export const GroupMessageEventSchema = object({
 	/** 消息 ID */
 	message_id: number(),
 	/** 消息段数组 */
-	message: array(SegmentSchema),
+	message: pipe(
+		array(SegmentSchema),
+		// 过滤掉空文本消息
+		transform((segments) =>
+			segments.filter(
+				(segment) =>
+					!(segment.type === "text" && segment.data.text.trim() === ""),
+			),
+		),
+	),
 	/** 发送人信息 */
 	sender: SenderSchema,
 });

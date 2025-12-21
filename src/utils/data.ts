@@ -1,17 +1,15 @@
 // --- 数据库相关工具 ---
 
 import { timeLog } from "@nickyzj2023/utils";
-import ai from "../handlers/plain-texts/ai";
 import type { GroupMessageEvent } from "../schemas/onebot/http-post";
 import type { ChatCompletionMessage } from "../schemas/openai";
-import {
-	flattenForwardSegment,
-	isAtSegment,
-	isAtSelfSegment,
-	isForwardSegment,
-	isTextSegment,
-} from "./onebot";
-import { textToMessage } from "./openai";
+import { onebotToOpenai } from "./openai";
+
+/** 消息列表，按群号划分，后期放到 sqlite 数据表里 */
+export const groupFullMessagesMap = new Map<number, ChatCompletionMessage[]>();
+
+/** 和机器人相关的消息列表，按群号划分 */
+export const groupMessagesMap = new Map<number, ChatCompletionMessage[]>();
 
 /**
  * 记录群友聊天消息，可用于“/总结一下”
@@ -22,53 +20,49 @@ import { textToMessage } from "./openai";
 export const saveGroupMessage = async (e: GroupMessageEvent) => {
 	// 根据群号读取消息数组
 	const groupId = e.group_id;
-	const groupFullMessages = readGroupFullMessages(groupId);
+	const groupFullMessages = await readGroupFullMessages(groupId);
 
-	// --- 根据消息类型提取内容 ---
-	const messages: ChatCompletionMessage[] = [];
-	const name = `${e.sender.nickname}（${e.sender.user_id}）`;
-	const [segment, segment2] = e.message;
-
-	// 纯文本
-	if (isTextSegment(segment)) {
-		messages[0] = textToMessage(segment.data.text, { name });
-	}
-	// @+纯文本
-	else {
-		if (isAtSegment(segment) && isTextSegment(segment2)) {
-			messages[0] = textToMessage(`@${segment.data.qq} ${segment2.data.text}`, {
-				name,
-			});
-		}
-		// 合并转发
-		else {
-			if (isForwardSegment(segment)) {
-				const forwaredMessages = await flattenForwardSegment(segment.data.id, {
-					processMessage: (message) => {
-						const text = message.segment.data.text.trim();
-						const name = `${message.sender.nickname}（${message.sender.user_id}）`;
-						return textToMessage(text, {
-							role: isAtSelfSegment(segment, e) ? "assistant" : "user",
-							name,
-						});
-					},
-				});
-				messages.push(...forwaredMessages);
-			}
-		}
-	}
+	// 转换消息为 OpenAI API 支持的格式
+	const messages = await onebotToOpenai(e);
 
 	groupFullMessages.push(...messages);
 	timeLog(
 		`群号${groupId}共存放${groupFullMessages.length}条消息，新存放的消息如下`,
 		JSON.stringify(messages, null, 2),
 	);
+	return messages;
 };
 
-/** 根据群号读取消息数组 */
-export const readGroupFullMessages = (groupId: number) => {
-	if (!Array.isArray(ai.groupFullMessagesMap[groupId])) {
-		ai.groupFullMessagesMap[groupId] = [];
+/**
+ * 获取群历史消息
+ * @param groupId 群号
+ * @param initialMessages 如果群里没有存放消息，则用它来作为初始消息
+ */
+export const readGroupFullMessages = async (
+	groupId: number,
+	initialMessages: ChatCompletionMessage[] = [],
+) => {
+	const messages = groupFullMessagesMap.get(groupId);
+	if (!Array.isArray(messages)) {
+		groupFullMessagesMap.set(groupId, initialMessages);
+		return initialMessages;
 	}
-	return ai.groupFullMessagesMap[groupId];
+	return messages;
+};
+
+/**
+ * 根据群号读取消息数组（仅和机器人相关的）
+ * @param groupId 群号
+ * @param initialMessages 如果群里没有存放消息，则用它来作为初始消息
+ */
+export const readGroupMessages = (
+	groupId: number,
+	initialMessages: ChatCompletionMessage[] = [],
+) => {
+	const messages = groupMessagesMap.get(groupId);
+	if (!Array.isArray(messages) || messages.length === 0) {
+		groupMessagesMap.set(groupId, initialMessages);
+		return initialMessages;
+	}
+	return messages;
 };
