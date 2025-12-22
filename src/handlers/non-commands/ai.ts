@@ -1,4 +1,4 @@
-import { fetcher, timeLog, to } from "@nickyzj2023/utils";
+import { fetcher, imageUrlToBase64, timeLog, to } from "@nickyzj2023/utils";
 import {
 	getIDSystemPrompt as getIdentitySystemPrompt,
 	IMAGE_UNDERSTANDING_PROMPT,
@@ -16,17 +16,6 @@ import type {
 import { readGroupMessages } from "../../utils/data";
 import { reply } from "../../utils/onebot";
 import { textToMessage } from "../../utils/openai";
-
-// ================================
-// 待抽离到 utils 的代码
-// ================================
-
-export async function imageUrlToBase64(imageUrl: string) {
-	const response = await fetch(imageUrl);
-	const imageArrayBuffer = await response.arrayBuffer();
-	const base64ImageData = Buffer.from(imageArrayBuffer).toString("base64");
-	return `data:image/jpeg;base64,${base64ImageData}`;
-}
 
 // ================================
 // 模型定义相关逻辑
@@ -91,22 +80,6 @@ const specialModels = [
 				},
 			},
 		} satisfies Model),
-	Bun.env.GEMINI_API_KEY &&
-		({
-			name: "Gemini",
-			aliases: ["gemini"],
-			useCase: "image-understanding",
-			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-			apiKey: Bun.env.GEMINI_API_KEY,
-			model: "gemini-2.5-flash",
-			maxTokens: 1000 * 1000, // 100w
-			extraBody: {
-				reasoning_effort: "none",
-			},
-			extraOptions: {
-				proxy: "http://127.0.0.1:7890",
-			},
-		} satisfies Model),
 ].filter(Boolean) as Model[];
 
 /** 当前模型，默认取 models 第一个 */
@@ -151,8 +124,16 @@ const chatCompletions = async (
 		);
 	}
 
-	const [error, response] = await to(
-		fetcher(model.baseUrl).post<OpenAIResponse>(
+	const [error, response] = await to<
+		OpenAIResponse,
+		{
+			error: {
+				code: string;
+				message: string;
+			};
+		}
+	>(
+		fetcher(model.baseUrl).post(
 			"/chat/completions",
 			{
 				model: model.model,
@@ -168,7 +149,7 @@ const chatCompletions = async (
 		),
 	);
 	if (error) {
-		throw new Error(error.message);
+		throw new Error(error.error.message);
 	}
 
 	const { content } = response.choices[0]?.message ?? {};
@@ -270,16 +251,27 @@ const summarize = async (messages: ChatCompletionMessage[]) => {
  * @see https://docs.bigmodel.cn/api-reference/%E6%A8%A1%E5%9E%8B-api/%E5%AF%B9%E8%AF%9D%E8%A1%A5%E5%85%A8#%E5%9B%BE%E7%89%87
  */
 const imageToText = async (image: ImageSegment["data"]) => {
-	console.log(image);
 	const model = specialModels.find(
 		(model) => model.useCase === "image-understanding",
 	);
 	if (!model) {
 		throw new Error("请先配置一个图片理解模型");
 	}
-	// 把图片地址转成 base64，因为部分模型无法直接访问外部链接
-	const imageUrl = image.url;
-	const base64 = await imageUrlToBase64(imageUrl);
+
+	const [error, base64] = await to<
+		string,
+		{
+			retcode: number;
+			retmsg: string;
+			retryflag: number;
+		}
+	>(imageUrlToBase64(image.url));
+	if (error) {
+		throw new Error(error.retmsg);
+	}
+	if (base64.includes("image/gif;base64")) {
+		throw new Error("不支持动图");
+	}
 
 	const content = await chatCompletions(
 		[

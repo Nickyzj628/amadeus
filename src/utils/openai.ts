@@ -26,11 +26,14 @@ export const textToMessage = (
 
 /**
  * 把消息格式从 OneBot 转成 OpenAI API
- *
- * @remarks
- * 保证返回的是 Promise<ChatCompletionMessage[]>，不会向外抛出错误
  */
-export const onebotToOpenai = async (e: GroupMessageEvent) => {
+export const onebotToOpenai = async (
+	e: GroupMessageEvent,
+	options?: {
+		/** 是否使用视觉模型，把图片翻译为自然语言 */
+		enableImageUnderstanding: boolean;
+	},
+) => {
 	const messages: ChatCompletionInputMessage[] = [];
 	const identity = `${e.sender.nickname}(@${e.sender.user_id})`;
 
@@ -42,15 +45,15 @@ export const onebotToOpenai = async (e: GroupMessageEvent) => {
 			messages.push(textToMessage(text));
 		}
 		// 图片
-		else if (isImageSegment(segment)) {
+		else if (isImageSegment(segment) && options?.enableImageUnderstanding) {
 			const [error, imageDesc] = await to(ai.imageToText(segment.data));
 			if (error) {
-				timeLog(`识别图片失败：${error.message}`);
-				continue;
+				throw new Error(error.message);
 			}
 			messages.push(
 				textToMessage(`${identity}：${prefix}【IMAGE_PARSED】${imageDesc}`),
 			);
+			timeLog(`识别了一张图片：${imageDesc}`);
 		}
 		// @某人
 		else if (isAtSegment(segment)) {

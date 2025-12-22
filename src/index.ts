@@ -1,4 +1,4 @@
-import { timeLog } from "@nickyzj2023/utils";
+import { timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { handleCommand } from "./handlers/commands";
 import { handleMessages } from "./handlers/non-commands";
@@ -45,8 +45,15 @@ const server = Bun.serve({
 					}
 				}
 
-				// 处理图文消息后，丢给聊天模型
-				const messages = await onebotToOpenai(e);
+				// 处理图文消息
+				const [error, messages] = await to(
+					onebotToOpenai(e, {
+						enableImageUnderstanding: true,
+					}),
+				);
+				if (error) {
+					return reply(`消息解析失败：${error.message}`);
+				}
 				return handleMessages(messages, e);
 			},
 		},
