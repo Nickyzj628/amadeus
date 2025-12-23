@@ -1,7 +1,7 @@
-import { timeLog, to } from "@nickyzj2023/utils";
+import { timeLog } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { handleCommand } from "./handlers/commands";
-import { handleMessages } from "./handlers/non-commands";
+import { handleText } from "./handlers/non-commands";
 import { GroupMessageEventSchema } from "./schemas/onebot/http-post";
 import {
 	isAtSelfSegment,
@@ -9,10 +9,9 @@ import {
 	reply,
 	textSegmentToCommand,
 } from "./utils/onebot";
-import { onebotToOpenai } from "./utils/openai";
 
 /** 机器人 QQ 号 */
-export let selfId = Number(Bun.env.SELF_ID);
+export let selfId = 0;
 
 const server = Bun.serve({
 	port: 8210,
@@ -50,16 +49,8 @@ const server = Bun.serve({
 					}
 				}
 
-				// 先转成 OpenAI API 格式，再处理消息
-				const [error, messages] = await to(
-					onebotToOpenai(e, {
-						enableImageUnderstanding: true,
-					}),
-				);
-				if (error) {
-					return reply(`消息解析失败：${error.message}`);
-				}
-				return handleMessages(messages, e);
+				// 处理文本
+				return handleText(e);
 			},
 		},
 	},
