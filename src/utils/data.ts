@@ -1,5 +1,3 @@
-// --- 数据库相关工具 ---
-
 import { timeLog } from "@nickyzj2023/utils";
 import type { GroupMessageEvent } from "../schemas/onebot/http-post";
 import type { ChatCompletionMessage } from "../schemas/openai";

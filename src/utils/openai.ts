@@ -1,8 +1,6 @@
-// --- OpenAI API 消息相关工具 ---
-
 import { timeLog, to } from "@nickyzj2023/utils";
 import ai from "../handlers/non-commands/ai";
-import type { GroupMessageEvent } from "../schemas/onebot/http-post";
+import type { MinimalMessageEvent } from "../schemas/onebot/http-post";
 import type { ChatCompletionInputMessage } from "../schemas/openai";
 import {
 	flattenForwardSegment,
@@ -13,6 +11,7 @@ import {
 	isTextSegment,
 } from "./onebot";
 
+/** 构造 OpenAI API 消息对象 */
 export const textToMessage = (
 	text: string,
 	args?: Partial<Omit<ChatCompletionInputMessage, "content">>,
@@ -28,9 +27,9 @@ export const textToMessage = (
  * 把消息格式从 OneBot 转成 OpenAI API
  */
 export const onebotToOpenai = async (
-	e: GroupMessageEvent,
+	e: MinimalMessageEvent,
 	options?: {
-		/** 是否使用视觉模型，把图片翻译为自然语言 */
+		/** 是否调用视觉模型，把图片翻译为自然语言 */
 		enableImageUnderstanding: boolean;
 	},
 ) => {
@@ -41,7 +40,7 @@ export const onebotToOpenai = async (
 	for (const segment of e.message) {
 		// 文字
 		if (isTextSegment(segment)) {
-			const text = `${identity}：${prefix}${segment.data.text.trim()}`;
+			const text = `${identity}：${prefix}${segment.data.text}`;
 			messages.push(textToMessage(text));
 		}
 		// 图片
@@ -62,17 +61,18 @@ export const onebotToOpenai = async (
 		// 合并转发
 		else if (isForwardSegment(segment)) {
 			const forwaredMessages = await flattenForwardSegment(segment.data.id, {
-				processMessage: (message) => {
-					const identity = `${message.sender.nickname}(@${message.sender.user_id})`;
-					const text = `${identity}：${message.segment.data.text.trim()}`;
-					return textToMessage(text, {
-						role: isAtSelfSegment(segment, e) ? "assistant" : "user",
-					});
-				},
+				// processMessage: (message) => {
+				// 	const identity = `${message.sender.nickname}(@${message.sender.user_id})`;
+				// 	const text = `${identity}：${message.segment.data.text}`;
+				// 	return textToMessage(text, {
+				// 		role: isAtSelfSegment(segment, e) ? "assistant" : "user",
+				// 	});
+				// },
 			});
 			messages.push(...forwaredMessages);
 		}
 	}
 
+	timeLog(JSON.stringify(messages, null, 2));
 	return messages;
 };

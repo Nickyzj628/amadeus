@@ -1,5 +1,7 @@
-// --- HTTP POST 相关类型，用于接收消息 ---
+// ================================
+// HTTP POST 相关类型，用于接收消息
 // @see https://github.com/botuniverse/onebot-11/blob/master/event/message.md
+// ================================
 
 import {
 	array,
@@ -42,6 +44,17 @@ export const ForwardSegmentSchema = object({
 });
 export type ForwardSegment = InferOutput<typeof ForwardSegmentSchema>;
 
+/** 回复消息 */
+export const ReplySegmentSchema = object({
+	type: literal("reply"),
+	data: object({
+		/** 回复的消息 ID，需通过 get_msg API 获取具体内容 */
+		id: string(),
+	}),
+});
+export type ReplySegment = InferOutput<typeof ReplySegmentSchema>;
+
+/** 图片消息 */
 export const ImageSegmentSchema = object({
 	type: literal("image"),
 	data: object({
@@ -58,6 +71,7 @@ export const SegmentSchema = union([
 	TextSegmentSchema,
 	AtSegmentSchema,
 	ForwardSegmentSchema,
+	ReplySegmentSchema,
 	ImageSegmentSchema,
 ]);
 export type Segment = InferOutput<typeof SegmentSchema>;
@@ -88,13 +102,20 @@ export const GroupMessageEventSchema = object({
 		array(SegmentSchema),
 		// 过滤掉空文本消息
 		transform((segments) =>
-			segments.filter(
-				(segment) =>
-					!(segment.type === "text" && segment.data.text.trim() === ""),
-			),
+			segments
+				.map((segment) => {
+					if (segment.type === "text") {
+						segment.data.text = segment.data.text.trim();
+					}
+					return segment;
+				})
+				.filter(
+					(segment) => !(segment.type === "text" && segment.data.text === ""),
+				),
 		),
 	),
 	/** 发送人信息 */
 	sender: SenderSchema,
 });
 export type GroupMessageEvent = InferOutput<typeof GroupMessageEventSchema>;
+export type MinimalMessageEvent = Pick<GroupMessageEvent, "message" | "sender">;

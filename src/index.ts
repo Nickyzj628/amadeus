@@ -5,12 +5,14 @@ import { handleMessages } from "./handlers/non-commands";
 import { GroupMessageEventSchema } from "./schemas/onebot/http-post";
 import {
 	isAtSelfSegment,
-	isImageSegment,
 	isTextSegment,
 	reply,
 	textSegmentToCommand,
 } from "./utils/onebot";
 import { onebotToOpenai } from "./utils/openai";
+
+/** 机器人 QQ 号 */
+export let selfId = Number(Bun.env.SELF_ID);
 
 const server = Bun.serve({
 	port: 8210,
@@ -24,17 +26,20 @@ const server = Bun.serve({
 					return reply();
 				}
 				const e = validation.output;
+				if (!selfId) {
+					selfId = e.self_id;
+				}
 
-				// 拦截不是“@机器人 <图文>”的消息
-				const [segment1, ...restSegments] = e.message;
-				if (!isAtSelfSegment(segment1, e) || restSegments.length === 0) {
+				// 拦截不是“(<回复/图文>) @机器人 <图文>”的消息
+				const atSegmentIndex = e.message.findIndex((segment) =>
+					isAtSelfSegment(segment),
+				);
+				if (atSegmentIndex === -1) {
 					return reply();
 				}
-				const hasUnsupportedSegment = restSegments.some(
-					(segment) => !isTextSegment(segment) && !isImageSegment(segment),
-				);
-				if (hasUnsupportedSegment) {
-					return reply("不支持的消息类型，目前只支持文字和图片");
+				const restSegments = e.message.toSpliced(atSegmentIndex, 1);
+				if (restSegments.length === 0) {
+					return reply();
 				}
 
 				// 优先处理指令
@@ -45,7 +50,7 @@ const server = Bun.serve({
 					}
 				}
 
-				// 处理图文消息
+				// 先转成 OpenAI API 格式，再处理消息
 				const [error, messages] = await to(
 					onebotToOpenai(e, {
 						enableImageUnderstanding: true,

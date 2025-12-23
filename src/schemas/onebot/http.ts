@@ -1,8 +1,11 @@
-// --- HTTP 相关类型，用于主动发请求 ---
+// ================================
+// HTTP 相关类型，用于主动发请求
+// @see https://api.luckylillia.com/doc-5416163
+// ================================
 
 import { array, type InferOutput, number, object, string } from "valibot";
 import {
-	type Segment,
+	GroupMessageEventSchema,
 	SegmentSchema,
 	type Sender,
 	SenderSchema,
@@ -31,9 +34,19 @@ export type GetForwardMessageResponse = InferOutput<
 >;
 export type ForwardMessage =
 	GetForwardMessageResponse["data"]["messages"][number];
+
 export type ForwardMessageSingle = {
 	/** 暂时只支持纯文本消息段 */
 	segment: TextSegment;
 	sender: Sender;
 	time: number;
 };
+
+/** POST /get_msg 返回结果 */
+export const GetMessageResponseSchema = object({
+	status: string(),
+	retCode: number(),
+	message: string(),
+	data: GroupMessageEventSchema,
+});
+export type GetMessageResponse = InferOutput<typeof GetMessageResponseSchema>;
