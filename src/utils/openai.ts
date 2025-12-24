@@ -52,7 +52,9 @@ export const onebotToOpenai = async (
 	e: MinimalMessageEvent,
 	options?: {
 		/** 是否调用视觉模型，把图片翻译为自然语言 */
-		enableImageUnderstanding: boolean;
+		enableImageUnderstanding?: boolean;
+		/** 每条转发消息允许递归获取的消息数 */
+		forwardCount?: number;
 	},
 ) => {
 	const messages: ChatCompletionInputMessage[] = [];
@@ -83,6 +85,7 @@ export const onebotToOpenai = async (
 		// 合并转发
 		else if (isForwardSegment(segment)) {
 			const forwaredMessages = await flattenForwardSegment(segment.data.id, {
+				count: options?.forwardCount,
 				processMessageEvent: async (e) => {
 					return await onebotToOpenai(e);
 				},

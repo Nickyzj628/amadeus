@@ -3,6 +3,7 @@ import { safeParse } from "valibot";
 import { GetForwardMessageResponseSchema } from "@/schemas/onebot/http";
 import type {
 	AtSegment,
+	CommonSegment,
 	ForwardSegment,
 	ImageSegment,
 	MinimalMessageEvent,
@@ -11,26 +12,28 @@ import type {
 } from "@/schemas/onebot/http-post";
 import { selfId } from "..";
 
-const http = fetcher(`http://127.0.0.1:${Bun.env.ONEBOT_HTTP_PORT}`);
+export const http = fetcher(`http://127.0.0.1:${Bun.env.ONEBOT_HTTP_PORT}`);
 
 // ================================
 // 消息段相关工具
 // ================================
 
 /** 是否为@某人的消息段 */
-export const isAtSegment = (segment?: Segment): segment is AtSegment => {
+export const isAtSegment = (segment?: CommonSegment): segment is AtSegment => {
 	return !isNil(segment) && segment.type === "at";
 };
 
 /** 是否为@当前机器人的消息段 */
 export const isAtSelfSegment = (
-	segment: Segment | undefined,
+	segment?: CommonSegment,
 ): segment is AtSegment => {
 	return isAtSegment(segment) && Number(segment.data.qq) === selfId;
 };
 
 /** 是否为纯文本消息段 */
-export const isTextSegment = (segment?: Segment): segment is TextSegment => {
+export const isTextSegment = (
+	segment?: CommonSegment,
+): segment is TextSegment => {
 	return !isNil(segment) && segment.type === "text";
 };
 
@@ -52,7 +55,9 @@ export const textToSegment = (text: string): TextSegment => ({
 });
 
 /** 是否为合并转发消息段 */
-export const isForwardSegment = (segment?: Segment) => {
+export const isForwardSegment = (
+	segment?: CommonSegment,
+): segment is ForwardSegment => {
 	return !isNil(segment) && segment.type === "forward";
 };
 
@@ -62,7 +67,7 @@ export const flattenForwardSegment = async <T = Segment>(
 	options?: {
 		/** 把消息转换成期望的类型 */
 		processMessageEvent?: (e: MinimalMessageEvent) => Promise<T[]>;
-		/** 递归展开的消息数量，默认 100 */
+		/** 递归展开的消息数量，默认 50 */
 		count?: number;
 	},
 ): Promise<T[]> => {
@@ -71,7 +76,7 @@ export const flattenForwardSegment = async <T = Segment>(
 		processMessageEvent = (async (e) => e.message) as (
 			e: MinimalMessageEvent,
 		) => Promise<T[]>,
-		count = 100,
+		count = 50,
 	} = options ?? {};
 
 	/** 递归查询转发消息详情 */
@@ -131,7 +136,9 @@ export const flattenForwardSegment = async <T = Segment>(
 };
 
 /** 是否为图片消息段 */
-export const isImageSegment = (segment?: Segment): segment is ImageSegment => {
+export const isImageSegment = (
+	segment?: CommonSegment,
+): segment is ImageSegment => {
 	return !isNil(segment) && segment.type === "image";
 };
 

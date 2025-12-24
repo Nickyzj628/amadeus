@@ -13,9 +13,16 @@ import {
 	string,
 	transform,
 	union,
+	unknown,
 } from "valibot";
+import {
+	isAtSegment,
+	isForwardSegment,
+	isImageSegment,
+	isTextSegment,
+} from "@/utils/onebot";
 
-/** 纯文本消息 */
+/** 纯文本消息段 */
 export const TextSegmentSchema = object({
 	type: literal("text"),
 	data: object({
@@ -24,7 +31,7 @@ export const TextSegmentSchema = object({
 });
 export type TextSegment = InferOutput<typeof TextSegmentSchema>;
 
-/** @某人消息 */
+/** @某人消息段 */
 export const AtSegmentSchema = object({
 	type: literal("at"),
 	data: object({
@@ -34,7 +41,7 @@ export const AtSegmentSchema = object({
 });
 export type AtSegment = InferOutput<typeof AtSegmentSchema>;
 
-/** 合并转发消息 */
+/** 合并转发消息段 */
 export const ForwardSegmentSchema = object({
 	type: literal("forward"),
 	data: object({
@@ -44,17 +51,7 @@ export const ForwardSegmentSchema = object({
 });
 export type ForwardSegment = InferOutput<typeof ForwardSegmentSchema>;
 
-/** 回复消息 */
-export const ReplySegmentSchema = object({
-	type: literal("reply"),
-	data: object({
-		/** 回复的消息 ID，需通过 get_msg API 获取具体内容 */
-		id: string(),
-	}),
-});
-export type ReplySegment = InferOutput<typeof ReplySegmentSchema>;
-
-/** 图片消息 */
+/** 图片消息段 */
 export const ImageSegmentSchema = object({
 	type: literal("image"),
 	data: object({
@@ -66,12 +63,18 @@ export const ImageSegmentSchema = object({
 });
 export type ImageSegment = InferOutput<typeof ImageSegmentSchema>;
 
-/** 消息段联合 */
+/** 通用消息段联合 */
+export const CommonSegmentSchema = object({
+	type: string(),
+	data: unknown(),
+});
+export type CommonSegment = InferOutput<typeof CommonSegmentSchema>;
+
+/** 当前代码支持的消息段联合 */
 export const SegmentSchema = union([
 	TextSegmentSchema,
 	AtSegmentSchema,
 	ForwardSegmentSchema,
-	ReplySegmentSchema,
 	ImageSegmentSchema,
 ]);
 export type Segment = InferOutput<typeof SegmentSchema>;
@@ -99,19 +102,24 @@ export const GroupMessageEventSchema = object({
 	message_id: number(),
 	/** 消息段数组 */
 	message: pipe(
-		array(SegmentSchema),
-		// 过滤掉空文本消息
+		array(CommonSegmentSchema),
+		// 过滤不支持的消息段类型和空文本消息
 		transform((segments) =>
-			segments
-				.map((segment) => {
-					if (segment.type === "text") {
-						segment.data.text = segment.data.text.trim();
-					}
-					return segment;
-				})
-				.filter(
-					(segment) => !(segment.type === "text" && segment.data.text === ""),
-				),
+			segments.filter((segment) => {
+				if (
+					!isTextSegment(segment) &&
+					!isAtSegment(segment) &&
+					!isForwardSegment(segment) &&
+					!isImageSegment(segment)
+				) {
+					return false;
+				}
+				if (isTextSegment(segment)) {
+					segment.data.text = segment.data.text.trim();
+					return segment.data.text !== "";
+				}
+				return true;
+			}),
 		),
 	),
 	/** 发送人信息 */

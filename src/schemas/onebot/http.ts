@@ -7,12 +7,10 @@ import { array, type InferOutput, number, object, string } from "valibot";
 import {
 	GroupMessageEventSchema,
 	SegmentSchema,
-	type Sender,
 	SenderSchema,
-	type TextSegment,
 } from "./http-post";
 
-/** POST /get_forawrd_msg 返回结果 */
+/** POST /get_forawrd_msg 结果 */
 export const GetForwardMessageResponseSchema = object({
 	status: string(),
 	retCode: number(),
@@ -35,7 +33,7 @@ export type GetForwardMessageResponse = InferOutput<
 export type ForwardMessage =
 	GetForwardMessageResponse["data"]["messages"][number];
 
-/** POST /get_msg 返回结果 */
+/** POST /get_msg 结果 */
 export const GetMessageResponseSchema = object({
 	status: string(),
 	retCode: number(),
@@ -43,3 +41,16 @@ export const GetMessageResponseSchema = object({
 	data: GroupMessageEventSchema,
 });
 export type GetMessageResponse = InferOutput<typeof GetMessageResponseSchema>;
+
+/** POST /get_group_msg_history 结果 */
+export const GetMessageHistoryResponseSchema = object({
+	status: string(),
+	retCode: number(),
+	message: string(),
+	data: object({
+		messages: array(GroupMessageEventSchema),
+	}),
+});
+export type GetMessageHistoryResponse = InferOutput<
+	typeof GetMessageHistoryResponseSchema
+>;
