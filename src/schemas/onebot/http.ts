@@ -13,7 +13,7 @@ import {
 /** POST /get_forawrd_msg 结果 */
 export const GetForwardMessageResponseSchema = object({
 	status: string(),
-	retCode: number(),
+	retcode: number(),
 	message: string(),
 	data: object({
 		messages: array(
@@ -33,19 +33,10 @@ export type GetForwardMessageResponse = InferOutput<
 export type ForwardMessage =
 	GetForwardMessageResponse["data"]["messages"][number];
 
-/** POST /get_msg 结果 */
-export const GetMessageResponseSchema = object({
-	status: string(),
-	retCode: number(),
-	message: string(),
-	data: GroupMessageEventSchema,
-});
-export type GetMessageResponse = InferOutput<typeof GetMessageResponseSchema>;
-
 /** POST /get_group_msg_history 结果 */
 export const GetMessageHistoryResponseSchema = object({
 	status: string(),
-	retCode: number(),
+	retcode: number(),
 	message: string(),
 	data: object({
 		messages: array(GroupMessageEventSchema),

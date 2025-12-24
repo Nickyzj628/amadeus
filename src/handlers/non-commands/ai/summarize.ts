@@ -1,7 +1,10 @@
 import { camelToSnake, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { SUMMARIZE_SYSTEM_PROMPT } from "@/constants";
-import { GetMessageHistoryResponseSchema } from "@/schemas/onebot/http";
+import {
+	type GetMessageHistoryResponse,
+	GetMessageHistoryResponseSchema,
+} from "@/schemas/onebot/http";
 import type { ChatCompletionInputMessage } from "@/schemas/openai";
 import { http } from "@/utils/onebot";
 import { onebotToOpenai } from "@/utils/openai";
@@ -16,7 +19,7 @@ const summarize = async (
 	},
 ) => {
 	// 获取群历史消息
-	const [error, response] = await to(
+	const [error, response] = await to<GetMessageHistoryResponse>(
 		http.post("/get_group_msg_history", {
 			[camelToSnake("groupId")]: groupId,
 			count: options?.count,
