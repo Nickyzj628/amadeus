@@ -1,25 +1,8 @@
-import { fetcher, imageUrlToBase64, timeLog, to } from "@nickyzj2023/utils";
-import {
-	getIDSystemPrompt as getIdentitySystemPrompt,
-	IMAGE_UNDERSTANDING_PROMPT,
-	SYSTEM_PROMPT,
-} from "../../constants";
-import type {
-	GroupMessageEvent,
-	ImageSegment,
-} from "../../schemas/onebot/http-post";
-import type {
-	ChatCompletionMessage,
-	Model,
-	OpenAIResponse,
-} from "../../schemas/openai";
-import { readGroupMessages } from "../../utils/data";
-import { reply } from "../../utils/onebot";
-import { textToMessage } from "../../utils/openai";
-
-// ================================
-// 模型定义相关逻辑
-// ================================
+import type { GroupMessageEvent } from "@/schemas/onebot/http-post";
+import type { Model } from "@/schemas/openai";
+import { reply } from "@/utils/onebot";
+import chat from "./chat";
+import summarize from "./summarize";
 
 /** 聊天模型列表，必须兼容 OpenAI API */
 const models = [
@@ -29,7 +12,7 @@ const models = [
 			aliases: ["chatglm", "glm"],
 			baseUrl: "https://open.bigmodel.cn/api/paas/v4",
 			apiKey: Bun.env.GLM_API_KEY,
-			model: "glm-4.6",
+			model: "glm-4.7",
 			maxTokens: 200 * 1000, // 200k
 			extraBody: {
 				thinking: {
@@ -102,202 +85,32 @@ const changeModel = (nameOrAlias = "") => {
 	return activeModel;
 };
 
-// ================================
-// 聊天相关逻辑
-// ================================
-
 /** 正在生成消息的群号 */
 let pendingGroupIds: number[] = [];
 
-/**
- * 调用 /chat-completions 接口，返回模型生成的文本
- * @param messages 如果传入的消息列表过长，会在请求后自动清理
- * @param model 默认使用当前模型，也可以手动指定
- */
-const chatCompletions = async (
-	messages: ChatCompletionMessage[],
-	model: Model | undefined = activeModel,
-) => {
-	if (!model) {
-		throw new Error(
-			"当前没有运行中的模型，@我并输入“/模型 <模型名称>”启用一个",
-		);
-	}
-
-	const [error, response] = await to<
-		OpenAIResponse,
-		{
-			error: {
-				code: string;
-				message: string;
-			};
-		}
-	>(
-		fetcher(model.baseUrl).post(
-			"/chat/completions",
-			{
-				model: model.model,
-				messages,
-				...model.extraBody,
-			},
-			{
-				headers: {
-					Authorization: `Bearer ${model.apiKey}`,
-				},
-				...model.extraOptions,
-			},
-		),
-	);
-	if (error) {
-		throw new Error(error.error.message);
-	}
-
-	const { content } = response.choices[0]?.message ?? {};
-	if (!content) {
-		throw new Error("生成的消息为空，快找群主排查！");
-	}
-
-	// 如果当前对话上下文 token 超过最大限制，则保留一半
-	const { total_tokens = 0 } = response.usage ?? {};
-	if (total_tokens >= model.maxTokens) {
-		const systemPrompts = messages.filter(
-			(message) => message.role === "system",
-		);
-
-		messages.splice(0, Math.floor(messages.length / 2));
-		if (systemPrompts.length > 0) {
-			messages.unshift(...systemPrompts);
-		}
-		timeLog("AI聊天上下文过长，已清理前半段消息");
-	}
-
-	return content as string;
-};
-
-/** 参与群聊 */
-const chat = async (
-	messages: ChatCompletionMessage[],
-	e: GroupMessageEvent,
-) => {
+/** 根据指定场景（chat、summarize、...）生成回复内容 */
+const handle = async (scene: "chat" | "summarize", e: GroupMessageEvent) => {
 	const groupId = e.group_id;
 	if (pendingGroupIds.includes(groupId)) {
-		throw new Error("正在处理上一条消息，请稍候……");
+		return reply("正在处理上一条消息，请稍候……");
 	}
-
-	const groupMessages = readGroupMessages(groupId, [
-		{
-			role: "system",
-			content: SYSTEM_PROMPT,
-		},
-		{
-			role: "system",
-			content: getIdentitySystemPrompt(e.self_id),
-		},
-	]);
-	groupMessages.push(...messages);
-
 	pendingGroupIds.push(groupId);
-	const [error, response] = await to(chatCompletions(groupMessages));
+
+	let text = "";
+	if (scene === "chat") {
+		text = await chat(e);
+	}
+	if (scene === "summarize") {
+		text = await summarize(groupId);
+	}
 	pendingGroupIds = pendingGroupIds.filter((id) => id !== groupId);
-
-	if (error) {
-		messages.pop();
-		return reply(`消息生成失败：${error.message}`);
-	}
-
-	groupMessages.push(
-		textToMessage(response, {
-			role: "assistant",
-		}),
-	);
-	return reply(response);
-};
-
-/** 归纳总结传入的消息列表 */
-const summarize = async (messages: ChatCompletionMessage[]) => {
-	return reply("施工中……");
-	// if (pendingGroupIds.includes(groupId)) {
-	// 	throw new Error("正在处理上一条消息，请稍候……");
-	// }
-	// pendingGroupIds.push(groupId);
-
-	// const messages = readGroupFullMessages(groupId);
-	// if (messages.length === 0) {
-	// 	throw new Error("没有可以总结的消息");
-	// }
-
-	// const [error, content] = await to(
-	// 	chatCompletions([
-	// 		{ role: "system", content: SUMMARIZE_SYSTEM_PROMPT },
-	// 		...messages.slice(-100),
-	// 	]),
-	// );
-	// pendingGroupIds = pendingGroupIds.filter((id) => id !== groupId);
-
-	// if (error) {
-	// 	return reply(`总结失败：${error.message}`);
-	// }
-
-	// return reply(content);
-};
-
-// ================================
-// 非直接回复群聊的工具函数
-// ================================
-
-/**
- * 把图片识别成自然语言
- * @param image 图片消息段里的 data 对象
- * @see https://docs.bigmodel.cn/api-reference/%E6%A8%A1%E5%9E%8B-api/%E5%AF%B9%E8%AF%9D%E8%A1%A5%E5%85%A8#%E5%9B%BE%E7%89%87
- */
-const imageToText = async (image: ImageSegment["data"]) => {
-	const model = specialModels.find(
-		(model) => model.useCase === "image-understanding",
-	);
-	if (!model) {
-		throw new Error("请先配置一个图片理解模型");
-	}
-
-	const [error, base64] = await to<
-		string,
-		{
-			retcode: number;
-			retmsg: string;
-			retryflag: number;
-		}
-	>(imageUrlToBase64(image.url));
-	if (error) {
-		throw new Error(error.retmsg);
-	}
-	if (base64.includes("image/gif;base64")) {
-		throw new Error("不支持动图");
-	}
-
-	const content = await chatCompletions(
-		[
-			{
-				role: "user",
-				content: [
-					{
-						type: "text",
-						text: IMAGE_UNDERSTANDING_PROMPT,
-					},
-					{ type: "image_url", image_url: { url: base64 } },
-				],
-			},
-		],
-		model,
-	);
-	return content;
+	return reply(text);
 };
 
 export default {
 	models,
+	specialModels,
 	activeModel,
 	changeModel,
-
-	chat,
-	summarize,
-
-	imageToText,
+	handle,
 };

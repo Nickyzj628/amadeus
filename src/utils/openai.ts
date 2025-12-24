@@ -1,15 +1,34 @@
 import { timeLog, to } from "@nickyzj2023/utils";
-import ai from "../handlers/non-commands/ai";
-import type { MinimalMessageEvent } from "../schemas/onebot/http-post";
-import type { ChatCompletionInputMessage } from "../schemas/openai";
+import { imageToText } from "@/handlers/non-commands/ai/utils";
+import type { MinimalMessageEvent } from "@/schemas/onebot/http-post";
+import type { ChatCompletionInputMessage } from "@/schemas/openai";
 import {
 	flattenForwardSegment,
 	isAtSegment,
-	isAtSelfSegment,
 	isForwardSegment,
 	isImageSegment,
 	isTextSegment,
 } from "./onebot";
+
+/** 和机器人相关的消息列表，按群号划分，准备放入 sqlite */
+export const groupMessagesMap = new Map<number, ChatCompletionInputMessage[]>();
+
+/**
+ * 根据群号读取消息数组（仅和机器人相关的）
+ * @param groupId 群号
+ * @param initialMessages 如果群里没有存放消息，则用它来作为初始消息
+ */
+export const readGroupMessages = (
+	groupId: number,
+	initialMessages: ChatCompletionInputMessage[] = [],
+) => {
+	const messages = groupMessagesMap.get(groupId);
+	if (!Array.isArray(messages) || messages.length === 0) {
+		groupMessagesMap.set(groupId, initialMessages);
+		return initialMessages;
+	}
+	return messages;
+};
 
 /** 构造 OpenAI API 消息对象 */
 export const textToMessage = (
@@ -25,6 +44,9 @@ export const textToMessage = (
 
 /**
  * 把消息格式从 OneBot 转成 OpenAI API
+ *
+ * @remarks
+ * 保证安全返回数组
  */
 export const onebotToOpenai = async (
 	e: MinimalMessageEvent,
@@ -45,9 +67,9 @@ export const onebotToOpenai = async (
 		}
 		// 图片
 		else if (isImageSegment(segment) && options?.enableImageUnderstanding) {
-			const [error, imageDesc] = await to(ai.imageToText(segment.data));
+			const [error, imageDesc] = await to(imageToText(segment.data));
 			if (error) {
-				throw new Error(error.message);
+				timeLog(`图片识别失败：${error.message}`);
 			}
 			messages.push(
 				textToMessage(`${identity}：${prefix}【IMAGE_PARSED】${imageDesc}`),
@@ -73,6 +95,5 @@ export const onebotToOpenai = async (
 		}
 	}
 
-	timeLog(JSON.stringify(messages, null, 2));
 	return messages;
 };

@@ -1,11 +1,10 @@
 import { camelToSnake, fetcher, isNil, timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
-import { selfId } from "..";
 import {
 	type ForwardMessage,
 	type GetForwardMessageResponse,
 	GetForwardMessageResponseSchema,
-} from "../schemas/onebot/http";
+} from "@/schemas/onebot/http";
 import type {
 	AtSegment,
 	ForwardSegment,
@@ -13,8 +12,9 @@ import type {
 	MinimalMessageEvent,
 	Segment,
 	TextSegment,
-} from "../schemas/onebot/http-post";
-import type { ChatCompletionInputMessage } from "../schemas/openai";
+} from "@/schemas/onebot/http-post";
+import type { ChatCompletionInputMessage } from "@/schemas/openai";
+import { selfId } from "..";
 import { onebotToOpenai } from "./openai";
 
 const http = fetcher(`http://127.0.0.1:${Bun.env.ONEBOT_HTTP_PORT}`);
@@ -60,11 +60,6 @@ export const textToSegment = (text: string): TextSegment => ({
 /** 是否为合并转发消息段 */
 export const isForwardSegment = (segment?: Segment) => {
 	return !isNil(segment) && segment.type === "forward";
-};
-
-/** 是否为合并转发消息段 */
-export const isReplySegment = (segment?: Segment) => {
-	return !isNil(segment) && segment.type === "reply";
 };
 
 /**
@@ -120,12 +115,17 @@ export const flattenForwardSegment = async <T = ChatCompletionInputMessage>(
 	return resultItems;
 };
 
+/** 是否为合并转发消息段 */
+export const isReplySegment = (segment?: Segment) => {
+	return !isNil(segment) && segment.type === "reply";
+};
+
 /**
  * 递归展开回复的消息
  * @param messageId 回复 ID
  * @param options 可以指定 processMessage 把消息处理成期望的类型，这里的消息是 OpenAI API 格式，别问为什么
  */
-export const flattenForwardSegment = async <T = ChatCompletionInputMessage>(
+export const flattenReplySegment = async <T = ChatCompletionInputMessage>(
 	messageId: ForwardSegment["data"]["id"],
 	options?: {
 		processMessage?: (message: ChatCompletionInputMessage) => T;

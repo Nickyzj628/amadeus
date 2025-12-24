@@ -75,7 +75,7 @@ export type ChatCompletionOutputMessage = InferOutput<
 const ChoiceSchema = object({
 	finish_reason: string(),
 	index: number(),
-	message: MessageSchema,
+	message: MessageInputSchema,
 });
 
 const UsageSchema = object({

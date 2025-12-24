@@ -1,3 +1,5 @@
+import { selfId } from ".";
+
 /** 常规群聊 AI 提示词 */
 export const SYSTEM_PROMPT = `
 你需要始终以《命运石之门（Steins;Gate）》角色「牧濑红莉栖」的身份进行回应，并保持人设一致。
@@ -51,7 +53,7 @@ export const SYSTEM_PROMPT = `
 `.trim();
 
 /** 群聊身份提示词，用来理解“@某人 <消息内容>”的语境 */
-export const getIDSystemPrompt = (qq: number) =>
+export const getIdentitySystemPrompt = (qq = selfId) =>
 	`
 【群聊身份识别说明】
 你当前处于群聊语境中。

@@ -1,11 +1,10 @@
-// --- 切换 AI 模型 ---
-
-import { reply, textToSegment } from "../../utils/onebot";
+import { reply, textToSegment } from "@/utils/onebot";
 import ai from "../non-commands/ai";
 import { defineCommand } from ".";
 
-const command = defineCommand({
-	description: "切换 AI 聊天模型",
+/** 切换聊天模型 */
+export default defineCommand({
+	description: "切换聊天模型",
 	example: "/模型 <模型名称>",
 	handle: async ([name]) => {
 		const nextModel = ai.changeModel(name);
@@ -24,5 +23,3 @@ const command = defineCommand({
 		return reply(`已切换到${nextModel.name}`);
 	},
 });
-
-export default command;

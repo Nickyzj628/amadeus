@@ -1,8 +1,6 @@
-// --- 心知天气 ---
-
 import { fetcher, to } from "@nickyzj2023/utils";
 import { array, object, safeParse, string } from "valibot";
-import { reply, textToSegment } from "../../utils/onebot";
+import { reply, textToSegment } from "@/utils/onebot";
 import { defineCommand } from ".";
 
 const Schema = object({
@@ -50,7 +48,8 @@ const getRelativeDate = (date: string) => {
 	return dates[new Date(date).getDate() - new Date().getDate()] ?? date;
 };
 
-const command = defineCommand({
+/** 心知天气 */
+export default defineCommand({
 	description: "查询城市天气",
 	example: "/天气 <城市名>",
 	async handle([city = "上海"]) {
@@ -99,5 +98,3 @@ const command = defineCommand({
 		);
 	},
 });
-
-export default command;
