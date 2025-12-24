@@ -83,13 +83,9 @@ export const onebotToOpenai = async (
 		// 合并转发
 		else if (isForwardSegment(segment)) {
 			const forwaredMessages = await flattenForwardSegment(segment.data.id, {
-				// processMessage: (message) => {
-				// 	const identity = `${message.sender.nickname}(@${message.sender.user_id})`;
-				// 	const text = `${identity}：${message.segment.data.text}`;
-				// 	return textToMessage(text, {
-				// 		role: isAtSelfSegment(segment, e) ? "assistant" : "user",
-				// 	});
-				// },
+				processMessageEvent: async (e) => {
+					return await onebotToOpenai(e);
+				},
 			});
 			messages.push(...forwaredMessages);
 		}

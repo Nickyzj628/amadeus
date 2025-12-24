@@ -1,10 +1,6 @@
 import { camelToSnake, fetcher, isNil, timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
-import {
-	type ForwardMessage,
-	type GetForwardMessageResponse,
-	GetForwardMessageResponseSchema,
-} from "@/schemas/onebot/http";
+import { GetForwardMessageResponseSchema } from "@/schemas/onebot/http";
 import type {
 	AtSegment,
 	ForwardSegment,
@@ -13,9 +9,7 @@ import type {
 	Segment,
 	TextSegment,
 } from "@/schemas/onebot/http-post";
-import type { ChatCompletionInputMessage } from "@/schemas/openai";
 import { selfId } from "..";
-import { onebotToOpenai } from "./openai";
 
 const http = fetcher(`http://127.0.0.1:${Bun.env.ONEBOT_HTTP_PORT}`);
 
@@ -62,29 +56,31 @@ export const isForwardSegment = (segment?: Segment) => {
 	return !isNil(segment) && segment.type === "forward";
 };
 
-/**
- * 递归展开合并转发的消息
- * @param messageId 合并转发 ID
- * @param options 可以指定 processMessage 把消息处理成期望的类型，这里的消息是 OpenAI API 格式，别问为什么
- */
-export const flattenForwardSegment = async <T = ChatCompletionInputMessage>(
+/** 递归展开合并转发的消息 */
+export const flattenForwardSegment = async <T = Segment>(
 	messageId: ForwardSegment["data"]["id"],
 	options?: {
-		processMessage?: (message: ChatCompletionInputMessage) => T;
+		/** 把消息转换成期望的类型 */
+		processMessageEvent?: (e: MinimalMessageEvent) => Promise<T[]>;
+		/** 递归展开的消息数量，默认 100 */
+		count?: number;
 	},
 ): Promise<T[]> => {
 	const resultItems: T[] = [];
 	const {
-		processMessage = ((message) => message) as (
-			message: ChatCompletionInputMessage,
-		) => T,
+		processMessageEvent = (async (e) => e.message) as (
+			e: MinimalMessageEvent,
+		) => Promise<T[]>,
+		count = 100,
 	} = options ?? {};
 
+	/** 递归查询转发消息详情 */
 	const getForwardMessages = async (
 		messageId: string,
-	): Promise<ForwardMessage[]> => {
+		count: number,
+	): Promise<MinimalMessageEvent[]> => {
 		const [error, response] = await to(
-			http.post<GetForwardMessageResponse>("/get_forward_msg", {
+			http.post("/get_forward_msg", {
 				[camelToSnake("messageId")]: messageId,
 			}),
 		);
@@ -99,75 +95,36 @@ export const flattenForwardSegment = async <T = ChatCompletionInputMessage>(
 			return [];
 		}
 
-		return validation.output.data.messages;
-	};
-	const forwardMessages = await getForwardMessages(messageId);
-
-	// 把消息转换成期望的格式
-	for (const message of forwardMessages) {
-		const e: MinimalMessageEvent = {
-			message: message.content,
-			sender: message.sender,
-		};
-		resultItems.push(...(await onebotToOpenai(e)).map(processMessage));
-	}
-
-	return resultItems;
-};
-
-/** 是否为合并转发消息段 */
-export const isReplySegment = (segment?: Segment) => {
-	return !isNil(segment) && segment.type === "reply";
-};
-
-/**
- * 递归展开回复的消息
- * @param messageId 回复 ID
- * @param options 可以指定 processMessage 把消息处理成期望的类型，这里的消息是 OpenAI API 格式，别问为什么
- */
-export const flattenReplySegment = async <T = ChatCompletionInputMessage>(
-	messageId: ForwardSegment["data"]["id"],
-	options?: {
-		processMessage?: (message: ChatCompletionInputMessage) => T;
-	},
-): Promise<T[]> => {
-	const resultItems: T[] = [];
-	const {
-		processMessage = ((message) => message) as (
-			message: ChatCompletionInputMessage,
-		) => T,
-	} = options ?? {};
-
-	const getForwardMessages = async (
-		messageId: string,
-	): Promise<ForwardMessage[]> => {
-		const [error, response] = await to(
-			http.post<GetForwardMessageResponse>("/get_forward_msg", {
-				[camelToSnake("messageId")]: messageId,
-			}),
+		const result: MinimalMessageEvent[] = [];
+		const restCount = validation.output.data.messages.reduce(
+			(acc, e) => acc - e.content.length,
+			count,
 		);
-		if (error) {
-			timeLog(`查询合并转发消息失败：${error.message}`);
-			return [];
+
+		for (const e of validation.output.data.messages) {
+			const { sender } = e;
+			for (const segment of e.content) {
+				// 递归添加深层转发消息
+				if (isForwardSegment(segment) && restCount > 0) {
+					result.push(
+						...(await getForwardMessages(segment.data.id, restCount)),
+					);
+				}
+				// 添加当前消息
+				else {
+					result.push({ sender, message: [segment] });
+				}
+			}
 		}
 
-		const validation = safeParse(GetForwardMessageResponseSchema, response);
-		if (!validation.success) {
-			timeLog(`解析合并转发消息失败：${validation.issues[0].message}`);
-			return [];
-		}
-
-		return validation.output.data.messages;
+		return result;
 	};
-	const forwardMessages = await getForwardMessages(messageId);
+	const forwardMessages = await getForwardMessages(messageId, count);
 
 	// 把消息转换成期望的格式
-	for (const message of forwardMessages) {
-		const e: MinimalMessageEvent = {
-			message: message.content,
-			sender: message.sender,
-		};
-		resultItems.push(...(await onebotToOpenai(e)).map(processMessage));
+	for (const e of forwardMessages) {
+		const items = await processMessageEvent(e);
+		resultItems.push(...items);
 	}
 
 	return resultItems;

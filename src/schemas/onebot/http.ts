@@ -35,13 +35,6 @@ export type GetForwardMessageResponse = InferOutput<
 export type ForwardMessage =
 	GetForwardMessageResponse["data"]["messages"][number];
 
-export type ForwardMessageSingle = {
-	/** 暂时只支持纯文本消息段 */
-	segment: TextSegment;
-	sender: Sender;
-	time: number;
-};
-
 /** POST /get_msg 返回结果 */
 export const GetMessageResponseSchema = object({
 	status: string(),
