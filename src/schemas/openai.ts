@@ -20,16 +20,23 @@ export type Model = {
 	extraOptions?: Record<string, any>;
 };
 
+export const RoleSchema = union([
+	literal("user"),
+	literal("system"),
+	literal("assistant"),
+	literal("tool"),
+]);
+
 /** 基本的字符串消息，content 为字符串 */
 const BaseMessageSchema = object({
-	role: string(),
+	role: RoleSchema,
 	content: string(),
 });
 export type BaseChatCompletionMessage = InferOutput<typeof BaseMessageSchema>;
 
 /** 多模态消息，content 为对象数组 */
 const MultiMessageSchema = object({
-	role: string(),
+	role: RoleSchema,
 	content: array(
 		union([
 			object({

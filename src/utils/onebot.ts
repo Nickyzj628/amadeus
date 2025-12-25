@@ -10,7 +10,6 @@ import type {
 	Segment,
 	TextSegment,
 } from "@/schemas/onebot/http-post";
-import { selfId } from "..";
 
 export const http = fetcher(`http://127.0.0.1:${Bun.env.ONEBOT_HTTP_PORT}`);
 
@@ -27,7 +26,9 @@ export const isAtSegment = (segment?: CommonSegment): segment is AtSegment => {
 export const isAtSelfSegment = (
 	segment?: CommonSegment,
 ): segment is AtSegment => {
-	return isAtSegment(segment) && Number(segment.data.qq) === selfId;
+	return (
+		isAtSegment(segment) && Number(segment.data.qq) === Number(Bun.env.SELF_ID)
+	);
 };
 
 /** 是否为纯文本消息段 */

@@ -1,5 +1,5 @@
 import { to } from "@nickyzj2023/utils";
-import { getIdentitySystemPrompt, SYSTEM_PROMPT } from "@/constants";
+import { SYSTEM_PROMPT } from "@/constants";
 import type { GroupMessageEvent } from "@/schemas/onebot/http-post";
 import {
 	onebotToOpenai,
@@ -15,10 +15,6 @@ const chat = async (e: GroupMessageEvent) => {
 		{
 			role: "system",
 			content: SYSTEM_PROMPT,
-		},
-		{
-			role: "system",
-			content: getIdentitySystemPrompt(),
 		},
 	]);
 	// 读取当前消息

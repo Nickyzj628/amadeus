@@ -1,6 +1,5 @@
 import { camelToSnake, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
-import { SUMMARIZE_SYSTEM_PROMPT } from "@/constants";
 import {
 	type GetMessageHistoryResponse,
 	GetMessageHistoryResponseSchema,
@@ -48,7 +47,7 @@ const summarize = async (
 	// 丢给模型总结
 	const [error2, content] = await to(
 		chatCompletions([
-			{ role: "system", content: SUMMARIZE_SYSTEM_PROMPT },
+			// { role: "system", content: SUMMARIZE_SYSTEM_PROMPT },
 			...messages,
 		]),
 	);

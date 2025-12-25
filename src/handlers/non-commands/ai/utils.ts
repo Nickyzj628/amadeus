@@ -1,8 +1,8 @@
 import { fetcher, imageUrlToBase64, timeLog, to } from "@nickyzj2023/utils";
-import { IMAGE_UNDERSTANDING_PROMPT } from "@/constants";
+// import { IMAGE_UNDERSTANDING_PROMPT } from "@/constants";
 import type { ImageSegment } from "@/schemas/onebot/http-post";
 import type {
-	ChatCompletionMessage,
+	BaseChatCompletionMessage,
 	Model,
 	OpenAIResponse,
 } from "@/schemas/openai";
@@ -14,7 +14,7 @@ import ai from ".";
  * @param model 默认使用当前模型，也可以手动指定
  */
 export const chatCompletions = async (
-	messages: ChatCompletionMessage[],
+	messages: BaseChatCompletionMessage[],
 	model: Model | undefined = ai.activeModel,
 ) => {
 	if (!model) {
@@ -106,10 +106,10 @@ export const imageToText = async (image: ImageSegment["data"]) => {
 			{
 				role: "user",
 				content: [
-					{
-						type: "text",
-						text: IMAGE_UNDERSTANDING_PROMPT,
-					},
+					// {
+					// 	type: "text",
+					// 	text: IMAGE_UNDERSTANDING_PROMPT,
+					// },
 					{ type: "image_url", image_url: { url: base64 } },
 				],
 			},
