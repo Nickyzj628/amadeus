@@ -1,7 +1,7 @@
 import { timeLog, to } from "@nickyzj2023/utils";
 import { imageToText } from "@/handlers/non-commands/ai/utils";
 import type { MinimalMessageEvent } from "@/schemas/onebot/http-post";
-import type { ChatCompletionInputMessage } from "@/schemas/openai";
+import type { BaseChatCompletionMessage } from "@/schemas/openai";
 import {
 	flattenForwardSegment,
 	isAtSegment,
@@ -11,7 +11,7 @@ import {
 } from "./onebot";
 
 /** 和机器人相关的消息列表，按群号划分，准备放入 sqlite */
-export const groupMessagesMap = new Map<number, ChatCompletionInputMessage[]>();
+export const groupMessagesMap = new Map<number, BaseChatCompletionMessage[]>();
 
 /**
  * 根据群号读取消息数组（仅和机器人相关的）
@@ -20,7 +20,7 @@ export const groupMessagesMap = new Map<number, ChatCompletionInputMessage[]>();
  */
 export const readGroupMessages = (
 	groupId: number,
-	initialMessages: ChatCompletionInputMessage[] = [],
+	initialMessages: BaseChatCompletionMessage[] = [],
 ) => {
 	const messages = groupMessagesMap.get(groupId);
 	if (!Array.isArray(messages) || messages.length === 0) {
@@ -33,9 +33,9 @@ export const readGroupMessages = (
 /** 构造 OpenAI API 消息对象 */
 export const textToMessage = (
 	text: string,
-	args?: Partial<Omit<ChatCompletionInputMessage, "content">>,
+	args?: Partial<Omit<BaseChatCompletionMessage, "content">>,
 ) => {
-	const message: ChatCompletionInputMessage = {
+	const message: BaseChatCompletionMessage = {
 		role: args?.role ?? "user",
 		content: text,
 	};
@@ -57,7 +57,7 @@ export const onebotToOpenai = async (
 		forwardCount?: number;
 	},
 ) => {
-	const messages: ChatCompletionInputMessage[] = [];
+	const messages: BaseChatCompletionMessage[] = [];
 	const identity = `${e.sender.nickname}(@${e.sender.user_id})`;
 
 	let prefix = "";

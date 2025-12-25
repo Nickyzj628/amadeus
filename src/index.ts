@@ -1,5 +1,6 @@
 import { timeLog } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
+import { MODELS } from "./constants";
 import { handleCommand } from "./handlers/commands";
 import { handleText } from "./handlers/non-commands";
 import { GroupMessageEventSchema } from "./schemas/onebot/http-post";
@@ -10,8 +11,11 @@ import {
 	textSegmentToCommand,
 } from "./utils/onebot";
 
-/** 机器人 QQ 号 */
-export let selfId = 0;
+if (!Bun.env.SELF_ID) {
+	throw new Error("请在.env文件中填写机器人QQ号（SELF_ID）");
+}
+
+const model = MODELS[0];
 
 const server = Bun.serve({
 	port: 8210,
@@ -25,9 +29,6 @@ const server = Bun.serve({
 					return reply();
 				}
 				const e = validation.output;
-				if (!selfId) {
-					selfId = e.self_id;
-				}
 
 				// 拦截不是“(<回复/图文>) @机器人 <图文>”的消息
 				const atSegmentIndex = e.message.findIndex((segment) =>

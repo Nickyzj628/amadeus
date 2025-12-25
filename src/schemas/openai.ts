@@ -20,35 +20,15 @@ export type Model = {
 	extraOptions?: Record<string, any>;
 };
 
-const MessageSchema = object({
-	role: string(),
-	content: union([
-		string(),
-		array(
-			union([
-				object({
-					type: literal("text"),
-					text: string(),
-				}),
-				object({
-					type: literal("image_url"),
-					image_url: object({
-						url: string(),
-					}),
-				}),
-			]),
-		),
-	]),
-});
-
-/** 用于输入的消息，content 为字符串 */
-const MessageInputSchema = object({
+/** 基本的字符串消息，content 为字符串 */
+const BaseMessageSchema = object({
 	role: string(),
 	content: string(),
 });
+export type BaseChatCompletionMessage = InferOutput<typeof BaseMessageSchema>;
 
-/** 用于对外发出请求的消息，content 为对象数组 */
-const MessageOutputSchema = object({
+/** 多模态消息，content 为对象数组 */
+const MultiMessageSchema = object({
 	role: string(),
 	content: array(
 		union([
@@ -65,32 +45,59 @@ const MessageOutputSchema = object({
 		]),
 	),
 });
+export type MultiChatCompletionMessage = InferOutput<typeof MultiMessageSchema>;
 
-export type ChatCompletionMessage = InferOutput<typeof MessageSchema>;
-export type ChatCompletionInputMessage = InferOutput<typeof MessageInputSchema>;
-export type ChatCompletionOutputMessage = InferOutput<
-	typeof MessageOutputSchema
->;
-
-const ChoiceSchema = object({
-	finish_reason: string(),
-	index: number(),
-	message: MessageInputSchema,
-});
-
-const UsageSchema = object({
-	completion_tokens: number(),
-	prompt_tokens: number(),
-	total_tokens: number(),
-});
-
+/** OpenAI API 请求返回的对象结构 */
 export const OpenAIResponseSchema = object({
-	choices: array(ChoiceSchema),
+	choices: array(
+		object({
+			finish_reason: string(),
+			index: number(),
+			message: BaseMessageSchema,
+		}),
+	),
 	created: number(),
 	id: string(),
 	model: string(),
 	object: string(),
-	usage: UsageSchema,
+	usage: object({
+		completion_tokens: number(),
+		prompt_tokens: number(),
+		total_tokens: number(),
+	}),
 });
-
 export type OpenAIResponse = InferOutput<typeof OpenAIResponseSchema>;
+
+/**
+ * 模型请求中的工具定义格式
+ */
+export type ToolDefinition = {
+	type: "function";
+	function: {
+		name: string;
+		description?: string;
+		parameters: Record<string, any>;
+	};
+};
+
+/**
+ * 模型返回的调用指令类型
+ */
+export type ToolCall = {
+	id: string;
+	type: "function";
+	function: {
+		name: string;
+		arguments: string; // 注意：API 返回的是 JSON 字符串，需要 JSON.parse()
+	};
+};
+
+/**
+ * 发送回模型的工具执行结果格式
+ */
+export type ToolMessage = {
+	role: "tool";
+	tool_call_id: string;
+	name: string;
+	content: string; // 执行结果必须转为字符串
+};

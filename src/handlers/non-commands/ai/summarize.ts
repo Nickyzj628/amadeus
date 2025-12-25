@@ -5,7 +5,7 @@ import {
 	type GetMessageHistoryResponse,
 	GetMessageHistoryResponseSchema,
 } from "@/schemas/onebot/http";
-import type { ChatCompletionInputMessage } from "@/schemas/openai";
+import type { BaseChatCompletionMessage } from "@/schemas/openai";
 import { http } from "@/utils/onebot";
 import { onebotToOpenai } from "@/utils/openai";
 import { chatCompletions } from "./utils";
@@ -35,7 +35,7 @@ const summarize = async (
 	}
 
 	// 转换成 OpenAI API 消息
-	const messages: ChatCompletionInputMessage[] = [];
+	const messages: BaseChatCompletionMessage[] = [];
 	for (const e of validation.output.data.messages) {
 		messages.push(
 			...(await onebotToOpenai(e, {
