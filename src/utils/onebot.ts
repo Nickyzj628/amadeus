@@ -1,15 +1,15 @@
 import { camelToSnake, fetcher, isNil, timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
-import { GetForwardMessageResponseSchema } from "@/schemas/onebot/http";
-import type {
-	AtSegment,
-	CommonSegment,
-	ForwardSegment,
-	ImageSegment,
-	MinimalMessageEvent,
-	Segment,
-	TextSegment,
-} from "@/schemas/onebot/http-post";
+import {
+	type AtSegment,
+	type CommonSegment,
+	type ForwardSegment,
+	GetForwardMessageResponseSchema,
+	type ImageSegment,
+	type MinimalMessageEvent,
+	type Segment,
+	type TextSegment,
+} from "@/schemas/onebot";
 
 export const http = fetcher(`http://127.0.0.1:${Bun.env.ONEBOT_HTTP_PORT}`);
 

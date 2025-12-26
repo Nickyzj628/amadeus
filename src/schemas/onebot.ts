@@ -1,10 +1,6 @@
-// ================================
-// HTTP POST 相关类型，用于接收消息
-// @see https://github.com/botuniverse/onebot-11/blob/master/event/message.md
-// ================================
-
 import {
 	array,
+	type GenericSchema,
 	type InferOutput,
 	literal,
 	number,
@@ -21,6 +17,11 @@ import {
 	isImageSegment,
 	isTextSegment,
 } from "@/utils/onebot";
+
+// ================================
+// HTTP POST 相关类型，用于接收消息
+// @see https://github.com/botuniverse/onebot-11/blob/master/event/message.md
+// ================================
 
 /** 纯文本消息段 */
 export const TextSegmentSchema = object({
@@ -127,3 +128,50 @@ export const GroupMessageEventSchema = object({
 });
 export type GroupMessageEvent = InferOutput<typeof GroupMessageEventSchema>;
 export type MinimalMessageEvent = Pick<GroupMessageEvent, "message" | "sender">;
+
+// ================================
+// HTTP 相关类型，用于主动发请求
+// @see https://api.luckylillia.com/doc-5416163
+// ================================
+
+/** 创建通用响应 Schema */
+const createResponseSchema = <TSchema extends GenericSchema>(
+	dataSchema: TSchema,
+) => {
+	return object({
+		status: string(),
+		retcode: number(),
+		message: string(),
+		data: dataSchema,
+	});
+};
+
+/** POST /get_forawrd_msg 结果 */
+export const GetForwardMessageResponseSchema = createResponseSchema(
+	object({
+		messages: array(
+			object({
+				content: array(SegmentSchema),
+				sender: SenderSchema,
+				time: number(),
+				message_format: string(),
+				message_type: string(),
+			}),
+		),
+	}),
+);
+export type GetForwardMessageResponse = InferOutput<
+	typeof GetForwardMessageResponseSchema
+>;
+export type ForwardMessage =
+	GetForwardMessageResponse["data"]["messages"][number];
+
+/** POST /get_group_msg_history 结果 */
+export const GetMessageHistoryResponseSchema = createResponseSchema(
+	object({
+		messages: array(GroupMessageEventSchema),
+	}),
+);
+export type GetMessageHistoryResponse = InferOutput<
+	typeof GetMessageHistoryResponseSchema
+>;

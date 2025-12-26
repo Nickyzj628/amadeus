@@ -1,37 +1,29 @@
 import { fetcher, imageUrlToBase64, timeLog, to } from "@nickyzj2023/utils";
-// import { IMAGE_UNDERSTANDING_PROMPT } from "@/constants";
-import type { ImageSegment } from "@/schemas/onebot/http-post";
+import { SPECIAL_MODELS } from "@/constants";
+import { modelRef } from "@/function-calls/changeModel";
+import type { ImageSegment } from "@/schemas/onebot";
 import type {
 	BaseChatCompletionMessage,
-	Model,
+	OpenAIError,
 	OpenAIResponse,
 } from "@/schemas/openai";
-import ai from ".";
 
 /**
- * 调用 /chat-completions 接口，返回模型生成的文本
- * @param messages 如果传入的消息列表过长，会在请求后自动清理
- * @param model 默认使用当前模型，也可以手动指定
+ * OpenAI.chat.completions() 的轻量实现，直接返回模型生成的文本
  */
 export const chatCompletions = async (
 	messages: BaseChatCompletionMessage[],
-	model: Model | undefined = ai.activeModel,
+	options?: {
+		/** 是否在上下文长度超过模型 maxTokens 时自动清理，默认开启 */
+		enableAutoCleanMessages?: boolean;
+	},
 ) => {
+	const { value: model } = modelRef;
 	if (!model) {
-		throw new Error(
-			"当前没有运行中的模型，@我并输入“/模型 <模型名称>”启用一个",
-		);
+		throw new Error("当前没有运行中的模型，@我并输入“切换到XX模型”启用一个");
 	}
 
-	const [error, response] = await to<
-		OpenAIResponse,
-		{
-			error: {
-				code: string;
-				message: string;
-			};
-		}
-	>(
+	const [error, response] = await to<OpenAIResponse, OpenAIError>(
 		fetcher(model.baseUrl).post(
 			"/chat/completions",
 			{
@@ -67,7 +59,7 @@ export const chatCompletions = async (
 		if (systemPrompts.length > 0) {
 			messages.unshift(...systemPrompts);
 		}
-		timeLog("AI聊天上下文过长，已清理前半段消息");
+		timeLog("上下文过长，已清理前半段消息");
 	}
 
 	return content;
@@ -79,7 +71,7 @@ export const chatCompletions = async (
  * @see https://docs.bigmodel.cn/api-reference/%E6%A8%A1%E5%9E%8B-api/%E5%AF%B9%E8%AF%9D%E8%A1%A5%E5%85%A8#%E5%9B%BE%E7%89%87
  */
 export const imageToText = async (image: ImageSegment["data"]) => {
-	const model = ai.specialModels.find(
+	const model = SPECIAL_MODELS.find(
 		(model) => model.useCase === "image-understanding",
 	);
 	if (!model) {
