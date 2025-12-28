@@ -56,11 +56,7 @@ export default {
 		// 转换成 OpenAI API 消息
 		const messages: ChatCompletionMessageParam[] = [];
 		for (const e of validation.output.data.messages) {
-			messages.push(
-				...(await onebotToOpenai(e, {
-					enableImageUnderstanding: true,
-				})),
-			);
+			messages.push(...(await onebotToOpenai(e)));
 		}
 
 		// 丢给模型总结
