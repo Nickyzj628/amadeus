@@ -4,7 +4,11 @@ import type {
 	ChatCompletionMessageParam,
 } from "openai/resources";
 import { SPECIAL_MODELS } from "@/constants";
-import type { ImageSegment, MinimalMessageEvent } from "@/schemas/onebot";
+import type {
+	ImageSegment,
+	MinimalMessageEvent,
+	Sender,
+} from "@/schemas/onebot";
 import type { ChatCompletionError, Model } from "@/schemas/openai";
 import { modelRef } from "@/tools/changeModel";
 import {
@@ -17,6 +21,8 @@ import {
 
 /** 和机器人相关的消息列表，按群号划分，准备放入 sqlite */
 export const groupMessagesMap = new Map<number, ChatCompletionMessageParam[]>();
+
+export const pendingGroups: number[] = [];
 
 /**
  * 根据群号读取消息数组（仅和机器人相关的）
@@ -35,14 +41,27 @@ export const readGroupMessages = (
 	return messages;
 };
 
-/** 构造 OpenAI API 消息对象 */
-export const textToMessage = (
+/**
+ * 构造 OpenAI API 消息对象
+ * @remarks 通过泛型 K 捕获 role 的具体类型，从而精准推导剩余字段
+ */
+export const textToMessage = <K extends ChatCompletionMessageParam["role"]>(
 	text: string,
-	options?: Partial<Omit<ChatCompletionMessageParam, "content">>,
-) => {
+	options?: {
+		role?: K;
+		sender?: Sender;
+	} & Partial<
+		Omit<Extract<ChatCompletionMessageParam, { role: K }>, "content" | "role">
+	>,
+): ChatCompletionMessageParam => {
+	const { role = "user" as K, sender, ...restOptions } = options ?? {};
+
+	const from = sender ? `${sender.nickname}(${sender.user_id})` : role;
+
 	return {
-		...options,
-		content: text,
+		role,
+		content: `[FROM: ${from}]\n[BODY: ${text}]`,
+		...restOptions,
 	} as ChatCompletionMessageParam;
 };
 
@@ -62,18 +81,18 @@ export const onebotToOpenai = async (
 	},
 ) => {
 	const messages: ChatCompletionMessageParam[] = [];
-	const identity = `${e.sender.nickname}(@${e.sender.user_id})`;
+	const { sender } = e;
 
 	let prefix = "";
 	for (const segment of e.message) {
 		// 文字
 		if (isTextSegment(segment)) {
-			const text = `${identity}：${prefix}${segment.data.text}`;
-			messages.push(textToMessage(text));
+			const text = `${prefix}${segment.data.text}`;
+			messages.push(textToMessage(text, { sender }));
 		}
 		// 图片
 		else if (isImageSegment(segment)) {
-			let text = `${identity}：${prefix}【IMAGE_PARSED: _】`;
+			let text = `${prefix}【IMAGE_PARSED: _】`;
 			const fillText = (description: string) => {
 				text = text.replace(
 					/(【IMAGE_PARSED: )(.*?)(】)/,
@@ -93,7 +112,7 @@ export const onebotToOpenai = async (
 				fillText(
 					"图像传感器阵列发生解析异常，逻辑层无法将原始波段转换为自然语言",
 				);
-				messages.push(textToMessage(text));
+				messages.push(textToMessage(text, { sender }));
 				continue;
 			}
 
@@ -138,7 +157,7 @@ export const chatCompletions = async (
 		throw new Error("当前没有运行中的模型，@我并输入“切换到XX模型”启用一个");
 	}
 
-	const [error, response] = await to<ChatCompletion, ChatCompletionError>(
+	const [error, response] = await to<ChatCompletion, ChatCompletionError[]>(
 		fetcher(model.baseUrl).post(
 			"/chat/completions",
 			{
@@ -156,7 +175,7 @@ export const chatCompletions = async (
 		),
 	);
 	if (error) {
-		throw new Error(error.error.message);
+		throw new Error(error[0]?.error.message);
 	}
 
 	const result = response.choices[0]?.message;

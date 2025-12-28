@@ -1,4 +1,4 @@
-import { camelToSnake, fetcher, isNil, timeLog, to } from "@nickyzj2023/utils";
+import { fetcher, isNil, timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import {
 	type AtSegment,
@@ -87,7 +87,7 @@ export const flattenForwardSegment = async <T = Segment>(
 	): Promise<MinimalMessageEvent[]> => {
 		const [error, response] = await to(
 			http.post("/get_forward_msg", {
-				[camelToSnake("messageId")]: messageId,
+				message_id: messageId,
 			}),
 		);
 		if (error) {
