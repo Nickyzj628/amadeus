@@ -1,4 +1,4 @@
-import { loopUntil, timeLog, to } from "@nickyzj2023/utils";
+import { compactStr, loopUntil, timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { SYSTEM_PROMPT } from "./constants";
 import { GroupMessageEventSchema } from "./schemas/onebot";
@@ -20,27 +20,6 @@ if (!Bun.env.ONEBOT_HTTP_POST_PORT) {
 		"请在.env文件中填写机器人接收消息的端口号（ONEBOT_HTTP_POST_PORT）",
 	);
 }
-
-/**
- * 调试专用：将多行或冗余字符串压缩为单行精简格式
- * @param text 原始文本
- * @param maxLength 最大保留长度（可选，默认无限大）
- */
-export const compactStr = (text: string = "", maxLength: number = Infinity): string => {
-    if (!text) return "";
-
-    const compressed = text
-        .replace(/\r?\n/g, "\\n") // 将换行符转换为字面量 \n
-        .replace(/\s+/g, " ")     // 将多个连续空格/制表符合并为一个空格
-        .trim();
-
-    if (compressed.length <= maxLength) {
-        return compressed;
-    }
-
-    // 超长截断，保留中间或结尾（这里采用保留开头+省略号）
-    return `${compressed.slice(0, maxLength)}...`;
-};
 
 const server = Bun.serve({
 	port: Bun.env.ONEBOT_HTTP_POST_PORT,
@@ -100,7 +79,10 @@ const server = Bun.serve({
 							);
 							for (const tool of toolCalls) {
 								const toolResult = await chooseAndHandleTool(tool, e);
-								timeLog(`已调用工具${tool.function.name}`, compactStr(toolResult));
+								timeLog(
+									`已调用工具${tool.function.name}`,
+									compactStr(toolResult),
+								);
 								messages.push(
 									textToMessage(toolResult, {
 										role: "tool",

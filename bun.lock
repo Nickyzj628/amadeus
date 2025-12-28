@@ -5,7 +5,7 @@
     "": {
       "name": "amadeus",
       "dependencies": {
-        "@nickyzj2023/utils": "^1.0.30",
+        "@nickyzj2023/utils": "^1.0.31",
         "openai": "^6.15.0",
         "sharp": "^0.34.5",
         "valibot": "^1.2.0",
@@ -75,7 +75,7 @@
 
     "@material/material-color-utilities": ["@material/material-color-utilities@0.3.0", "", {}, "sha512-ztmtTd6xwnuh2/xu+Vb01btgV8SQWYCaK56CkRK8gEkWe5TuDyBcYJ0wgkMRn+2VcE9KUmhvkz+N9GHrqw/C0g=="],
 
-    "@nickyzj2023/utils": ["@nickyzj2023/utils@1.0.30", "", { "dependencies": { "typedoc-material-theme": "^1.4.1" }, "peerDependencies": { "typescript": "^5" } }, "sha512-lzO6n17vXcri6qkFUHKKpv2AD8xl390jxURo/g97TigNYrTWi2jKeggFDn2cHl3z6eygHJC0Ll7Z1ajT+BzAJw=="],
+    "@nickyzj2023/utils": ["@nickyzj2023/utils@1.0.31", "", { "dependencies": { "typedoc-material-theme": "^1.4.1" }, "peerDependencies": { "typescript": "^5" } }, "sha512-JEiS5X9KEVTje9X5Of6kWA3q/co4wa9TKeAf0J18q3IPk7YULerWvTOUktLM0ZPOayJuXKVzavdhtwJGJGwKbw=="],
 
     "@shikijs/engine-oniguruma": ["@shikijs/engine-oniguruma@3.20.0", "", { "dependencies": { "@shikijs/types": "3.20.0", "@shikijs/vscode-textmate": "^10.0.2" } }, "sha512-Yx3gy7xLzM0ZOjqoxciHjA7dAt5tyzJE3L4uQoM83agahy+PlW244XJSrmJRSBvGYELDhYXPacD4R/cauV5bzQ=="],
 
