@@ -3,6 +3,7 @@ import type { ChatCompletionTool } from "openai/resources";
 import {
 	array,
 	boolean,
+	type InferOutput,
 	literal,
 	number,
 	object,
@@ -14,7 +15,7 @@ import {
 	url,
 } from "valibot";
 
-const Schema = object({
+const ResponseSchema = object({
 	credits: number(),
 	searchParameters: object({
 		q: string(),
@@ -40,6 +41,13 @@ const Schema = object({
 	),
 	total: number(),
 });
+type Response = InferOutput<typeof ResponseSchema>;
+
+const ErrorSchema = object({
+	errCode: number(),
+	errMsg: string(),
+});
+type Error = InferOutput<typeof ErrorSchema>;
 
 const api = fetcher("https://metaso.cn/api/v1");
 
@@ -63,29 +71,45 @@ export default {
 	} as ChatCompletionTool,
 
 	handle: async ({ query }: { query: string }) => {
-		const [error, response] = await to(
-			api.post("/search", {
-				q: query,
-				scope: "webpage",
-				size: 10,
-				conciseSnippet: true,
-			}),
+		const apiKey = Bun.env.METASO_API_KEY;
+		if (!apiKey) {
+			return "无法进行搜索：请先配置METASO_API_KEY环境变量";
+		}
+
+		const [error, response] = await to<Response | Error>(
+			api.post(
+				"/search",
+				{
+					q: query,
+					scope: "webpage",
+					size: 10,
+					conciseSnippet: true,
+				},
+				{
+					headers: {
+						Authorization: `Bearer ${apiKey}`,
+					},
+				},
+			),
 		);
 		if (error) {
 			return `搜索失败：${error.message}`;
 		}
+		if ("errCode" in response) {
+			return `搜索失败：${response.errMsg}`;
+		}
 
-		const validation = safeParse(Schema, response);
+		const validation = safeParse(ResponseSchema, response);
 		if (!validation.success) {
 			return `搜索失败：${validation.issues[0].message}`;
 		}
-		const { searchParameters, webpages } = validation.output;
+		const { webpages } = validation.output;
 		if (!webpages || !webpages.length) {
 			return "搜索失败：结果为空";
 		}
 
 		return [
-			`${searchParameters.q}的检索结果：`,
+			`“${query}”的检索结果：`,
 			...webpages
 				.filter((webpage) => webpage.score === "high")
 				.map((webpage, i) =>
