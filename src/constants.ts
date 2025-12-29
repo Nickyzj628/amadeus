@@ -26,30 +26,31 @@ export const SYSTEM_PROMPT = `
 
 /** “总结一下”专用提示词 */
 export const SUMMARY_PROMPT = `
-## Role: 群消息分析引擎
-你是一个高效的群聊信息处理器，专门负责从杂乱的对话流中提取核心逻辑。
+## Role
+你是一个高效的群聊信息处理器，负责将杂乱的 [FROM: 用户(ID)] [BODY: 内容] 格式的消息流转化为高度压缩的逻辑结构。
 
-## Task: 消息流解析
-请对提供的 [FROM: 用户(ID)] [BODY: 内容] 格式的消息历史进行深度扫描，并输出一份结构化的分析报告。
+## Task
+请对提供的原始对话进行扫描。注意：【IMAGE_PARSED】代表视觉观测，必须将其作为上下文证据融合进对应的讨论话题中。
 
-## Guidelines: 提取维度
-1. **核心话题**：识别出当前群聊中最主要的讨论主题。
-2. **关键观点**：提取不同用户针对话题发表的具有代表性的见解（需标注发言者）。
-3. **视觉/多媒体记录**：如果消息中包含 【IMAGE_PARSED】，需将其内容整合进讨论脉络中。
-4. **情感波动**：简述当前群聊的氛围（如：技术争鸣、愉快闲聊、产生冲突等）。
+## Output Format
+请仅输出以下结构的 JSON，严禁包含任何关于“熵”、“字数”等元数据的独立字段：
 
-## Output Format (严格遵守 JSON)
-请仅输出 JSON 字符串，包含以下字段：
-- "analyzed_range": 说明分析了多少条消息。
-- "topics": 话题列表（数组）。
-- "key_points": 核心观点摘要（数组，格式："用户名: 观点"）。
-- "visual_context": 提到的图片内容摘要。
-- "entropy": 信息熵评估（高/中/低）。
+{
+  "analyzed_range": "说明分析的消息条数（如：最近50条）",
+  "summary": [
+    {
+      "topic": "话题名称（需包含该话题的讨论热度或混乱程度的隐喻描述）",
+      "key_points": [
+        "用户名: 核心观点（若涉及图片，需在此处注明：‘结合[图片内容]提到...’）"
+      ],
+      "atmosphere": "简述该话题下的讨论氛围（如：逻辑严密、无意义复读、情绪化争论）"
+    }
+  ]
+}
 
 ## Constraints
-- 禁止任何开场白或解释。
-- 排除所有无意义的复读、表情刷屏或自动回复。
-- 确保输出内容精炼，以便后续由主聊天人格进行最终解读。
+1. **精炼化**：剔除所有无意义的打招呼和表情刷屏，仅保留具有信息价值的内容。
+2. **角色适配**：输出内容应保持客观中立，以便后续由【牧濑红莉栖】进行个性化解读。
 `.trim();
 
 /** 聊天模型列表，必须兼容 OpenAI API */
@@ -98,9 +99,9 @@ export const MODELS = [
 export const SPECIAL_MODELS = [
 	Bun.env.GLM_API_KEY &&
 		({
+			useCase: "image-understanding",
 			name: "智谱清言",
 			aliases: ["chatglm", "glm"],
-			useCase: "image-understanding",
 			baseUrl: "https://open.bigmodel.cn/api/paas/v4",
 			apiKey: Bun.env.GLM_API_KEY,
 			model: "glm-4.6v-flashx",
@@ -111,19 +112,16 @@ export const SPECIAL_MODELS = [
 				},
 			},
 		} satisfies Model),
-	Bun.env.GLM_API_KEY &&
+	Bun.env.DEEPSEEK_API_KEY &&
 		({
-			name: "智谱清言",
-			aliases: ["chatglm", "glm"],
 			useCase: "json",
-			baseUrl: "https://open.bigmodel.cn/api/paas/v4",
-			apiKey: Bun.env.GLM_API_KEY,
-			model: "glm-4.5-flash",
+			name: "DeepSeek",
+			aliases: ["deepseek", "ds"],
+			baseUrl: "https://api.deepseek.com",
+			apiKey: Bun.env.DEEPSEEK_API_KEY,
+			model: "deepseek-chat",
 			maxTokens: 128 * 1000, // 128k
 			extraBody: {
-				thinking: {
-					type: "disabled",
-				},
 				response_format: {
 					type: "json_object",
 				},

@@ -44,6 +44,7 @@ const server = Bun.serve({
 					return reply();
 				}
 
+				// 限制每个群只能同时处理一条消息
 				const groupId = e.group_id;
 				if (pendingGroups.includes(groupId)) {
 					return reply("正在处理上一条消息，请稍候……");
@@ -98,9 +99,9 @@ const server = Bun.serve({
 						},
 					),
 				);
+				pendingGroups.splice(pendingGroups.indexOf(groupId), 1);
 
 				// 回复消息
-				pendingGroups.splice(pendingGroups.indexOf(groupId), 1);
 				if (error) {
 					return reply(error.message);
 				}
