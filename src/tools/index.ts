@@ -4,6 +4,7 @@ import type { GroupMessageEvent } from "@/schemas/onebot";
 import changeModel from "./changeModel";
 import decodeAbbr from "./decodeAbbr";
 import getWeather from "./getWeather";
+import searchWeb from "./searchWeb";
 import summarizeChat from "./summarizeChat";
 
 export const tools = [changeModel, getWeather, summarizeChat, decodeAbbr].map(
@@ -32,6 +33,9 @@ export const chooseAndHandleTool = async (
 		}
 		case "decodeAbbr": {
 			return decodeAbbr.handle(args);
+		}
+		case "searchWeb": {
+			return searchWeb.handle(args);
 		}
 		default: {
 			throw new Error(`调用了不存在的函数（ ${tool.function.name}）`);

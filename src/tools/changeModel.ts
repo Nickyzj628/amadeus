@@ -10,7 +10,7 @@ export default {
 		type: "function",
 		function: {
 			name: "changeModel",
-			description: "切换系统底层的大语言模型。当用户请求切换到特定模型时调用",
+			description: "切换系统底层的大语言模型。当用户请求切换到特定模型时调用。",
 			parameters: {
 				type: "object",
 				properties: {
@@ -18,7 +18,7 @@ export default {
 						type: "string",
 						enum: MODELS.map((model) => model.name),
 						description:
-							"目标模型的唯一标识符。需根据用户上下文中的描述映射至对应枚举值",
+							"目标模型的唯一标识符。需根据用户上下文中的描述映射至对应枚举值。",
 					},
 				},
 				required: ["name"],

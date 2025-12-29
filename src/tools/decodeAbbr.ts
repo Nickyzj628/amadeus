@@ -1,7 +1,6 @@
 import { fetcher, to } from "@nickyzj2023/utils";
 import type { ChatCompletionTool } from "openai/resources";
 import { array, object, optional, safeParse, string } from "valibot";
-import type { reply } from "@/utils/onebot";
 
 const Schema = array(
 	object({
