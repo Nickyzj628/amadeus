@@ -4,7 +4,7 @@ import type {
 	ChatCompletionTool,
 } from "openai/resources";
 import { safeParse } from "valibot";
-import { SUMMARY_PROMPT } from "@/constants";
+import { SPECIAL_MODELS, SUMMARY_PROMPT } from "@/constants";
 import {
 	type GetMessageHistoryResponse,
 	GetMessageHistoryResponseSchema,
@@ -37,6 +37,11 @@ export default {
 	 * 工具处理逻辑
 	 */
 	handle: async ({ count }: { count?: number }, e: GroupMessageEvent) => {
+		const model = SPECIAL_MODELS.find((model) => model.useCase === "json");
+		if (!model) {
+			return "还没有配置总结相关的JSON Output模型";
+		}
+
 		// 获取群历史消息
 		const [error, response] = await to<GetMessageHistoryResponse>(
 			http.post("/get_group_msg_history", {
@@ -61,10 +66,12 @@ export default {
 
 		// 丢给模型总结
 		const [error2, completion] = await to(
-			chatCompletions([
-				{ role: "system", content: SUMMARY_PROMPT },
-				...messages,
-			]),
+			chatCompletions(
+				[{ role: "system", content: SUMMARY_PROMPT }, ...messages],
+				{
+					model,
+				},
+			),
 		);
 		if (error2) {
 			return `总结失败：${error2.message}`;
