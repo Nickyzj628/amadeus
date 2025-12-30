@@ -1,55 +1,44 @@
-import { fetcher, to } from "@nickyzj2023/utils";
+import { compactStr, fetcher, to } from "@nickyzj2023/utils";
 import type { ChatCompletionTool } from "openai/resources";
 import {
 	array,
-	boolean,
 	type InferOutput,
-	literal,
+	nullable,
 	number,
 	object,
-	optional,
-	pipe,
 	safeParse,
 	string,
-	union,
-	url,
 } from "valibot";
 
+// 定义主数据结构的 schema
 const ResponseSchema = object({
-	credits: number(),
-	searchParameters: object({
-		q: string(),
-		scope: string(),
-		size: number(),
-		searchFile: boolean(),
-		includeSummary: boolean(),
-		includeRawContent: boolean(),
-		conciseSnippet: boolean(),
-		format: literal("chat_completions"),
-	}),
-	webpages: array(
+	query: string(),
+	results: array(
 		object({
+			url: string(),
 			title: string(),
-			link: pipe(string(), url()),
-			score: union([literal("high"), literal("medium"), literal("low")]),
-			snippet: string(),
-			position: number(),
-			// authors 和 date 是可选的，因为部分结果中不存在
-			authors: optional(array(string())),
-			date: optional(string()),
+			content: string(),
+			score: number(),
+			raw_content: nullable(string()),
+			favicon: string(),
 		}),
 	),
-	total: number(),
+	response_time: number(),
+	request_id: string(),
 });
 type Response = InferOutput<typeof ResponseSchema>;
 
 const ErrorSchema = object({
-	errCode: number(),
-	errMsg: string(),
+	id: string(),
+	error: string(),
 });
 type Error = InferOutput<typeof ErrorSchema>;
 
-const api = fetcher("https://metaso.cn/api/v1");
+const api = fetcher("https://api.tavily.com", {
+	headers: {
+		Authorization: `Bearer ${Bun.env.TAVILY_API_KEY}`,
+	},
+});
 
 export default {
 	tool: {
@@ -71,54 +60,42 @@ export default {
 	} as ChatCompletionTool,
 
 	handle: async ({ query }: { query: string }) => {
-		const apiKey = Bun.env.METASO_API_KEY;
-		if (!apiKey) {
-			return "无法进行搜索：请先配置METASO_API_KEY环境变量";
+		if (!Bun.env.TAVILY_API_KEY) {
+			return "无法执行搜索：请先配置TAVILY_API_KEY环境变量";
 		}
 
 		const [error, response] = await to<Response | Error>(
-			api.post(
-				"/search",
-				{
-					q: query,
-					scope: "webpage",
-					size: 10,
-					conciseSnippet: true,
-				},
-				{
-					headers: {
-						Authorization: `Bearer ${apiKey}`,
-					},
-				},
-			),
+			api.post("/search", { query }),
 		);
 		if (error) {
 			return `搜索失败：${error.message}`;
 		}
-		if ("errCode" in response) {
-			return `搜索失败：${response.errMsg}`;
+		if ("error" in response) {
+			return `搜索失败：${response.error}`;
 		}
 
 		const validation = safeParse(ResponseSchema, response);
 		if (!validation.success) {
 			return `搜索失败：${validation.issues[0].message}`;
 		}
-		const { webpages } = validation.output;
-		if (!webpages || !webpages.length) {
+		const { results } = validation.output;
+		if (!results || !results.length) {
 			return "搜索失败：结果为空";
 		}
 
 		return [
 			`“${query}”的检索结果：`,
-			...webpages
-				.filter((webpage) => webpage.score === "high")
-				.map((webpage, i) =>
+			...results.map((result, i) =>
+				compactStr(
 					`
-			  ${i + 1}. ${webpage.title}
-					- 摘要：${webpage.snippet}
-					- 来源：${webpage.link}（${webpage.date || "未注明日期"}）
-			`.trim(),
+			  ${i + 1}. ${result.title}
+					- 摘要：${result.content}
+					- 来源：${result.url}
+					- 置信度：${result.score}
+			`,
+					{ maxLength: Infinity },
 				),
+			),
 		].join("\n");
 	},
 };
