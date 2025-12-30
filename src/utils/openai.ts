@@ -99,10 +99,10 @@ export const onebotToOpenai = async (
 		}
 		// 图片
 		else if (isImageSegment(segment)) {
-			let text = `${prefix}【IMAGE_PARSED: _】`;
+			let text = `${prefix}[IMAGE_PARSED: _]`;
 			const fillText = (description: string) => {
 				text = text.replace(
-					/(【IMAGE_PARSED: )(.*?)(】)/,
+					/(\[IMAGE_PARSED: )(.*?)(\])/,
 					`$1${description}$3`,
 				);
 			};

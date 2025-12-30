@@ -122,7 +122,7 @@ export const GroupMessageEventSchema = object({
 						// 移除孤立的闭合思考标签
 						.replace(/<\/think>/gi, "")
 						// 移除元数据标签
-						.replace(/\[FROM:.*?\]|\[BODY:.*?\]|【IMAGE_PARSED:.*?】/gi, "")
+						.replace(/\[FROM:.*?\]|\[BODY:.*?\]|\[IMAGE_PARSED:.*?\]/gi, "")
 						.trim();
 					return segment.data.text !== "";
 				}
