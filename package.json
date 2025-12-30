@@ -15,7 +15,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@nickyzj2023/utils": "^1.0.31",
+    "@nickyzj2023/utils": "^1.0.33",
     "openai": "^6.15.0",
     "sharp": "^0.34.5",
     "valibot": "^1.2.0"

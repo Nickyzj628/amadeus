@@ -1,6 +1,6 @@
 import { fetcher, to } from "@nickyzj2023/utils";
-import type { ChatCompletionTool } from "openai/resources";
 import { array, type InferOutput, object, safeParse, string } from "valibot";
+import { defineTool } from "./utils";
 
 const Schema = object({
 	results: array(
@@ -53,8 +53,8 @@ const getRelativeDate = (date: string) => {
 	return dates[new Date(date).getDate() - new Date().getDate()] ?? date;
 };
 
-export default {
-	tool: {
+export default defineTool(
+	{
 		type: "function",
 		function: {
 			name: "getWeather",
@@ -71,9 +71,8 @@ export default {
 				required: ["city"],
 			},
 		},
-	} as ChatCompletionTool,
-
-	handle: async ({ city }: { city: string }) => {
+	},
+	async ({ city }) => {
 		// 检查 api key
 		const key = Bun.env.SENIVERSE_PRIVATE_KEY;
 		if (!key) {
@@ -114,4 +113,4 @@ export default {
 			`数据更新时间：${new Date(result.last_update).toLocaleString()}`,
 		].join("\n");
 	},
-};
+);

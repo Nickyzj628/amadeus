@@ -1,20 +1,17 @@
 import { to } from "@nickyzj2023/utils";
-import type {
-	ChatCompletionMessageParam,
-	ChatCompletionTool,
-} from "openai/resources";
+import type { ChatCompletionMessageParam } from "openai/resources";
 import { safeParse } from "valibot";
 import { SPECIAL_MODELS, SUMMARY_PROMPT } from "@/constants";
 import {
 	type GetMessageHistoryResponse,
 	GetMessageHistoryResponseSchema,
-	type GroupMessageEvent,
 } from "@/schemas/onebot";
 import { http } from "@/utils/onebot";
 import { chatCompletions, onebotToOpenai } from "@/utils/openai";
+import { defineTool } from "./utils";
 
-export default {
-	tool: {
+export default defineTool(
+	{
 		type: "function",
 		function: {
 			name: "summarizeChat",
@@ -31,12 +28,8 @@ export default {
 				},
 			},
 		},
-	} as ChatCompletionTool,
-
-	/**
-	 * 工具处理逻辑
-	 */
-	handle: async (params: {
+	},
+	async (params: {
 		count?: number;
 		/** 群号，如果传了则通过 OneBot HTTP 接口获取群号历史消息 */
 		groupId?: number;
@@ -96,4 +89,4 @@ export default {
 
 		return completion.content as string;
 	},
-};
+);

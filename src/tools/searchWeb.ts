@@ -1,14 +1,13 @@
 import { compactStr, fetcher, to } from "@nickyzj2023/utils";
-import type { ChatCompletionTool } from "openai/resources";
 import {
 	array,
 	type InferOutput,
-	nullable,
 	number,
 	object,
 	safeParse,
 	string,
 } from "valibot";
+import { defineTool } from "./utils";
 
 // 定义主数据结构的 schema
 const ResponseSchema = object({
@@ -19,8 +18,6 @@ const ResponseSchema = object({
 			title: string(),
 			content: string(),
 			score: number(),
-			raw_content: nullable(string()),
-			favicon: string(),
 		}),
 	),
 	response_time: number(),
@@ -40,8 +37,8 @@ const api = fetcher("https://api.tavily.com", {
 	},
 });
 
-export default {
-	tool: {
+export default defineTool(
+	{
 		type: "function",
 		function: {
 			name: "searchWeb",
@@ -57,9 +54,8 @@ export default {
 				required: ["query"],
 			},
 		},
-	} as ChatCompletionTool,
-
-	handle: async ({ query }: { query: string }) => {
+	},
+	async ({ query }) => {
 		if (!Bun.env.TAVILY_API_KEY) {
 			return "无法执行搜索：请先配置TAVILY_API_KEY环境变量";
 		}
@@ -98,4 +94,4 @@ export default {
 			),
 		].join("\n");
 	},
-};
+);

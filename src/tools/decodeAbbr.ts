@@ -1,6 +1,6 @@
 import { fetcher, to } from "@nickyzj2023/utils";
-import type { ChatCompletionTool } from "openai/resources";
 import { array, object, optional, safeParse, string } from "valibot";
+import { defineTool } from "./utils";
 
 const Schema = array(
 	object({
@@ -11,8 +11,8 @@ const Schema = array(
 
 const api = fetcher("https://lab.magiconch.com/api/nbnhhsh");
 
-export default {
-	tool: {
+export default defineTool(
+	{
 		type: "function",
 		function: {
 			name: "decodeAbbr",
@@ -29,9 +29,8 @@ export default {
 				required: ["abbr"],
 			},
 		},
-	} as ChatCompletionTool,
-
-	handle: async ({ abbr }: { abbr: string }) => {
+	},
+	async ({ abbr }) => {
 		const [error, response] = await to(api.post("/guess", { text: abbr }));
 		if (error) {
 			return `暗号解密失败：${error.message}`;
@@ -52,4 +51,4 @@ export default {
 		}
 		return `你想说的是不是：${items.join("、")}`;
 	},
-};
+);

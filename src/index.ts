@@ -82,7 +82,7 @@ const server = Bun.serve({
 								const toolResult = await chooseAndHandleTool(tool, e);
 								timeLog(
 									`已调用工具${tool.function.name}`,
-									compactStr(toolResult),
+									compactStr(toolResult, { maxLength: 100 }),
 								);
 								messages.push(
 									textToMessage(toolResult, {

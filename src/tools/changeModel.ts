@@ -1,12 +1,12 @@
-import type { ChatCompletionTool } from "openai/resources";
 import { MODELS } from "@/constants";
+import { defineTool } from "./utils";
 
 export const modelRef = {
 	value: MODELS[0],
 };
 
-export default {
-	tool: {
+export default defineTool(
+	{
 		type: "function",
 		function: {
 			name: "changeModel",
@@ -24,9 +24,8 @@ export default {
 				required: ["name"],
 			},
 		},
-	} as ChatCompletionTool,
-
-	handle: ({ name }: { name: string }) => {
+	},
+	({ name }) => {
 		const targetModel = MODELS.find((model) => model.name === name);
 		if (!targetModel) {
 			return "切换失败，模型不存在";
@@ -34,4 +33,4 @@ export default {
 		modelRef.value = targetModel;
 		return `模型已切换至 ${targetModel.name}`;
 	},
-};
+);
