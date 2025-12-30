@@ -7,9 +7,13 @@ import getWeather from "./getWeather";
 import searchWeb from "./searchWeb";
 import summarizeChat from "./summarizeChat";
 
-export const tools = [changeModel, getWeather, summarizeChat, decodeAbbr].map(
-	(item) => item.tool,
-);
+export const tools = [
+	changeModel,
+	getWeather,
+	summarizeChat,
+	decodeAbbr,
+	searchWeb,
+].map((item) => item.tool);
 
 /**
  * 根据传入的 function tool call，返回工具调用结果
