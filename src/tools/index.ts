@@ -29,7 +29,7 @@ export const chooseAndHandleTool = async (
 			return getWeather.handle(args);
 		}
 		case "summarizeChat": {
-			return summarizeChat.handle(args, e);
+			return summarizeChat.handle(args, { groupId: e.group_id });
 		}
 		case "decodeAbbr": {
 			return decodeAbbr.handle(args);

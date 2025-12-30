@@ -3,7 +3,13 @@ import type {
 	ChatCompletion,
 	ChatCompletionMessageParam,
 } from "openai/resources";
-import { SPECIAL_MODELS } from "@/constants";
+import {
+	ANCHOR_THRESHOLD,
+	IDENTITY_ANCHOR,
+	MAX_TOKEN_THRESHOLD,
+	SPECIAL_MODELS,
+	SUMMARIZE_THRESHOLD,
+} from "@/constants";
 import type {
 	ImageSegment,
 	MinimalMessageEvent,
@@ -11,6 +17,7 @@ import type {
 } from "@/schemas/onebot";
 import type { ChatCompletionError, Model } from "@/schemas/openai";
 import { modelRef } from "@/tools/changeModel";
+import summarizeChat from "@/tools/summarizeChat";
 import {
 	flattenForwardSegment,
 	isAtSegment,
@@ -139,32 +146,85 @@ export const onebotToOpenai = async (
 	return messages;
 };
 
-/**
- * openai.chat.completions() 的轻量实现，返回response.choices[0].message
- */
+/** openai.chat.completions() 的替代实现，返回response.choices[0].message */
 export const chatCompletions = async (
 	messages: ChatCompletionMessageParam[],
 	options?: {
 		/** 使用指定模型发出请求，默认全局正在使用的模型 */
 		model?: Model;
-		/** 是否在上下文长度即将达到模型 maxTokens 时自动清理，默认开启 */
-		enableAutoCleanMessages?: boolean;
 		body?: Record<string, any>;
+		/**
+		 * 是否自动优化上下文，默认开启。处理逻辑如下：
+		 * 1. 超过 30 条消息时添加临时人设锚点
+		 * 2. 超过 100 条消息时滑动窗口总结一部分消息
+		 * 3. 达到 maxToken 的 90% 时删除前半消息
+		 */
+		disableMessagesOptimization?: boolean;
 	},
 ) => {
-	const model = options?.model ?? modelRef.value;
+	const {
+		model = modelRef.value,
+		body: bodyFromParams = {},
+		disableMessagesOptimization = false,
+	} = options ?? {};
+
 	if (!model) {
 		throw new Error("当前没有运行中的模型，@我并输入“切换到XX模型”启用一个");
 	}
 
+	const wipMessages = [...messages];
+
+	// 如果消息超过 X 条，则总结一部分消息，并替代原消息
+	const needSummarize =
+		!disableMessagesOptimization && wipMessages.length > SUMMARIZE_THRESHOLD;
+	if (needSummarize) {
+		const firstUserMessageIndex = wipMessages.findIndex(
+			(message) => message.role === "user",
+		);
+
+		const count = SUMMARIZE_THRESHOLD * 0.5;
+		const providedMessages = wipMessages.slice(
+			firstUserMessageIndex,
+			firstUserMessageIndex + count,
+		);
+		const summarized = await summarizeChat.handle({
+			count,
+			providedMessages,
+		});
+
+		wipMessages.splice(
+			firstUserMessageIndex,
+			count,
+			textToMessage(`[MEMORANDUM] ${summarized}`, { role: "system" }),
+		);
+	}
+
+	// 如果消息仍超过 Y 条，则添加临时人设锚点
+	const needIdentityAnchor =
+		!disableMessagesOptimization && wipMessages.length > ANCHOR_THRESHOLD;
+	let anchorIndex = -1;
+	if (needIdentityAnchor) {
+		anchorIndex = wipMessages.findLastIndex(
+			(message) => message.role === "user",
+		);
+		if (anchorIndex !== -1) {
+			wipMessages.splice(
+				anchorIndex,
+				0,
+				textToMessage(IDENTITY_ANCHOR, { role: "system" }),
+			);
+		}
+	}
+
+	// 发起请求
 	const [error, response] = await to<ChatCompletion, ChatCompletionError[]>(
 		fetcher(model.baseUrl).post(
 			"/chat/completions",
 			{
 				model: model.model,
-				messages,
+				messages: wipMessages,
 				...model.extraBody,
-				...options?.body,
+				...bodyFromParams,
 			},
 			{
 				headers: {
@@ -177,22 +237,31 @@ export const chatCompletions = async (
 	if (error) {
 		throw new Error(error[0]?.error.message);
 	}
-
 	const result = response.choices[0]?.message;
 	if (!result) {
 		throw new Error("生成的消息为空，快找群主排查！");
 	}
 
-	// 如果上下文即将超过 maxTokens，则清理掉一半
+	// 如果启用了临时人设锚点，则在使用后移除
+	if (anchorIndex !== -1) {
+		wipMessages.splice(anchorIndex + 1, 1);
+	}
+
+	// 如果上下文即将达到 maxTokens，则清理掉一半
 	const totalTokens = response.usage?.total_tokens ?? 0;
-	if (totalTokens >= model.maxTokens * 0.9) {
-		const deleteCount = Math.floor(messages.length / 2);
-		const systemPrompts = messages.filter(
+	if (totalTokens >= model.maxTokens * MAX_TOKEN_THRESHOLD) {
+		const deleteCount = Math.floor(wipMessages.length / 2);
+		// 保留系统消息
+		const systemPrompts = wipMessages.filter(
 			(message, i) => message.role === "system" && i < deleteCount,
 		);
-		messages.splice(0, deleteCount, ...systemPrompts);
-		timeLog("上下文过长，已清理前半段消息（保留系统消息））");
+		wipMessages.splice(0, deleteCount, ...systemPrompts);
+		timeLog("上下文过长，已清理前半段垃圾消息）");
 	}
+
+	// 同步 wipMessages 到原数组
+	messages.length = 0;
+	messages.push(...wipMessages);
 
 	return result;
 };

@@ -36,32 +36,49 @@ export default {
 	/**
 	 * 工具处理逻辑
 	 */
-	handle: async ({ count }: { count?: number }, e: GroupMessageEvent) => {
+	handle: async (params: {
+		count?: number;
+		/** 群号，如果传了则通过 OneBot HTTP 接口获取群号历史消息 */
+		groupId?: number;
+		/** 总结提供的消息 */
+		providedMessages?: ChatCompletionMessageParam[];
+	}) => {
+		const { count = 30, groupId, providedMessages } = params ?? {};
+
 		const model = SPECIAL_MODELS.find((model) => model.useCase === "json");
 		if (!model) {
 			return "还没有配置总结相关的JSON Output模型";
 		}
-
-		// 获取群历史消息
-		const [error, response] = await to<GetMessageHistoryResponse>(
-			http.post("/get_group_msg_history", {
-				group_id: e.group_id,
-				count: count ?? 30,
-			}),
-		);
-		if (error) {
-			return `总结失败：${error.message}`;
+		if (!groupId && !providedMessages) {
+			return "请提供用于总结的群号或消息数组";
 		}
 
-		const validation = safeParse(GetMessageHistoryResponseSchema, response);
-		if (!validation.success) {
-			return `总结失败：${validation.issues[0].message}`;
-		}
-
-		// 转换成 OpenAI API 消息
 		const messages: ChatCompletionMessageParam[] = [];
-		for (const e of validation.output.data.messages) {
-			messages.push(...(await onebotToOpenai(e)));
+
+		// 使用提供的消息
+		if (providedMessages) {
+			messages.push(...providedMessages);
+		}
+		// 使用手动获取的群历史消息
+		else if (groupId) {
+			const [error, response] = await to<GetMessageHistoryResponse>(
+				http.post("/get_group_msg_history", {
+					group_id: groupId,
+					count,
+				}),
+			);
+			if (error) {
+				return `总结失败：${error.message}`;
+			}
+			const validation = safeParse(GetMessageHistoryResponseSchema, response);
+			if (!validation.success) {
+				return `总结失败：${validation.issues[0].message}`;
+			}
+
+			// 转换成 OpenAI API 消息
+			for (const e of validation.output.data.messages) {
+				messages.push(...(await onebotToOpenai(e)));
+			}
 		}
 
 		// 丢给模型总结
