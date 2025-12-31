@@ -89,7 +89,6 @@ export default defineTool(
 					- 来源：${result.url}
 					- 置信度：${result.score}
 			`,
-					{ maxLength: Infinity },
 				),
 			),
 		].join("\n");
