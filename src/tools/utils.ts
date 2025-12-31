@@ -1,3 +1,4 @@
+import { isObject } from "@nickyzj2023/utils";
 import type { ChatCompletionFunctionTool } from "openai/resources";
 
 export const defineTool = (
@@ -8,15 +9,29 @@ export const defineTool = (
 	handle,
 });
 
+/** 校验大模型调用工具时是否传递必要参数 */
 export const validateArgs = <T extends ReturnType<typeof defineTool>>(
 	args: Record<string, any>,
 	item: T,
 ): args is Parameters<T["handle"]>[0] => {
-	const propKeys = Object.keys(item.tool.function.parameters?.properties ?? {});
-	for (const key of propKeys) {
+	const { parameters } = item.tool.function;
+	if (!parameters) {
+		return true;
+	}
+
+	const { properties, required } = parameters;
+	if (!Array.isArray(required) || !isObject(properties)) {
+		return true;
+	}
+
+	for (const key in properties) {
+		if (!required.includes(key)) {
+			continue;
+		}
 		if (!(key in args)) {
 			throw new Error(`缺少参数${key}`);
 		}
 	}
+
 	return true;
 };
