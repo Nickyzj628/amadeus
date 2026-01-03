@@ -107,14 +107,6 @@ export const GroupMessageEventSchema = object({
 		// 过滤不支持的消息段类型和空文本消息
 		transform((segments) =>
 			segments.filter((segment) => {
-				if (
-					!isTextSegment(segment) &&
-					!isAtSegment(segment) &&
-					!isForwardSegment(segment) &&
-					!isImageSegment(segment)
-				) {
-					return false;
-				}
 				if (isTextSegment(segment)) {
 					segment.data.text = segment.data.text
 						// 移除可能残留的思考标签及其内容
@@ -126,7 +118,11 @@ export const GroupMessageEventSchema = object({
 						.trim();
 					return segment.data.text !== "";
 				}
-				return true;
+				return (
+					isAtSegment(segment) ||
+					isForwardSegment(segment) ||
+					isImageSegment(segment)
+				);
 			}),
 		),
 	),

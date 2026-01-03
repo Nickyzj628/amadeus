@@ -1,9 +1,10 @@
 import { compactStr, loopUntil, timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { SYSTEM_PROMPT } from "./constants";
+import { StreamEventSchema } from "./schemas/brec";
 import { GroupMessageEventSchema } from "./schemas/onebot";
 import { chooseAndHandleTool, tools } from "./tools";
-import { isAtSelfSegment, reply } from "./utils/onebot";
+import { http, isAtSelfSegment, reply, textToSegment } from "./utils/onebot";
 import {
 	chatCompletions,
 	onebotToOpenai,
@@ -26,7 +27,7 @@ const server = Bun.serve({
 	routes: {
 		"/": {
 			POST: async (req) => {
-				// 验证请求体格式，隐式拦截了非图文、@本机器人、转发以外的消息
+				// 验证请求体格式，隐式保留了文字、图片、@、转发消息
 				const body = await req.json();
 				const validation = safeParse(GroupMessageEventSchema, body);
 				if (!validation.success) {
@@ -34,7 +35,7 @@ const server = Bun.serve({
 				}
 				const e = validation.output;
 
-				// 拦截不是“(<回复/图文>) @机器人 <图文>”的消息
+				// 拦截不是@当前机器人的消息
 				const atSegmentIndex = e.message.findIndex(isAtSelfSegment);
 				if (atSegmentIndex === -1) {
 					return reply();
@@ -110,6 +111,44 @@ const server = Bun.serve({
 					return reply(response.content);
 				}
 				return reply("……");
+			},
+		},
+		"/brec": {
+			POST: async (req) => {
+				// 验证请求体格式
+				const body = await req.json();
+				const validation = safeParse(StreamEventSchema, body);
+				if (!validation.success) {
+					return new Response();
+				}
+
+				// 构造消息
+				const { Name, Streaming, Title, RoomId } = validation.output.EventData;
+				if (!Streaming) {
+					return new Response();
+				}
+				const segment = textToSegment(
+					`${Name}播了 ${Title}\nhttps://live.bilibili.com/${RoomId}`,
+				);
+
+				// 推送到群里
+				const groupIds = (Bun.env.BREC_GROUP_IDS || "").split(",");
+				if (groupIds.length === 0) {
+					return new Response();
+				}
+				for (const groupId of groupIds) {
+					const [error, response] = await to(
+						http.post("/send_group_msg", {
+							group_id: groupId,
+							message: [segment],
+						}),
+					);
+					if (error) {
+						timeLog(`直播推送失败：${error.message}`);
+						break;
+					}
+				}
+				return new Response();
 			},
 		},
 	},
