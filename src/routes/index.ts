@@ -3,7 +3,7 @@ import { safeParse } from "valibot";
 import { SYSTEM_PROMPT } from "@/constants";
 import { GroupMessageEventSchema } from "@/schemas/onebot";
 import { chooseAndHandleTool, tools } from "@/tools";
-import { isAtSelfSegment, reply } from "@/utils/onebot";
+import { isAtSelfSegment, normalizeText, reply } from "@/utils/onebot";
 import {
 	chatCompletions,
 	onebotToOpenai,
@@ -63,7 +63,6 @@ export const rootRoute = {
 						body: { tools },
 					});
 					messages.push(completion);
-					console.log(completion);
 
 					// 调用工具
 					const toolCalls = (completion.tool_calls ?? []).filter(
@@ -108,7 +107,7 @@ export const rootRoute = {
 		}
 		if (response.content) {
 			timeLog("已处理消息", compactStr(response.content), "\n");
-			return reply(response.content);
+			return reply(normalizeText(response.content));
 		}
 		return reply("……");
 	},

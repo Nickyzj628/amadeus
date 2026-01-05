@@ -153,7 +153,7 @@ export const onebotToOpenai = async (
 				continue;
 			}
 			const flatRepliedMessages = await onebotToOpenai(e, options);
-			messages.push(...flatRepliedMessages);
+			prefix += `[CONTEXT_BLOCK:\n${flatRepliedMessages.map((message) => `- ${message.content}`).join("\n")}]`;
 		}
 	}
 
