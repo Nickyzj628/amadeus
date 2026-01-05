@@ -106,8 +106,7 @@ export const rootRoute = {
 			return reply(error.message);
 		}
 		if (response.content) {
-			timeLog("已处理消息", compactStr(response.content), "\n");
-			return reply(normalizeText(response.content));
+			return reply(response.content);
 		}
 		return reply("……");
 	},

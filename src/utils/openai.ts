@@ -103,11 +103,13 @@ export const onebotToOpenai = async (
 		// 文字
 		if (isTextSegment(segment)) {
 			const text = `${prefix}${segment.data.text}`;
+			prefix = "";
 			messages.push(textToMessage(text, { sender }));
 		}
 		// 图片
 		else if (isImageSegment(segment)) {
 			let text = `${prefix}[IMAGE_PARSED: _]`;
+			prefix = "";
 			const fillText = (description: string) => {
 				text = text.replace(
 					/(\[IMAGE_PARSED: )(.*?)(\])/,
@@ -156,6 +158,10 @@ export const onebotToOpenai = async (
 			prefix += `[CONTEXT_BLOCK:\n${flatRepliedMessages.map((message) => `- ${message.content}`).join("\n")}]`;
 		}
 	}
+	// 如果还有没被消费的 prefix，则当做一条消息
+	if (prefix !== "") {
+		messages.push(textToMessage(prefix, { sender }));
+	}
 
 	return messages;
 };
@@ -169,9 +175,9 @@ export const chatCompletions = async (
 		body?: Record<string, any>;
 		/**
 		 * 是否自动优化上下文，默认开启。处理逻辑如下：
-		 * 1. 超过 30 条消息时添加临时人设锚点
-		 * 2. 超过 100 条消息时滑动窗口总结一部分消息
-		 * 3. 达到 maxToken 的 90% 时删除前半消息
+		 * 1. 超过 X 条消息时添加临时人设锚点
+		 * 2. 超过 Y 条消息时滑动窗口总结一部分消息
+		 * 3. 达到上下文窗口的 85% 时删除前半消息
 		 */
 		disableMessagesOptimization?: boolean;
 	},
@@ -231,25 +237,25 @@ export const chatCompletions = async (
 	}
 
 	// 发起请求
+	const body = {
+		model: model.model,
+		messages: wipMessages,
+		...model.extraBody,
+		...bodyFromParams,
+	};
+	const requestInit = {
+		headers: {
+			Authorization: `Bearer ${model.apiKey}`,
+		},
+		...model.extraOptions,
+	};
 	const [error, response] = await to<ChatCompletion, ChatCompletionError[]>(
-		fetcher(model.baseUrl).post(
-			"/chat/completions",
-			{
-				model: model.model,
-				messages: wipMessages,
-				...model.extraBody,
-				...bodyFromParams,
-			},
-			{
-				headers: {
-					Authorization: `Bearer ${model.apiKey}`,
-				},
-				...model.extraOptions,
-			},
-		),
+		fetcher(model.baseUrl).post("/chat/completions", body, requestInit),
 	);
 	if (error) {
-		throw new Error(compactStr(JSON.stringify(error, null, 2)));
+		const errMessage = compactStr(JSON.stringify(error, null, 2));
+		timeLog(`请求失败：${errMessage}`, body, requestInit);
+		throw new Error(errMessage);
 	}
 	const result = response.choices[0]?.message;
 	if (!result) {
