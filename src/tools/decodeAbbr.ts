@@ -16,14 +16,13 @@ export default defineTool(
 		type: "function",
 		function: {
 			name: "decodeAbbr",
-			description:
-				"语义解密工具。当你遇到无法通过逻辑推导理解的中文拼音缩写（如 smg, jtjdg, yyds）时，调用此工具进行解密。",
+			description: "解释用户输入的陌生拼音缩写的含义。",
 			parameters: {
 				type: "object",
 				properties: {
 					abbr: {
 						type: "string",
-						description: "待解密的缩写或不明所以的网络词汇。",
+						description: "待解释的缩写。",
 					},
 				},
 				required: ["abbr"],

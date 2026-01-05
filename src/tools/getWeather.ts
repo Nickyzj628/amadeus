@@ -59,13 +59,13 @@ export default defineTool(
 		function: {
 			name: "getWeather",
 			description:
-				"获取指定城市未来三天（今天、明天、后天）的气温及天气状况数据。供科学分析及日常观测参考。",
+				"获取指定国内城市未来三天（今天、明天、后天）的气温及天气状况。",
 			parameters: {
 				type: "object",
 				properties: {
 					city: {
 						type: "string",
-						description: "目标城市的名称。如：上海、哈尔滨。",
+						description: "目标城市名称。如：上海、哈尔滨。",
 					},
 				},
 				required: ["city"],

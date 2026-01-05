@@ -42,7 +42,7 @@ export default defineTool(
 		type: "function",
 		function: {
 			name: "searchWeb",
-			description: "执行互联网搜索以获取实时信息、核查事实。",
+			description: "获取实时信息。不知道答案时必须先搜索，不得编造。",
 			parameters: {
 				type: "object",
 				properties: {

@@ -12,6 +12,8 @@ import {
 	textToMessage,
 } from "@/utils/openai";
 
+const MAX_REQUEST_COUNT = 5;
+
 export const rootRoute = {
 	POST: async (req: Request) => {
 		// 验证请求体格式，隐式保留了文字、图片、@、转发消息
@@ -55,7 +57,7 @@ export const rootRoute = {
 		// 循环请求模型，直到不再调用工具
 		const [error, response] = await to(
 			loopUntil(
-				async () => {
+				async (count) => {
 					// 发出请求
 					const completion = await chatCompletions(messages, {
 						body: { tools },
@@ -66,23 +68,33 @@ export const rootRoute = {
 					const toolCalls = (completion.tool_calls ?? []).filter(
 						(call) => call.type === "function",
 					);
-					for (const tool of toolCalls) {
-						const toolResult = await chooseAndHandleTool(tool, e);
-						timeLog(
-							`已调用工具${tool.function.name}`,
-							compactStr(toolResult, { maxLength: 100 }),
-						);
-						messages.push(
-							textToMessage(toolResult, {
-								role: "tool",
-								tool_call_id: tool.id,
-							}),
-						);
+					if (toolCalls.length > 0) {
+						// 如果在调用工具时超过最大请求次数，则抛出异常
+						if (count === MAX_REQUEST_COUNT) {
+							throw new Error(
+								`单次聊天发出的请求次数超过限制（${MAX_REQUEST_COUNT}），终止响应`,
+							);
+						}
+						// 遍历模型想要调用的工具
+						for (const tool of toolCalls) {
+							const toolResult = await chooseAndHandleTool(tool, e);
+							timeLog(
+								`已调用工具${tool.function.name}`,
+								compactStr(toolResult, { maxLength: 100 }),
+							);
+							messages.push(
+								textToMessage(toolResult, {
+									role: "tool",
+									tool_call_id: tool.id,
+								}),
+							);
+						}
 					}
 
 					return completion;
 				},
 				{
+					maxRetries: MAX_REQUEST_COUNT,
 					shouldStop: (completion) => !completion.tool_calls,
 				},
 			),

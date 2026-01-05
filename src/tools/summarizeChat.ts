@@ -15,14 +15,13 @@ export default defineTool(
 		type: "function",
 		function: {
 			name: "summarizeChat",
-			description:
-				"分析并总结当前群聊的消息历史。当用户要求了解‘大家在聊什么’、‘错过了什么’或需要回顾近期讨论重点时调用。",
+			description: "分析并总结当前群聊的消息历史。",
 			parameters: {
 				type: "object",
 				properties: {
 					count: {
 						type: "number",
-						description: "需要追溯的消息条数，默认为 30 条。",
+						description: "需要追溯的消息条数。",
 						default: 30,
 					},
 				},

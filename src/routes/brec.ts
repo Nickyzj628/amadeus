@@ -18,7 +18,7 @@ export const brecRoute = {
 			return reply();
 		}
 		const segment = textToSegment(
-			`${Name}播了 ${Title}\nhttps://live.bilibili.com/${RoomId}`,
+			`${Name}播了：${Title}\nhttps://live.bilibili.com/${RoomId}`,
 		);
 
 		// 推送到群里
