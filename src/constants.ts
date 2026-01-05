@@ -77,47 +77,44 @@ export const SUMMARY_PROMPT = compactStr(`
 
 /** 聊天模型列表，必须兼容 OpenAI API */
 export const MODELS = [
-	Bun.env.GLM_API_KEY &&
-		({
-			name: "智谱清言",
-			aliases: ["chatglm", "glm"],
-			baseUrl: "https://open.bigmodel.cn/api/paas/v4",
-			apiKey: Bun.env.GLM_API_KEY,
-			model: "glm-4.7",
-			maxTokens: 200 * 1000, // 200k
-			extraBody: {
-				thinking: {
-					type: "disabled",
-				},
+	{
+		name: "智谱清言",
+		aliases: ["chatglm", "glm"],
+		baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+		model: "glm-4.7",
+		apiKey: Bun.env.GLM_API_KEY,
+		maxTokens: 200 * 1000, // 200k
+		extraBody: {
+			thinking: {
+				type: "disabled",
 			},
-		} satisfies Model),
-	Bun.env.DEEPSEEK_API_KEY &&
-		({
-			name: "DeepSeek",
-			aliases: ["deepseek", "ds"],
-			baseUrl: "https://api.deepseek.com",
-			apiKey: Bun.env.DEEPSEEK_API_KEY,
-			model: "deepseek-chat",
-			maxTokens: 128 * 1000, // 128k
-		} satisfies Model),
-	Bun.env.GEMINI_API_KEY &&
-		({
-			name: "Gemini",
-			aliases: ["gemini"],
-			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-			apiKey: Bun.env.GEMINI_API_KEY,
-			model: "gemini-2.5-flash",
-			maxTokens: 1000 * 1000, // 100w
-			extraBody: {
-				reasoning_effort: "none",
-			},
-			extraOptions: {
-				proxy: "http://127.0.0.1:7890",
-			},
-		} satisfies Model),
-].filter(Boolean) as Model[];
+		},
+	},
+	{
+		name: "DeepSeek",
+		aliases: ["deepseek", "ds"],
+		baseUrl: "https://api.deepseek.com",
+		apiKey: Bun.env.DEEPSEEK_API_KEY,
+		model: "deepseek-chat",
+		maxTokens: 128 * 1000, // 128k
+	},
+	{
+		name: "Gemini",
+		aliases: ["gemini"],
+		baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+		apiKey: Bun.env.GEMINI_API_KEY,
+		model: "gemini-2.5-flash",
+		maxTokens: 1000 * 1000, // 100w
+		extraBody: {
+			reasoning_effort: "none",
+		},
+		extraOptions: {
+			proxy: "http://127.0.0.1:7890",
+		},
+	},
+].filter((model) => !!model.apiKey) as Model[];
 
-/** 特殊场景使用的模型列表，必须兼容 OpenAI API */
+/** 特殊场景使用的模型列表，必须是兼容 OpenAI API 的多模态模型 */
 export const SPECIAL_MODELS = [
 	Bun.env.GLM_API_KEY &&
 		({
