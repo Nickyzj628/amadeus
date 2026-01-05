@@ -16,7 +16,7 @@ const MAX_REQUEST_COUNT = 5;
 
 export const rootRoute = {
 	POST: async (req: Request) => {
-		// 验证请求体格式，隐式保留了文字、图片、@、转发消息段
+		// 验证请求体格式，隐式保留了文字、图片、@、转发、回复消息段
 		const body = await req.json();
 		const validation = safeParse(GroupMessageEventSchema, body);
 		if (!validation.success) {
@@ -63,6 +63,7 @@ export const rootRoute = {
 						body: { tools },
 					});
 					messages.push(completion);
+					console.log(completion);
 
 					// 调用工具
 					const toolCalls = (completion.tool_calls ?? []).filter(
@@ -106,7 +107,7 @@ export const rootRoute = {
 			return reply(error.message);
 		}
 		if (response.content) {
-			timeLog("已处理消息", compactStr(response.content));
+			timeLog("已处理消息", compactStr(response.content), "\n");
 			return reply(response.content);
 		}
 		return reply("……");

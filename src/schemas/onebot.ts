@@ -11,12 +11,13 @@ import {
 	union,
 	unknown,
 } from "valibot";
-import { normalizeText } from "@/utils/common";
 import {
 	isAtSegment,
 	isForwardSegment,
 	isImageSegment,
+	isReplySegment,
 	isTextSegment,
+	normalizeText,
 } from "@/utils/onebot";
 
 // ================================
@@ -65,6 +66,16 @@ export const ImageSegmentSchema = object({
 });
 export type ImageSegment = InferOutput<typeof ImageSegmentSchema>;
 
+/** 回复消息段 */
+export const ReplySegmentSchema = object({
+	type: literal("reply"),
+	data: object({
+		/** 要回复的消息 ID，需通过 /get_msg API 获取具体内容 */
+		id: string(),
+	}),
+});
+export type ReplySegment = InferOutput<typeof ReplySegmentSchema>;
+
 /** 通用消息段联合 */
 export const CommonSegmentSchema = object({
 	type: string(),
@@ -78,6 +89,7 @@ export const SegmentSchema = union([
 	AtSegmentSchema,
 	ForwardSegmentSchema,
 	ImageSegmentSchema,
+	ReplySegmentSchema,
 ]);
 export type Segment = InferOutput<typeof SegmentSchema>;
 
@@ -115,7 +127,8 @@ export const GroupMessageEventSchema = object({
 				return (
 					isAtSegment(segment) ||
 					isForwardSegment(segment) ||
-					isImageSegment(segment)
+					isImageSegment(segment) ||
+					isReplySegment(segment)
 				);
 			}),
 		),
@@ -172,3 +185,9 @@ export const GetMessageHistoryResponseSchema = createResponseSchema(
 export type GetMessageHistoryResponse = InferOutput<
 	typeof GetMessageHistoryResponseSchema
 >;
+
+/** POST /get_msg 结果 */
+export const GetMessageResponseSchema = createResponseSchema(
+	GroupMessageEventSchema,
+);
+export type GetMessageResponse = InferOutput<typeof GetMessageResponseSchema>;

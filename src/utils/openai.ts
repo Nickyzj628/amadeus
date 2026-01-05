@@ -26,9 +26,11 @@ import { modelRef } from "@/tools/changeModel";
 import summarizeChat from "@/tools/summarizeChat";
 import {
 	flattenForwardSegment,
+	getReplyMessage,
 	isAtSegment,
 	isForwardSegment,
 	isImageSegment,
+	isReplySegment,
 	isTextSegment,
 } from "./onebot";
 
@@ -136,13 +138,22 @@ export const onebotToOpenai = async (
 		}
 		// 合并转发
 		else if (isForwardSegment(segment)) {
-			const forwaredMessages = await flattenForwardSegment(segment.data.id, {
+			const forwardedMessages = await flattenForwardSegment(segment.data.id, {
 				count: options?.forwardCount,
 				processMessageEvent: async (e) => {
 					return await onebotToOpenai(e);
 				},
 			});
-			messages.push(...forwaredMessages);
+			messages.push(...forwardedMessages);
+		}
+		// 回复
+		else if (isReplySegment(segment)) {
+			const e = await getReplyMessage(segment.data.id);
+			if (!e) {
+				continue;
+			}
+			const flatRepliedMessages = await onebotToOpenai(e, options);
+			messages.push(...flatRepliedMessages);
 		}
 	}
 
@@ -298,7 +309,7 @@ export const imageToText = async (image: ImageSegment["data"]) => {
 					{ type: "image_url", image_url: { url: base64 } },
 					{
 						type: "text",
-						text: "简明扼要地描述图片内容。",
+						text: "描述图片内容。只描述明确可见的信息，对于不确定的内容不要推测。",
 					},
 				],
 			},
