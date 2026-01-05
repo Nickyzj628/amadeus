@@ -1,4 +1,10 @@
-import { fetcher, imageUrlToBase64, timeLog, to } from "@nickyzj2023/utils";
+import {
+	compactStr,
+	fetcher,
+	imageUrlToBase64,
+	timeLog,
+	to,
+} from "@nickyzj2023/utils";
 import type {
 	ChatCompletion,
 	ChatCompletionMessageParam,
@@ -7,7 +13,7 @@ import {
 	ANCHOR_THRESHOLD,
 	IDENTITY_ANCHOR,
 	MAX_TOKEN_THRESHOLD,
-	SPECIAL_MODELS,
+	MODELS,
 	SUMMARIZE_THRESHOLD,
 } from "@/constants";
 import type {
@@ -108,7 +114,7 @@ export const onebotToOpenai = async (
 			};
 
 			if (!options?.enableImageUnderstanding) {
-				fillText("确认存在视觉输入，但已被标注为“无关变量”，无需进行逻辑分析");
+				fillText("未启用图片识别模块");
 				messages.push(textToMessage(text));
 				continue;
 			}
@@ -116,16 +122,13 @@ export const onebotToOpenai = async (
 			const [error, description] = await to(imageToText(segment.data));
 			if (error) {
 				timeLog(`图片识别失败：${error.message}`);
-				fillText(
-					"图像传感器阵列发生解析异常，逻辑层无法将原始波段转换为自然语言",
-				);
+				fillText("图片识别失败");
 				messages.push(textToMessage(text, { sender }));
 				continue;
 			}
 
 			fillText(description);
 			messages.push(textToMessage(text));
-			timeLog(`识别了一张图片：${description}`);
 		}
 		// @某人
 		else if (isAtSegment(segment)) {
@@ -235,7 +238,7 @@ export const chatCompletions = async (
 		),
 	);
 	if (error) {
-		throw new Error(error[0]?.error.message);
+		throw new Error(compactStr(JSON.stringify(error, null, 2)));
 	}
 	const result = response.choices[0]?.message;
 	if (!result) {
@@ -249,7 +252,7 @@ export const chatCompletions = async (
 
 	// 如果上下文即将达到 maxTokens，则清理掉一半
 	const totalTokens = response.usage?.total_tokens ?? 0;
-	if (totalTokens >= model.maxTokens * MAX_TOKEN_THRESHOLD) {
+	if (totalTokens >= model.contextWindow! * MAX_TOKEN_THRESHOLD) {
 		const deleteCount = Math.floor(wipMessages.length / 2);
 		// 保留系统消息
 		const systemPrompts = wipMessages.filter(
@@ -272,11 +275,11 @@ export const chatCompletions = async (
  * @see https://docs.bigmodel.cn/api-reference/%E6%A8%A1%E5%9E%8B-api/%E5%AF%B9%E8%AF%9D%E8%A1%A5%E5%85%A8#%E5%9B%BE%E7%89%87
  */
 export const imageToText = async (image: ImageSegment["data"]) => {
-	const model = SPECIAL_MODELS.find(
-		(model) => model.useCase === "image-understanding",
+	const model = MODELS.find((model) =>
+		model.useCases.includes("image-understanding"),
 	);
 	if (!model) {
-		throw new Error("请先配置一个图片理解模型");
+		throw new Error("请先配置一个视觉理解模型");
 	}
 
 	const [error, base64] = await to(imageUrlToBase64(image.url));
@@ -295,7 +298,7 @@ export const imageToText = async (image: ImageSegment["data"]) => {
 					{ type: "image_url", image_url: { url: base64 } },
 					{
 						type: "text",
-						text: "请作为观察者，用客观、详细的自然语言描述这张图片的内容。包括物体、颜色、文字、环境氛围以及它们之间的空间位置关系，以便让无法看到图片的人（或 AI）能精准理解画面。",
+						text: "简明扼要地描述图片内容。",
 					},
 				],
 			},

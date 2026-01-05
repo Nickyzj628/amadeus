@@ -6,9 +6,9 @@ export type Model = {
 	model: string;
 	apiKey: string;
 	/** 模型用途，默认为纯聊天的 ["chat"] */
-	useCases?: ("chat" | "image-understanding" | "json")[];
+	useCases: ("chat" | "image-understanding" | "json")[];
 	/** 上下文窗口，默认 128k */
-	contextWindow: number;
+	contextWindow?: number;
 	/** 请求时额外携带的 body 参数 */
 	extraBody?: Record<string, any>;
 	/** 请求时额外携带的 fetch options，可用于设置代理 */

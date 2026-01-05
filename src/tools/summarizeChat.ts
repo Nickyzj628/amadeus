@@ -1,13 +1,14 @@
 import { to } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { safeParse } from "valibot";
-import { SPECIAL_MODELS, SUMMARY_PROMPT } from "@/constants";
+import { MODELS, SUMMARY_PROMPT, SYSTEM_PROMPT } from "@/constants";
 import {
 	type GetMessageHistoryResponse,
 	GetMessageHistoryResponseSchema,
 } from "@/schemas/onebot";
 import { http } from "@/utils/onebot";
 import { chatCompletions, onebotToOpenai } from "@/utils/openai";
+import { modelRef } from "./changeModel";
 import { defineTool } from "./utils";
 
 export default defineTool(
@@ -36,13 +37,15 @@ export default defineTool(
 		providedMessages?: ChatCompletionMessageParam[];
 	}) => {
 		const { count = 30, groupId, providedMessages } = params ?? {};
-
-		const model = SPECIAL_MODELS.find((model) => model.useCase === "json");
-		if (!model) {
-			return "还没有配置总结相关的JSON Output模型";
-		}
 		if (!groupId && !providedMessages) {
 			return "请提供用于总结的群号或消息数组";
+		}
+
+		const model = modelRef.value?.useCases.includes("json")
+			? modelRef.value
+			: MODELS.find((model) => model.useCases.includes("json"));
+		if (!model) {
+			return "还没有配置JSON Output模型";
 		}
 
 		const messages: ChatCompletionMessageParam[] = [];

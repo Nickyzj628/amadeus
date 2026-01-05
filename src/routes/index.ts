@@ -16,7 +16,7 @@ const MAX_REQUEST_COUNT = 5;
 
 export const rootRoute = {
 	POST: async (req: Request) => {
-		// 验证请求体格式，隐式保留了文字、图片、@、转发消息
+		// 验证请求体格式，隐式保留了文字、图片、@、转发消息段
 		const body = await req.json();
 		const validation = safeParse(GroupMessageEventSchema, body);
 		if (!validation.success) {
@@ -72,7 +72,7 @@ export const rootRoute = {
 						// 如果在调用工具时超过最大请求次数，则抛出异常
 						if (count === MAX_REQUEST_COUNT) {
 							throw new Error(
-								`单次聊天发出的请求次数超过限制（${MAX_REQUEST_COUNT}），终止响应`,
+								`单次聊天调用的工具次数超过限制（${MAX_REQUEST_COUNT}），已停止响应`,
 							);
 						}
 						// 遍历模型想要调用的工具
@@ -80,7 +80,7 @@ export const rootRoute = {
 							const toolResult = await chooseAndHandleTool(tool, e);
 							timeLog(
 								`已调用工具${tool.function.name}`,
-								compactStr(toolResult, { maxLength: 100 }),
+								compactStr(toolResult),
 							);
 							messages.push(
 								textToMessage(toolResult, {

@@ -79,11 +79,11 @@ export const SUMMARY_PROMPT = compactStr(`
 export const MODELS = [
 	{
 		name: "智谱清言",
-		aliases: ["chatglm", "glm"],
 		baseUrl: "https://open.bigmodel.cn/api/paas/v4",
 		model: "glm-4.7",
 		apiKey: Bun.env.GLM_API_KEY,
-		maxTokens: 200 * 1000, // 200k
+		contextWindow: 200 * 1000, // 200k
+		useCases: ["chat", "json"],
 		extraBody: {
 			thinking: {
 				type: "disabled",
@@ -92,19 +92,19 @@ export const MODELS = [
 	},
 	{
 		name: "DeepSeek",
-		aliases: ["deepseek", "ds"],
 		baseUrl: "https://api.deepseek.com",
-		apiKey: Bun.env.DEEPSEEK_API_KEY,
 		model: "deepseek-chat",
-		maxTokens: 128 * 1000, // 128k
+		apiKey: Bun.env.DEEPSEEK_API_KEY,
+		contextWindow: 128 * 1000, // 128k
+		useCases: ["chat", "json"],
 	},
 	{
 		name: "Gemini",
-		aliases: ["gemini"],
 		baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-		apiKey: Bun.env.GEMINI_API_KEY,
 		model: "gemini-2.5-flash",
-		maxTokens: 1000 * 1000, // 100w
+		apiKey: Bun.env.GEMINI_API_KEY,
+		contextWindow: 1000 * 1000, // 100w
+		useCases: ["chat", "json"],
 		extraBody: {
 			reasoning_effort: "none",
 		},
@@ -112,38 +112,23 @@ export const MODELS = [
 			proxy: "http://127.0.0.1:7890",
 		},
 	},
-].filter((model) => !!model.apiKey) as Model[];
-
-/** 特殊场景使用的模型列表，必须是兼容 OpenAI API 的多模态模型 */
-export const SPECIAL_MODELS = [
-	Bun.env.GLM_API_KEY &&
-		({
-			useCase: "image-understanding",
-			name: "智谱清言",
-			aliases: ["chatglm", "glm"],
-			baseUrl: "https://open.bigmodel.cn/api/paas/v4",
-			apiKey: Bun.env.GLM_API_KEY,
-			model: "glm-4.6v-flashx",
-			maxTokens: 200 * 1000, // 200k
-			extraBody: {
-				thinking: {
-					type: "disabled",
-				},
+	{
+		name: "智谱清言（视觉理解）",
+		baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+		model: "glm-4.6v-flashx",
+		apiKey: Bun.env.GLM_API_KEY,
+		contextWindow: 200 * 1000, // 200k
+		useCases: ["image-understanding"],
+		extraBody: {
+			thinking: {
+				type: "disabled",
 			},
-		} satisfies Model),
-	Bun.env.DEEPSEEK_API_KEY &&
-		({
-			useCase: "json",
-			name: "DeepSeek",
-			aliases: ["deepseek", "ds"],
-			baseUrl: "https://api.deepseek.com",
-			apiKey: Bun.env.DEEPSEEK_API_KEY,
-			model: "deepseek-chat",
-			maxTokens: 128 * 1000, // 128k
-			extraBody: {
-				response_format: {
-					type: "json_object",
-				},
-			},
-		} satisfies Model),
-].filter(Boolean) as Model[];
+		},
+	},
+]
+	.filter((model) => !!model.apiKey)
+	.map((model) => ({
+		...model,
+		contextWindow: model.contextWindow ?? 128 * 1000,
+		useCases: model.useCases ?? ["chat"],
+	})) as Model[];
