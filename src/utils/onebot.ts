@@ -149,7 +149,7 @@ export const isImageSegment = (
 export const reply = (...segments: Segment[] | string[]) => {
 	const isEmpty = segments.length === 0;
 	if (isEmpty) {
-		return new Response(undefined, { status: 204 });
+		return new Response(null, { status: 204 });
 	}
 
 	const normalizedSegments = segments.map((segment) => {
