@@ -103,6 +103,30 @@ export const MODELS = [
 		},
 	},
 	{
+		name: "LongCat",
+		baseUrl: "https://api.longcat.chat/openai/v1",
+		model: "longcat-flash-chat",
+		apiKey: Bun.env.LONGCAT_API_KEY,
+		contextWindow: 32 * 1000, // 32k
+		useCases: ["chat"],
+	},
+	{
+		name: "DouBao",
+		baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+		model: "doubao-seed-1-8-251228",
+		apiKey: Bun.env.DOUBAO_API_KEY,
+		contextWindow: 256 * 1000, // 256k
+		useCases: ["chat"],
+	},
+	{
+		name: "Qwen",
+		baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+		model: "qwen-plus-latest",
+		apiKey: Bun.env.QWEN_API_KEY,
+		contextWindow: 128 * 1000, // 128k
+		useCases: ["chat"],
+	},
+	{
 		name: "DeepSeek",
 		baseUrl: "https://api.deepseek.com",
 		model: "deepseek-chat",
