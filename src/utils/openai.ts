@@ -114,9 +114,7 @@ export const onebotToOpenai = async (
 	const consumeContextBlock = () => {
 		let content = "";
 		if (contextBlockItems.length > 0) {
-			content = compactStr(
-				`[CONTEXT_BLOCK:\n${contextBlockItems.map((item) => `\t- ${item}`).join("\n")}]`,
-			);
+			content = `[CONTEXT_BLOCK:\n${contextBlockItems.join("\n")}]`;
 			contextBlockItems.length = 0;
 		}
 		return content;
@@ -164,10 +162,13 @@ export const onebotToOpenai = async (
 	}
 
 	const content = contentItems.join(" ");
+	const contextBlock = consumeContextBlock();
 	return textToMessage(content, {
 		sender,
 		makeContent: (mixedContent) =>
-			consumeContextBlock() + (content === "" ? "" : mixedContent),
+			compactStr(
+				[contextBlock, content && mixedContent].filter(Boolean).join("\n"),
+			),
 	});
 };
 
