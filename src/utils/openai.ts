@@ -68,8 +68,8 @@ export const textToMessage = <K extends ChatCompletionMessageParam["role"]>(
 		role?: K;
 		/** 修改发送人信息，默认 user */
 		sender?: Sender;
-		/** 上下文背景信息标签，默认不携带 */
-		contextBlock?: string;
+		/** 从外部篡改即将完成的消息 content 字段 */
+		makeContent?: (content: string) => string;
 		/** 禁止装饰 text 后，将不再携带 [FROM]、[BODY]、[CONTEXT_BLOCK] 等标签，默认不禁 */
 		disableDecoration?: boolean;
 	} & Partial<
@@ -79,7 +79,7 @@ export const textToMessage = <K extends ChatCompletionMessageParam["role"]>(
 	const {
 		role = "user" as K,
 		sender,
-		contextBlock = "",
+		makeContent = (content: string) => content,
 		disableDecoration = false,
 		...restOptions
 	} = options ?? {};
@@ -88,18 +88,16 @@ export const textToMessage = <K extends ChatCompletionMessageParam["role"]>(
 
 	return {
 		role,
-		content: disableDecoration
-			? text
-			: `[FROM: ${from}]${contextBlock ? `[CONTEXT_BLOCK: ${contextBlock}]` : ""}[BODY: ${text}]`,
+		content: makeContent(
+			disableDecoration ? text : `[FROM: ${from}][BODY: ${text}]`,
+		),
 		...restOptions,
 	} as ChatCompletionMessageParam;
 };
 
 /**
  * 把消息格式从 OneBot 转成 OpenAI API
- *
- * @remarks
- * 保证安全返回数组
+ * @remarks 保证安全返回消息对象
  */
 export const onebotToOpenai = async (
 	e: MinimalMessageEvent,
@@ -110,44 +108,40 @@ export const onebotToOpenai = async (
 		forwardCount?: number;
 	},
 ) => {
-	const messages: ChatCompletionMessageParam[] = [];
 	const { sender } = e;
 
-	let at = "";
-	const contextBlock = "";
-
-	const fillImageText = (text: string, imageDesc: string) => {
-		return text.replace(/(\[IMAGE_PARSED: )(.*?)(\])/, `$1${imageDesc}$3`);
+	const contextBlockItems: string[] = [];
+	const consumeContextBlock = () => {
+		let content = "";
+		if (contextBlockItems.length > 0) {
+			content = compactStr(
+				`[CONTEXT_BLOCK:\n${contextBlockItems.map((item) => `\t- ${item}`).join("\n")}]`,
+			);
+			contextBlockItems.length = 0;
+		}
+		return content;
 	};
-	const fillContextBlock = (messages: ChatCompletionMessageParam[]) => {
-		return `[CONTEXT_BLOCK:\n${messages.map((message) => `- ${message.content}`).join("\n")}]`;
-	};
 
+	// 解析消息段数组
+	const contentItems: string[] = [];
 	for (const segment of e.message) {
 		// 文字
 		if (isTextSegment(segment)) {
-			const text = `${at}${segment.data.text}`;
-			messages.push(textToMessage(text, { sender }));
-			at = "";
+			contentItems.push(segment.data.text);
 		}
 		// 图片
 		else if (isImageSegment(segment) && options?.enableImageUnderstanding) {
-			let text = `${at}[IMAGE_PARSED: _]`;
-
 			const [error, description] = await to(imageToText(segment.data));
 			if (error) {
 				timeLog(`图片识别失败：${error.message}`);
-				text = fillImageText(text, "图片识别失败");
+				contentItems.push("[IMAGE_PARSED: 图片识别失败]");
 			} else {
-				text = fillImageText(text, description);
+				contentItems.push(`[IMAGE_PARSED: ${description}]`);
 			}
-
-			messages.push(textToMessage(text, { sender }));
-			at = "";
 		}
 		// @某人
 		else if (isAtSegment(segment)) {
-			at += `@${segment.data.qq} `;
+			contentItems.push(`@${segment.data.qq}`);
 		}
 		// 合并转发
 		else if (isForwardSegment(segment)) {
@@ -155,33 +149,26 @@ export const onebotToOpenai = async (
 				count: options?.forwardCount,
 				processMessageEvent: onebotToOpenai,
 			});
-			messages.push(
-				textToMessage(fillContextBlock(forwardedMessages), {
-					sender,
-					disableDecoration: true,
-				}),
+			contextBlockItems.push(
+				...forwardedMessages.map((message) => message.content as string),
 			);
 		}
 		// 回复
 		else if (isReplySegment(segment)) {
 			const e = await getReplyMessage(segment.data.id);
 			if (e) {
-				const flatRepliedMessages = await onebotToOpenai(e, options);
-				messages.push(
-					textToMessage(at, {
-						sender,
-						contextBlock: fillContextBlock(flatRepliedMessages),
-					}),
-				);
+				const flatRepliedMessage = await onebotToOpenai(e, options);
+				contextBlockItems.push(flatRepliedMessage.content as string);
 			}
 		}
 	}
-	// 如果还有没被消费的 prefix，则当做一条消息
-	if (at !== "") {
-		messages.push(textToMessage(at, { sender }));
-	}
 
-	return messages;
+	const content = contentItems.join(" ");
+	return textToMessage(content, {
+		sender,
+		makeContent: (mixedContent) =>
+			consumeContextBlock() + (content === "" ? "" : mixedContent),
+	});
 };
 
 /** openai.chat.completions() 的替代实现，返回response.choices[0].message */
@@ -287,7 +274,7 @@ export const chatCompletions = async (
 
 	// 如果上下文即将达到 maxTokens，则清理掉一半
 	const totalTokens = response.usage?.total_tokens ?? 0;
-	if (totalTokens >= model.contextWindow! * MAX_TOKEN_THRESHOLD) {
+	if (totalTokens >= model.contextWindow * MAX_TOKEN_THRESHOLD) {
 		const deleteCount = Math.floor(wipMessages.length / 2);
 		// 保留系统消息
 		const systemPrompts = wipMessages.filter(

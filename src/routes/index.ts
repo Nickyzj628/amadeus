@@ -3,7 +3,7 @@ import { safeParse } from "valibot";
 import { MAX_TOOL_COUNT, SYSTEM_PROMPT } from "@/constants";
 import { GroupMessageEventSchema } from "@/schemas/onebot";
 import { chooseAndHandleTool, tools } from "@/tools";
-import { isAtSelfSegment, reply } from "@/utils/onebot";
+import { isAtSelfSegment, normalizeText, reply } from "@/utils/onebot";
 import {
 	chatCompletions,
 	onebotToOpenai,
@@ -39,14 +39,11 @@ export const rootRoute = {
 		const messages = readGroupMessages(groupId, [
 			textToMessage(SYSTEM_PROMPT, { role: "system" }),
 		]);
-		const currentMessages = await onebotToOpenai(e, {
+		const currentMessage = await onebotToOpenai(e, {
 			enableImageUnderstanding: true,
 		});
-		messages.push(...currentMessages);
-		timeLog(
-			"处理消息",
-			currentMessages.map((message) => message.content),
-		);
+		messages.push(currentMessage);
+		timeLog("接收消息", currentMessage.content);
 
 		// 循环请求模型，直到不再调用工具
 		const [error, response] = await to(
@@ -100,7 +97,9 @@ export const rootRoute = {
 			return reply(error.message);
 		}
 		if (response.content) {
-			return reply(response.content);
+			const content = normalizeText(response.content);
+			timeLog("回复消息", content);
+			return reply(content);
 		}
 		return reply("……");
 	},

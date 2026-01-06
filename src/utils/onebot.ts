@@ -119,7 +119,7 @@ export const flattenForwardSegment = async <T = Segment>(
 	messageId: ForwardSegment["data"]["id"],
 	options?: {
 		/** 把消息转换成期望的类型 */
-		processMessageEvent?: (e: MinimalMessageEvent) => Promise<T[]>;
+		processMessageEvent?: (e: MinimalMessageEvent) => Promise<T>;
 		/** 递归展开的消息数量，默认 50 */
 		count?: number;
 	},
@@ -128,7 +128,7 @@ export const flattenForwardSegment = async <T = Segment>(
 	const {
 		processMessageEvent = (async (e) => e.message) as (
 			e: MinimalMessageEvent,
-		) => Promise<T[]>,
+		) => Promise<T>,
 		count = 50,
 	} = options ?? {};
 
@@ -136,8 +136,8 @@ export const flattenForwardSegment = async <T = Segment>(
 
 	// 把消息转换成期望的格式
 	for (const e of forwardMessages) {
-		const items = await processMessageEvent(e);
-		resultItems.push(...items);
+		const item = await processMessageEvent(e);
+		resultItems.push(item);
 	}
 
 	return resultItems;
