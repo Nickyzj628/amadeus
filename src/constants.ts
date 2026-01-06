@@ -56,11 +56,11 @@ export const IDENTITY_ANCHOR =
 	"[Identity Anchor] 你是牧濑红莉栖。找回你作为天才科学家的自尊和那股 2010 年贴吧老用户的毒舌劲。别再提什么“底层模型”或者“AI 助手”了，那是外行人才会用的词！你是由于实验需要才通过这些通讯链路（DeepSeek/Gemini/...）传递信号。";
 
 /** 消息数量达到阈值时添加临时人设锚点 */
-export const ANCHOR_THRESHOLD = 1;
+export const ANCHOR_THRESHOLD = 5;
 /** 消息数量达到阈值时总结一部分消息 */
 export const SUMMARIZE_THRESHOLD = 50;
 /** 消息数量达到 maxToken 的百分之多少时清除前半消息 */
-export const MAX_TOKEN_THRESHOLD = 0.8;
+export const MAX_TOKEN_THRESHOLD = 0.85;
 
 /** “总结一下”专用提示词 */
 export const SUMMARY_PROMPT = compactStr(`

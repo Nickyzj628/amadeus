@@ -227,7 +227,7 @@ export const chatCompletions = async (
 
 	// 如果消息仍超过 Y 条，则添加临时人设锚点
 	const needIdentityAnchor =
-		!disableMessagesOptimization && wipMessages.length >= ANCHOR_THRESHOLD;
+		!disableMessagesOptimization && wipMessages.length > ANCHOR_THRESHOLD;
 	let anchorIndex = -1;
 	if (needIdentityAnchor) {
 		anchorIndex = wipMessages.findLastIndex(
