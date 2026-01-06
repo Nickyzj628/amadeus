@@ -2,7 +2,7 @@ import { compactStr } from "@nickyzj2023/utils";
 import type { Model } from "./schemas/openai";
 
 /** 未被 @ 时的回复几率 */
-export const REPLY_PROBABILITY_NOT_BE_AT = 0.1;
+export const REPLY_PROBABILITY_NOT_BE_AT = 0.05;
 
 /** 单次回复工具调用次数限制 */
 export const MAX_TOOL_COUNT = 5;
