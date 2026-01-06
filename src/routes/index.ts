@@ -1,9 +1,9 @@
 import { compactStr, loopUntil, timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
-import { SYSTEM_PROMPT } from "@/constants";
+import { MAX_TOOL_COUNT, SYSTEM_PROMPT } from "@/constants";
 import { GroupMessageEventSchema } from "@/schemas/onebot";
 import { chooseAndHandleTool, tools } from "@/tools";
-import { isAtSelfSegment, normalizeText, reply } from "@/utils/onebot";
+import { isAtSelfSegment, reply } from "@/utils/onebot";
 import {
 	chatCompletions,
 	onebotToOpenai,
@@ -11,8 +11,6 @@ import {
 	readGroupMessages,
 	textToMessage,
 } from "@/utils/openai";
-
-const MAX_REQUEST_COUNT = 5;
 
 export const rootRoute = {
 	POST: async (req: Request) => {
@@ -29,10 +27,6 @@ export const rootRoute = {
 		if (atSegmentIndex === -1) {
 			return reply();
 		}
-		const restSegments = e.message.toSpliced(atSegmentIndex, 1);
-		if (restSegments.length === 0) {
-			return reply();
-		}
 
 		// 限制每个群只能同时处理一条消息
 		const groupId = e.group_id;
@@ -41,7 +35,7 @@ export const rootRoute = {
 		}
 		pendingGroups.push(groupId);
 
-		// 读取群聊消息
+		// 读取机器人相关群聊消息
 		const messages = readGroupMessages(groupId, [
 			textToMessage(SYSTEM_PROMPT, { role: "system" }),
 		]);
@@ -70,9 +64,9 @@ export const rootRoute = {
 					);
 					if (toolCalls.length > 0) {
 						// 如果在调用工具时超过最大请求次数，则抛出异常
-						if (count === MAX_REQUEST_COUNT) {
+						if (count === MAX_TOOL_COUNT) {
 							throw new Error(
-								`单次聊天调用的工具次数超过限制（${MAX_REQUEST_COUNT}），已停止响应`,
+								`单次聊天调用的工具次数超过限制（${MAX_TOOL_COUNT}），已停止响应`,
 							);
 						}
 						// 遍历模型想要调用的工具
@@ -94,7 +88,7 @@ export const rootRoute = {
 					return completion;
 				},
 				{
-					maxRetries: MAX_REQUEST_COUNT,
+					maxRetries: MAX_TOOL_COUNT,
 					shouldStop: (completion) => !completion.tool_calls,
 				},
 			),

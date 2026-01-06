@@ -12,6 +12,7 @@ import type {
 import {
 	ANCHOR_THRESHOLD,
 	IDENTITY_ANCHOR,
+	IMAGE_UNDERSTANDING_PROMPT,
 	MAX_TOKEN_THRESHOLD,
 	MODELS,
 	SUMMARIZE_THRESHOLD,
@@ -63,19 +64,33 @@ export const readGroupMessages = (
 export const textToMessage = <K extends ChatCompletionMessageParam["role"]>(
 	text: string,
 	options?: {
+		/** 修改消息对应的角色，默认 user */
 		role?: K;
+		/** 修改发送人信息，默认 user */
 		sender?: Sender;
+		/** 上下文背景信息标签，默认不携带 */
+		contextBlock?: string;
+		/** 禁止装饰 text 后，将不再携带 [FROM]、[BODY]、[CONTEXT_BLOCK] 等标签，默认不禁 */
+		disableDecoration?: boolean;
 	} & Partial<
 		Omit<Extract<ChatCompletionMessageParam, { role: K }>, "content" | "role">
 	>,
 ): ChatCompletionMessageParam => {
-	const { role = "user" as K, sender, ...restOptions } = options ?? {};
+	const {
+		role = "user" as K,
+		sender,
+		contextBlock = "",
+		disableDecoration = false,
+		...restOptions
+	} = options ?? {};
 
 	const from = sender ? `${sender.nickname}(${sender.user_id})` : role;
 
 	return {
 		role,
-		content: `[FROM: ${from}]\n[BODY: ${text}]`,
+		content: disableDecoration
+			? text
+			: `[FROM: ${from}]${contextBlock ? `[CONTEXT_BLOCK: ${contextBlock}]` : ""}[BODY: ${text}]`,
 		...restOptions,
 	} as ChatCompletionMessageParam;
 };
@@ -98,69 +113,72 @@ export const onebotToOpenai = async (
 	const messages: ChatCompletionMessageParam[] = [];
 	const { sender } = e;
 
-	let prefix = "";
+	let at = "";
+	const contextBlock = "";
+
+	const fillImageText = (text: string, imageDesc: string) => {
+		return text.replace(/(\[IMAGE_PARSED: )(.*?)(\])/, `$1${imageDesc}$3`);
+	};
+	const fillContextBlock = (messages: ChatCompletionMessageParam[]) => {
+		return `[CONTEXT_BLOCK:\n${messages.map((message) => `- ${message.content}`).join("\n")}]`;
+	};
+
 	for (const segment of e.message) {
 		// 文字
 		if (isTextSegment(segment)) {
-			const text = `${prefix}${segment.data.text}`;
-			prefix = "";
+			const text = `${at}${segment.data.text}`;
 			messages.push(textToMessage(text, { sender }));
+			at = "";
 		}
 		// 图片
-		else if (isImageSegment(segment)) {
-			let text = `${prefix}[IMAGE_PARSED: _]`;
-			prefix = "";
-			const fillText = (description: string) => {
-				text = text.replace(
-					/(\[IMAGE_PARSED: )(.*?)(\])/,
-					`$1${description}$3`,
-				);
-			};
-
-			if (!options?.enableImageUnderstanding) {
-				fillText("未启用图片识别模块");
-				messages.push(textToMessage(text));
-				continue;
-			}
+		else if (isImageSegment(segment) && options?.enableImageUnderstanding) {
+			let text = `${at}[IMAGE_PARSED: _]`;
 
 			const [error, description] = await to(imageToText(segment.data));
 			if (error) {
 				timeLog(`图片识别失败：${error.message}`);
-				fillText("图片识别失败");
-				messages.push(textToMessage(text, { sender }));
-				continue;
+				text = fillImageText(text, "图片识别失败");
+			} else {
+				text = fillImageText(text, description);
 			}
 
-			fillText(description);
-			messages.push(textToMessage(text));
+			messages.push(textToMessage(text, { sender }));
+			at = "";
 		}
 		// @某人
 		else if (isAtSegment(segment)) {
-			prefix += `@${segment.data.qq} `;
+			at += `@${segment.data.qq} `;
 		}
 		// 合并转发
 		else if (isForwardSegment(segment)) {
 			const forwardedMessages = await flattenForwardSegment(segment.data.id, {
 				count: options?.forwardCount,
-				processMessageEvent: async (e) => {
-					return await onebotToOpenai(e);
-				},
+				processMessageEvent: onebotToOpenai,
 			});
-			messages.push(...forwardedMessages);
+			messages.push(
+				textToMessage(fillContextBlock(forwardedMessages), {
+					sender,
+					disableDecoration: true,
+				}),
+			);
 		}
 		// 回复
 		else if (isReplySegment(segment)) {
 			const e = await getReplyMessage(segment.data.id);
-			if (!e) {
-				continue;
+			if (e) {
+				const flatRepliedMessages = await onebotToOpenai(e, options);
+				messages.push(
+					textToMessage(at, {
+						sender,
+						contextBlock: fillContextBlock(flatRepliedMessages),
+					}),
+				);
 			}
-			const flatRepliedMessages = await onebotToOpenai(e, options);
-			prefix += `[CONTEXT_BLOCK:\n${flatRepliedMessages.map((message) => `- ${message.content}`).join("\n")}]`;
 		}
 	}
 	// 如果还有没被消费的 prefix，则当做一条消息
-	if (prefix !== "") {
-		messages.push(textToMessage(prefix, { sender }));
+	if (at !== "") {
+		messages.push(textToMessage(at, { sender }));
 	}
 
 	return messages;
@@ -299,10 +317,7 @@ export const imageToText = async (image: ImageSegment["data"]) => {
 		throw new Error("请先配置一个视觉理解模型");
 	}
 
-	const [error, base64] = await to(imageUrlToBase64(image.url));
-	if (error) {
-		throw new Error(error.message);
-	}
+	const base64 = await imageUrlToBase64(image.url);
 	if (base64.includes("image/gif")) {
 		throw new Error("不支持动图");
 	}
@@ -313,10 +328,7 @@ export const imageToText = async (image: ImageSegment["data"]) => {
 				role: "user",
 				content: [
 					{ type: "image_url", image_url: { url: base64 } },
-					{
-						type: "text",
-						text: "描述图片内容。只描述明确可见的信息，对于不确定的内容不要推测。",
-					},
+					{ type: "text", text: IMAGE_UNDERSTANDING_PROMPT },
 				],
 			},
 		],
@@ -325,7 +337,7 @@ export const imageToText = async (image: ImageSegment["data"]) => {
 		},
 	);
 	if (!response.content) {
-		throw new Error("未能把图片转换成自然语言");
+		throw new Error("图片识别失败");
 	}
 
 	return response.content;
