@@ -1,6 +1,10 @@
 import { compactStr, loopUntil, timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
-import { MAX_TOOL_COUNT, SYSTEM_PROMPT } from "@/constants";
+import {
+	MAX_TOOL_COUNT,
+	REPLY_PROBABILITY_NOT_BE_AT,
+	SYSTEM_PROMPT,
+} from "@/constants";
 import { GroupMessageEventSchema } from "@/schemas/onebot";
 import { chooseAndHandleTool, tools } from "@/tools";
 import { isAtSelfSegment, normalizeText, reply } from "@/utils/onebot";
@@ -22,9 +26,9 @@ export const rootRoute = {
 		}
 		const e = validation.output;
 
-		// 拦截不是@当前机器人的消息
+		// 拦截不是@当前机器人的消息（极小概率放行）
 		const atSegmentIndex = e.message.findIndex(isAtSelfSegment);
-		if (atSegmentIndex === -1) {
+		if (atSegmentIndex === -1 && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
 			return reply();
 		}
 
