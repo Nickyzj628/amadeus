@@ -27,7 +27,7 @@ import { modelRef } from "@/tools/changeModel";
 import summarizeChat from "@/tools/summarizeChat";
 import {
 	flattenForwardSegment,
-	getReplyMessage,
+	getMessage,
 	isAtSegment,
 	isForwardSegment,
 	isImageSegment,
@@ -153,7 +153,7 @@ export const onebotToOpenai = async (
 		}
 		// 回复
 		else if (isReplySegment(segment)) {
-			const e = await getReplyMessage(segment.data.id);
+			const e = await getMessage(segment.data.id);
 			if (e) {
 				const flatRepliedMessage = await onebotToOpenai(e, options);
 				contextBlockItems.push(flatRepliedMessage.content as string);
@@ -227,7 +227,7 @@ export const chatCompletions = async (
 
 	// 如果消息仍超过 Y 条，则添加临时人设锚点
 	const needIdentityAnchor =
-		!disableMessagesOptimization && wipMessages.length > ANCHOR_THRESHOLD;
+		!disableMessagesOptimization && wipMessages.length >= ANCHOR_THRESHOLD;
 	let anchorIndex = -1;
 	if (needIdentityAnchor) {
 		anchorIndex = wipMessages.findLastIndex(

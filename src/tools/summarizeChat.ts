@@ -1,12 +1,7 @@
 import { to } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageParam } from "openai/resources";
-import { safeParse } from "valibot";
-import { MODELS, SUMMARY_PROMPT, SYSTEM_PROMPT } from "@/constants";
-import {
-	type GetMessageHistoryResponse,
-	GetMessageHistoryResponseSchema,
-} from "@/schemas/onebot";
-import { http } from "@/utils/onebot";
+import { MODELS, SUMMARY_PROMPT } from "@/constants";
+import { getGroupMessageHistory } from "@/utils/onebot";
 import { chatCompletions, onebotToOpenai } from "@/utils/openai";
 import { modelRef } from "./changeModel";
 import { defineTool } from "./utils";
@@ -56,23 +51,15 @@ export default defineTool(
 		}
 		// 使用手动获取的群历史消息
 		else if (groupId) {
-			const [error, response] = await to<GetMessageHistoryResponse>(
-				http.post("/get_group_msg_history", {
-					group_id: groupId,
-					count,
-				}),
+			const [error, response] = await to(
+				getGroupMessageHistory(groupId, count),
 			);
 			if (error) {
 				return `总结失败：${error.message}`;
 			}
-			const validation = safeParse(GetMessageHistoryResponseSchema, response);
-			if (!validation.success) {
-				return `总结失败：${validation.issues[0].message}`;
-			}
-
 			// 转换成 OpenAI API 消息
-			for (const e of validation.output.data.messages) {
-				messages.push(...(await onebotToOpenai(e)));
+			for (const e of response) {
+				messages.push(await onebotToOpenai(e));
 			}
 		}
 
@@ -80,9 +67,7 @@ export default defineTool(
 		const [error2, completion] = await to(
 			chatCompletions(
 				[{ role: "system", content: SUMMARY_PROMPT }, ...messages],
-				{
-					model,
-				},
+				{ model },
 			),
 		);
 		if (error2) {

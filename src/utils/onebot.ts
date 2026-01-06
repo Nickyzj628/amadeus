@@ -5,7 +5,9 @@ import {
 	type CommonSegment,
 	type ForwardSegment,
 	GetForwardMessageResponseSchema,
+	GetMessageHistoryResponseSchema,
 	type GetMessageResponse,
+	GetMessageResponseSchema,
 	type ImageSegment,
 	type MinimalMessageEvent,
 	type ReplySegment,
@@ -72,29 +74,16 @@ const getForwardMessages = async (
 	messageId: string,
 	count: number,
 ): Promise<MinimalMessageEvent[]> => {
-	const [error, response] = await to(
-		http.post("/get_forward_msg", {
-			message_id: messageId,
-		}),
-	);
+	const [error, response] = await to(getForwardMessage(messageId));
 	if (error) {
 		timeLog(`查询合并转发消息失败：${error.message}`);
 		return [];
 	}
 
-	const validation = safeParse(GetForwardMessageResponseSchema, response);
-	if (!validation.success) {
-		timeLog(`解析合并转发消息失败：${validation.issues[0].message}`);
-		return [];
-	}
-
 	const result: MinimalMessageEvent[] = [];
-	const restCount = validation.output.data.messages.reduce(
-		(acc, e) => acc - e.content.length,
-		count,
-	);
+	const restCount = response.reduce((acc, e) => acc - e.content.length, count);
 
-	for (const e of validation.output.data.messages) {
+	for (const e of response) {
 		const { sender } = e;
 		for (const segment of e.content) {
 			// 递归添加深层转发消息
@@ -157,23 +146,6 @@ export const isReplySegment = (
 	return !isNil(segment) && segment.type === "reply";
 };
 
-/**
- * 查询回复的消息
- * @remarks 保证安全返回，即使失败也返回 null
- */
-export const getReplyMessage = async (messageId: string) => {
-	const [error, response] = await to(
-		http.post<GetMessageResponse>("/get_msg", {
-			message_id: messageId,
-		}),
-	);
-	if (error) {
-		timeLog(`查询回复消息失败：${error.message}`);
-		return null;
-	}
-	return response.data;
-};
-
 /** 移除文本中的不自然内容 */
 export const normalizeText = (text: string) => {
 	return (
@@ -188,7 +160,9 @@ export const normalizeText = (text: string) => {
 	);
 };
 
-// --- 快速操作 ---
+// ================================
+// 快速操作
+// ================================
 
 /** 回复当前发送人，不传参则返回空响应（必须响应请求，否则 OneBot 将一直等待直到超时） */
 export const reply = (...segments: Segment[] | string[]) => {
@@ -210,4 +184,74 @@ export const reply = (...segments: Segment[] | string[]) => {
 			at_sender: true,
 		}),
 	);
+};
+
+// ================================
+// HTTP 请求
+// ================================
+
+/**
+ * 获取群历史消息
+ * @see https://api.luckylillia.com/api-156808591
+ */
+export const getGroupMessageHistory = async (groupId: number, count = 30) => {
+	const response = await http.post("/get_group_msg_history", {
+		group_id: groupId,
+		count,
+	});
+
+	const validation = safeParse(GetMessageHistoryResponseSchema, response);
+	if (!validation.success) {
+		throw new Error(validation.issues[0].message);
+	}
+
+	return validation.output.data.messages;
+};
+
+/**
+ * 获取消息详情
+ * @see https://api.luckylillia.com/api-147574979
+ */
+export const getMessage = async (messageId: string) => {
+	const response = await http.post("/get_msg", {
+		message_id: messageId,
+	});
+
+	const validation = safeParse(GetMessageResponseSchema, response);
+	if (!validation.success) {
+		throw new Error(validation.issues[0].message);
+	}
+
+	return validation.output.data;
+};
+
+/**
+ * 获取转发消息详情
+ * @see https://api.luckylillia.com/api-159742006
+ */
+export const getForwardMessage = async (messageId: string) => {
+	const response = await http.post("/get_forward_msg", {
+		message_id: messageId,
+	});
+
+	const validation = safeParse(GetForwardMessageResponseSchema, response);
+	if (!validation.success) {
+		throw new Error(validation.issues[0].message);
+	}
+
+	return validation.output.data.messages;
+};
+
+/**
+ * 发送群聊文本消息
+ * @see https://api.luckylillia.com/api-226300081
+ */
+export const sendGroupMessage = async (
+	groupId: number,
+	message: CommonSegment[],
+) => {
+	return http.post("/send_group_msg", {
+		group_id: groupId,
+		message,
+	});
 };

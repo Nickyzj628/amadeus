@@ -1,7 +1,7 @@
 import { timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { StreamEventSchema } from "@/schemas/brec";
-import { http, reply, textToSegment } from "@/utils/onebot";
+import { http, reply, sendGroupMessage, textToSegment } from "@/utils/onebot";
 
 export const brecRoute = {
 	POST: async (req: Request) => {
@@ -22,17 +22,12 @@ export const brecRoute = {
 		);
 
 		// 推送到群里
-		const groupIds = (Bun.env.BREC_GROUP_IDS || "").split(",");
+		const groupIds = (Bun.env.BREC_GROUP_IDS || "").split(",").map(Number);
 		if (groupIds.length === 0) {
 			return reply();
 		}
 		for (const groupId of groupIds) {
-			const [error, response] = await to(
-				http.post("/send_group_msg", {
-					group_id: groupId,
-					message: [segment],
-				}),
-			);
+			const [error, response] = await to(sendGroupMessage(groupId, [segment]));
 			if (error) {
 				timeLog(`直播推送失败：${error.message}`);
 				break;
