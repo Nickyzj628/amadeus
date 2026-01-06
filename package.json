@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "build": "bun build src/index.ts --outdir dist",
+    "build": "bun build src/index.ts --minify --outdir dist",
     "start": "bun dist/index.js"
   },
   "devDependencies": {
