@@ -28,7 +28,7 @@ export const rootRoute = {
 
 		// 拦截不是@当前机器人的消息（极小概率放行）
 		const atSegmentIndex = e.message.findIndex(isAtSelfSegment);
-		if (atSegmentIndex === -1 && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
+		if (atSegmentIndex === -1 && REPLY_PROBABILITY_NOT_BE_AT > Math.random()) {
 			return reply();
 		}
 
