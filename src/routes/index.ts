@@ -56,6 +56,7 @@ export const rootRoute = {
 					// 发出请求
 					const completion = await chatCompletions(messages, {
 						body: { tools },
+						disableMessagesOptimization: messages.at(-1)?.role === "tool",
 					});
 					messages.push(completion);
 

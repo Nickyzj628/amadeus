@@ -208,7 +208,7 @@ export const chatCompletions = async (
 			(message) => message.role === "user",
 		);
 
-		const count = SUMMARIZE_THRESHOLD * 0.5;
+		const count = Math.floor(SUMMARIZE_THRESHOLD * 0.8);
 		const providedMessages = wipMessages.slice(
 			firstUserMessageIndex,
 			firstUserMessageIndex + count,
@@ -231,7 +231,7 @@ export const chatCompletions = async (
 	let anchorIndex = -1;
 	if (needIdentityAnchor) {
 		anchorIndex = wipMessages.findLastIndex(
-			(message) => message.role === "user",
+			(message) => message.role !== "system" && message.role !== "tool",
 		);
 		if (anchorIndex !== -1) {
 			wipMessages.splice(
