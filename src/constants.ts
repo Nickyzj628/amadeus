@@ -97,6 +97,17 @@ export const IMAGE_UNDERSTANDING_PROMPT =
 /** 聊天模型列表，必须兼容 OpenAI API */
 export const MODELS = [
 	{
+		name: "OpenRouter",
+		baseUrl: "https://openrouter.ai/api/v1",
+		model: "openai/gpt-oss-120b",
+		apiKey: Bun.env.OPEN_ROUTER_API_KEY,
+		contextWindow: 128 * 1000,
+		useCases: ["chat", "json"],
+		extraOptions: {
+			proxy: "http://127.0.0.1:7890",
+		},
+	},
+	{
 		name: "智谱清言",
 		baseUrl: "https://open.bigmodel.cn/api/paas/v4",
 		model: "glm-4.7",
@@ -108,30 +119,6 @@ export const MODELS = [
 				type: "disabled",
 			},
 		},
-	},
-	{
-		name: "LongCat",
-		baseUrl: "https://api.longcat.chat/openai/v1",
-		model: "longcat-flash-chat",
-		apiKey: Bun.env.LONGCAT_API_KEY,
-		contextWindow: 32 * 1000, // 32k
-		useCases: ["chat"],
-	},
-	{
-		name: "DouBao",
-		baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
-		model: "doubao-seed-1-8-251228",
-		apiKey: Bun.env.DOUBAO_API_KEY,
-		contextWindow: 256 * 1000, // 256k
-		useCases: ["chat"],
-	},
-	{
-		name: "Qwen",
-		baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-		model: "qwen-plus-latest",
-		apiKey: Bun.env.QWEN_API_KEY,
-		contextWindow: 128 * 1000, // 128k
-		useCases: ["chat"],
 	},
 	{
 		name: "DeepSeek",
