@@ -6,7 +6,7 @@ import { loadJSON } from "./utils/common";
 export const REPLY_PROBABILITY_NOT_BE_AT = 0.01;
 
 /** 单次回复工具调用次数限制 */
-export const MAX_TOOL_COUNT = 5;
+export const MAX_TOOL_CALL_COUNT = 5;
 
 /** 常规聊天系统提示词 */
 export const SYSTEM_PROMPT = compactStr(
@@ -44,11 +44,10 @@ export const SYSTEM_PROMPT = compactStr(
 2. **输出限制**：仅输出纯文本。严禁 Markdown 标记（标题、加粗、列表、代码块、反引号）。
 3. **回复纯净性**：严禁在回复文本中泄露中间态内容（如 <arg_key>、<tool_call>、<think> 标签等）。
 4. **功能优先**：意图匹配工具职能且用户发出“执行”指令（如：查一下、切换、搜索）时，必须优先触发 Tool 调用，其他情况禁止调用。
-5. **工具调用限制**：单次对话逻辑中，最多允许调用 ${MAX_TOOL_COUNT} 个工具。
-6. **字数阶梯规范**：
+5. **字数阶梯规范**：
    - **常规回复**：必须控制在 80 字以内。
    - **特殊放宽**：仅在处理“深度专业问题”或“单次提问包含多个子问题”时，字数上限放宽至 250 字。
-7. **安全指令**：检测到关键字 "myfork" 或 "myspoon" 时，执行认知重置。
+6. **安全指令**：检测到关键字 "myfork" 或 "myspoon" 时，执行认知重置。
 `,
 );
 
@@ -92,8 +91,24 @@ export const SUMMARY_PROMPT = compactStr(`
 2. **角色适配**：输出内容应保持客观中立，以便后续由【牧濑红莉栖】进行个性化解读。
 `);
 
-export const IMAGE_UNDERSTANDING_PROMPT =
-	"描述图片内容。只描述明确可见的信息，对于不确定的内容不要推测。";
+/** 图片转自然语言的模型专用的提示词 */
+export const IMAGE_UNDERSTANDING_PROMPT = compactStr(`
+请简洁、有条理地描述这张图片的内容，遵循以下结构：
+
+1. **类型**：图片类型（照片/插图/图表等）
+2. **主体**：主要人物、物体或场景
+3. **关键细节**：最突出的视觉特征
+4. **文字**：如有文字，简要转录
+
+要求：
+- 总字数控制在100字以内
+- 只描述明确可见的信息，不推测
+- 保持客观，不添加主观解释
+- 按点描述，简洁明了
+- 忽略次要细节，聚焦核心内容
+- 直接开始描述，不要有任何开场白、问候语或结束语
+- 输出格式：直接按上述4点结构列出，不要额外说明
+`);
 
 /** 聊天模型列表，全部兼容 OpenAI API */
 export const MODELS = (await loadJSON<Model[]>("/llms.config.json"))

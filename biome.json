@@ -24,7 +24,8 @@
         "noExplicitAny": "info"
       },
       "style": {
-        "noNonNullAssertion": "info"
+        "noNonNullAssertion": "info",
+        "useTemplate": "info"
       }
     }
   },

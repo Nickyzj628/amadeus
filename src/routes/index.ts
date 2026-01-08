@@ -1,12 +1,12 @@
 import { compactStr, loopUntil, timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import {
-	MAX_TOOL_COUNT,
+	MAX_TOOL_CALL_COUNT,
 	REPLY_PROBABILITY_NOT_BE_AT,
 	SYSTEM_PROMPT,
 } from "@/constants";
 import { GroupMessageEventSchema } from "@/schemas/onebot";
-import { chooseAndHandleTool, tools } from "@/tools";
+import { handleTool, tools } from "@/tools";
 import { isAtSelfSegment, normalizeText, reply } from "@/utils/onebot";
 import {
 	chatCompletions,
@@ -18,7 +18,7 @@ import {
 
 export const rootRoute = {
 	POST: async (req: Request) => {
-		// 验证请求体格式，隐式保留了文字、图片、@、转发、回复消息段
+		// 验证请求体格式，在 schema 校验阶段保留了文字、图片、@、转发、回复消息段
 		const body = await req.json();
 		const validation = safeParse(GroupMessageEventSchema, body);
 		if (!validation.success) {
@@ -26,7 +26,7 @@ export const rootRoute = {
 		}
 		const e = validation.output;
 
-		// 拦截不是@当前机器人的消息（极小概率放行）
+		// 拦截不是 @ 当前机器人的消息（极小概率放行）
 		const atSegmentIndex = e.message.findIndex(isAtSelfSegment);
 		if (atSegmentIndex === -1 && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
 			return reply();
@@ -35,7 +35,7 @@ export const rootRoute = {
 		// 限制每个群只能同时处理一条消息
 		const groupId = e.group_id;
 		if (pendingGroups.includes(groupId)) {
-			return reply("正在处理上一条消息，请稍候……");
+			return reply();
 		}
 		pendingGroups.push(groupId);
 
@@ -43,20 +43,21 @@ export const rootRoute = {
 		const messages = readGroupMessages(groupId, [
 			textToMessage(SYSTEM_PROMPT, { role: "system" }),
 		]);
+		const currentMessageIndex = messages.length;
 		const currentMessage = await onebotToOpenai(e, {
 			enableImageUnderstanding: true,
 		});
 		messages.push(currentMessage);
-		timeLog("接收消息", currentMessage.content);
+		timeLog(currentMessage.content);
 
-		// 循环请求模型，直到不再调用工具
+		// 不断请求模型，直到给出回复
 		const [error, response] = await to(
 			loopUntil(
 				async (count) => {
 					// 发出请求
 					const completion = await chatCompletions(messages, {
 						body: { tools },
-						disableMessagesOptimization: messages.at(-1)?.role === "tool",
+						disableMessagesOptimization: messages.at(-1)?.role === "tool", // 调用工具的途中不优化上下文
 					});
 					messages.push(completion);
 
@@ -65,19 +66,16 @@ export const rootRoute = {
 						(call) => call.type === "function",
 					);
 					if (toolCalls.length > 0) {
-						// 如果在调用工具时超过最大请求次数，则抛出异常
-						if (count === MAX_TOOL_COUNT) {
+						// 如果在调用工具时超过最大请求次数，则撤回本轮消息，并抛出异常
+						if (count === MAX_TOOL_CALL_COUNT) {
+							messages.splice(currentMessageIndex);
 							throw new Error(
-								`单次聊天调用的工具次数超过限制（${MAX_TOOL_COUNT}），已停止响应`,
+								`单次聊天调用的工具次数超过限制（${MAX_TOOL_CALL_COUNT}），已终止响应`,
 							);
 						}
-						// 遍历模型想要调用的工具
+						// 调用模型所需工具
 						for (const tool of toolCalls) {
-							const toolResult = await chooseAndHandleTool(tool, e);
-							timeLog(
-								`已调用工具${tool.function.name}`,
-								compactStr(toolResult),
-							);
+							const toolResult = await handleTool(tool, e);
 							messages.push(
 								textToMessage(toolResult, {
 									role: "tool",
@@ -90,7 +88,7 @@ export const rootRoute = {
 					return completion;
 				},
 				{
-					maxRetries: MAX_TOOL_COUNT,
+					maxRetries: MAX_TOOL_CALL_COUNT,
 					shouldStop: (completion) => !completion.tool_calls,
 				},
 			),
@@ -103,7 +101,7 @@ export const rootRoute = {
 		}
 		if (response.content) {
 			const content = normalizeText(response.content);
-			timeLog("回复消息", content);
+			timeLog(compactStr(content) + "\n");
 			return reply(content);
 		}
 		return reply("……");

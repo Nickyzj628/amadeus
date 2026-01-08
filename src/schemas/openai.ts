@@ -9,7 +9,7 @@ export type Model = {
 	abilities: (
 		| "chat" // 基本聊天
 		| "structured outputs" // 返回 JSON 数据
-		| "fucntion calling" // 调用工具
+		| "function calling" // 调用工具
 		| "vision-understanding" // 视觉理解
 	)[];
 	/** 请求时额外携带的 body 参数 */

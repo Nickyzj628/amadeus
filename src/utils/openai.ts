@@ -260,7 +260,7 @@ export const chatCompletions = async (
 	);
 	if (error) {
 		const errMessage = compactStr(JSON.stringify(error, null, 2));
-		timeLog(`请求失败：${errMessage}`, body, requestInit);
+		timeLog(`请求失败：${errMessage}`);
 		throw new Error(errMessage);
 	}
 	const result = response.choices[0]?.message;
@@ -274,15 +274,16 @@ export const chatCompletions = async (
 	}
 
 	// 如果上下文即将达到 maxTokens，则清理掉一半
-	const totalTokens = response.usage?.total_tokens ?? 0;
-	if (totalTokens >= model.contextWindow * MAX_TOKEN_THRESHOLD) {
+	const tokens = response.usage?.total_tokens ?? 0;
+	timeLog(`(${tokens}token)`);
+	if (tokens >= model.contextWindow * MAX_TOKEN_THRESHOLD) {
 		const deleteCount = Math.floor(wipMessages.length / 2);
 		// 保留系统消息
 		const systemPrompts = wipMessages.filter(
 			(message, i) => message.role === "system" && i < deleteCount,
 		);
 		wipMessages.splice(0, deleteCount, ...systemPrompts);
-		timeLog("上下文过长，已清理前半段垃圾消息）");
+		timeLog("(上下文过长，已清理前半段垃圾消息)");
 	}
 
 	// 同步 wipMessages 到原数组
