@@ -1,5 +1,6 @@
 import { compactStr } from "@nickyzj2023/utils";
 import type { Model } from "./schemas/openai";
+import { loadJSON } from "./utils/common";
 
 /** 未被 @ 时的回复几率 */
 export const REPLY_PROBABILITY_NOT_BE_AT = 0.01;
@@ -94,71 +95,10 @@ export const SUMMARY_PROMPT = compactStr(`
 export const IMAGE_UNDERSTANDING_PROMPT =
 	"描述图片内容。只描述明确可见的信息，对于不确定的内容不要推测。";
 
-/** 聊天模型列表，必须兼容 OpenAI API */
-export const MODELS = [
-	{
-		name: "OpenRouter",
-		baseUrl: "https://openrouter.ai/api/v1",
-		model: "openai/gpt-oss-120b",
-		apiKey: Bun.env.OPEN_ROUTER_API_KEY,
-		contextWindow: 128 * 1000,
-		useCases: ["chat", "json"],
-		extraOptions: {
-			proxy: "http://127.0.0.1:7890",
-		},
-	},
-	{
-		name: "智谱清言",
-		baseUrl: "https://open.bigmodel.cn/api/paas/v4",
-		model: "glm-4.7",
-		apiKey: Bun.env.GLM_API_KEY,
-		contextWindow: 200 * 1000, // 200k
-		useCases: ["chat", "json"],
-		extraBody: {
-			thinking: {
-				type: "disabled",
-			},
-		},
-	},
-	{
-		name: "DeepSeek",
-		baseUrl: "https://api.deepseek.com",
-		model: "deepseek-chat",
-		apiKey: Bun.env.DEEPSEEK_API_KEY,
-		contextWindow: 128 * 1000, // 128k
-		useCases: ["chat", "json"],
-	},
-	{
-		name: "Gemini",
-		baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-		model: "gemini-2.5-flash",
-		apiKey: Bun.env.GEMINI_API_KEY,
-		contextWindow: 1000 * 1000, // 100w
-		useCases: ["chat", "json"],
-		extraBody: {
-			reasoning_effort: "none",
-		},
-		extraOptions: {
-			proxy: "http://127.0.0.1:7890",
-		},
-	},
-	{
-		name: "智谱清言（视觉理解）",
-		baseUrl: "https://open.bigmodel.cn/api/paas/v4",
-		model: "glm-4.6v-flashx",
-		apiKey: Bun.env.GLM_API_KEY,
-		contextWindow: 200 * 1000, // 200k
-		useCases: ["image-understanding"],
-		extraBody: {
-			thinking: {
-				type: "disabled",
-			},
-		},
-	},
-]
+/** 聊天模型列表，全部兼容 OpenAI API */
+export const MODELS = (await loadJSON<Model[]>("/llms.config.json"))
 	.filter((model) => !!model.apiKey)
 	.map((model) => ({
 		...model,
-		contextWindow: model.contextWindow ?? 128 * 1000,
-		useCases: model.useCases ?? ["chat"],
-	})) as Model[];
+		contextWindow: model.contextWindow || 128000,
+	})) satisfies Model[];

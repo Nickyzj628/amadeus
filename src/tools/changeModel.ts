@@ -15,25 +15,27 @@ export default defineTool(
 			parameters: {
 				type: "object",
 				properties: {
-					name: {
+					provider: {
 						type: "string",
-						enum: MODELS.filter((model) => model.useCases.includes("chat")).map(
-							(model) => model.name,
-						),
+						enum: MODELS.filter((model) =>
+							model.abilities.includes("chat"),
+						).map((model) => model.provider),
 						description:
 							"目标模型的唯一标识符。需根据用户上下文中的描述映射至对应枚举值。",
 					},
 				},
-				required: ["name"],
+				required: ["provider"],
 			},
 		},
 	},
-	({ name }) => {
-		const targetModel = MODELS.find((model) => model.name === name);
+	({ provider }) => {
+		const targetModel = MODELS.filter((model) =>
+			model.abilities.includes("chat"),
+		).find((model) => model.provider === provider);
 		if (!targetModel) {
 			return "切换失败，模型不存在";
 		}
 		modelRef.value = targetModel;
-		return `模型已切换至 ${targetModel.name}`;
+		return `模型已切换至 ${targetModel.provider}（${targetModel.model}）`;
 	},
 );

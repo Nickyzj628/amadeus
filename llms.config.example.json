@@ -1,0 +1,26 @@
+[
+  {
+    "provider": "智谱清言",
+    "model": "glm-4.7",
+    "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+    "apiKey": "xxx-xxx",
+    "contextWindow": 200000,
+    "abilities": ["chat", "structured outputs", "function calling"],
+    "extraBody": {
+      "thinking": {
+        "type": "disabled"
+      }
+    }
+  },
+  {
+    "provider": "OpenRouter",
+    "model": "qwen/qwen-2.5-vl-7b-instruct:free",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "apiKey": "sk-xx-xx-xxx",
+    "contextWindow": 32000,
+    "abilities": ["vision-understanding"],
+    "extraOptions": {
+      "proxy": "http://127.0.0.1:7890"
+    }
+  }
+]

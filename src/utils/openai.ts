@@ -299,7 +299,7 @@ export const chatCompletions = async (
  */
 export const imageToText = async (image: ImageSegment["data"]) => {
 	const model = MODELS.find((model) =>
-		model.useCases.includes("image-understanding"),
+		model.abilities.includes("vision-understanding"),
 	);
 	if (!model) {
 		throw new Error("请先配置一个视觉理解模型");

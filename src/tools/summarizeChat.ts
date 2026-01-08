@@ -36,9 +36,9 @@ export default defineTool(
 			return "请提供用于总结的群号或消息数组";
 		}
 
-		const model = modelRef.value?.useCases.includes("json")
+		const model = modelRef.value?.abilities.includes("structured outputs")
 			? modelRef.value
-			: MODELS.find((model) => model.useCases.includes("json"));
+			: MODELS.find((model) => model.abilities.includes("structured outputs"));
 		if (!model) {
 			return "还没有配置JSON Output模型";
 		}
