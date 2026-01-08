@@ -1,4 +1,5 @@
 import { compactStr, loopUntil, timeLog, to } from "@nickyzj2023/utils";
+import type { ChatCompletionMessage } from "openai/resources";
 import { safeParse } from "valibot";
 import {
 	MAX_TOOL_CALL_COUNT,
@@ -75,14 +76,19 @@ export const rootRoute = {
 						}
 						// 调用模型所需工具
 						for (const tool of toolCalls) {
-							const { content, replyDirectly } = await handleTool(tool, e);
+							let { content, replyDirectly } = await handleTool(tool, e);
+							content = normalizeText(content);
 							// 工具说可以直接把结果回复给用户
 							if (replyDirectly) {
-								messages.splice(currentMessageIndex + 1); // 清除工具调用痕迹，当成模型直接回复
-								completion.role = "assistant";
-								completion.content = content;
-								delete completion.tool_calls;
-								return completion;
+								// 清除工具调用痕迹，伪装成模型的直接回复
+								messages.splice(
+									currentMessageIndex + 1,
+									messages.length,
+									textToMessage(content, {
+										role: "assistant",
+									}),
+								);
+								return { content } as ChatCompletionMessage;
 							}
 							// 带着工具结果，进入下个循环
 							messages.push(

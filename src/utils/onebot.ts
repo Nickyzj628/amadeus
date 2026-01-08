@@ -154,8 +154,10 @@ export const normalizeText = (text: string) => {
 			.replace(/<think>[\s\S]*?<\/think>/gi, "")
 			// 移除孤立的闭合思考标签
 			.replace(/<\/think>/gi, "")
-			// 移除元数据标签
-			.replace(/\[FROM:.*?\]|\[BODY:.*?\]|\[IMAGE_PARSED:.*?\]/gi, "")
+			// 提取[BODY: xxx]标签中的内容
+			.replace(/\[BODY:(.*?)\]/gi, "$1")
+			// 移除[FROM]和[IMAGE_PARSED]元数据标签
+			.replace(/\[FROM:.*?\]|\[IMAGE_PARSED:.*?\]/gi, "")
 			.trim()
 	);
 };
