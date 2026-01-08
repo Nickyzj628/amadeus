@@ -75,9 +75,18 @@ export const rootRoute = {
 						}
 						// 调用模型所需工具
 						for (const tool of toolCalls) {
-							const toolResult = await handleTool(tool, e);
+							const { content, replyDirectly } = await handleTool(tool, e);
+							// 工具说可以直接把结果回复给用户
+							if (replyDirectly) {
+								messages.splice(currentMessageIndex + 1); // 清除工具调用痕迹，当成模型直接回复
+								completion.role = "assistant";
+								completion.content = content;
+								delete completion.tool_calls;
+								return completion;
+							}
+							// 带着工具结果，进入下个循环
 							messages.push(
-								textToMessage(toolResult, {
+								textToMessage(content, {
 									role: "tool",
 									tool_call_id: tool.id,
 								}),

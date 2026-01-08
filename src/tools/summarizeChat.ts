@@ -36,13 +36,6 @@ export default defineTool(
 			return "请提供用于总结的群号或消息数组";
 		}
 
-		const model = modelRef.value?.abilities.includes("structured outputs")
-			? modelRef.value
-			: MODELS.find((model) => model.abilities.includes("structured outputs"));
-		if (!model) {
-			return "还没有配置JSON Output模型";
-		}
-
 		const messages: ChatCompletionMessageParam[] = [];
 
 		// 使用提供的消息
@@ -65,10 +58,10 @@ export default defineTool(
 
 		// 丢给模型总结
 		const [error2, completion] = await to(
-			chatCompletions(
-				[{ role: "system", content: SUMMARY_PROMPT }, ...messages],
-				{ model },
-			),
+			chatCompletions([
+				{ role: "system", content: SUMMARY_PROMPT },
+				...messages,
+			]),
 		);
 		if (error2) {
 			return `总结失败：${error2.message}`;

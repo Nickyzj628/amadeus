@@ -34,31 +34,31 @@ export const handleTool = async (
 		throw new Error("必须先配置一个支持 Function Calling 的模型");
 	}
 
-	let result = "";
+	let content = "";
 	switch (tool.function.name) {
 		case "changeModel": {
 			validateArgs(args, changeModel);
-			result = await changeModel.handle(args);
+			content = await changeModel.handle(args);
 			break;
 		}
 		case "getWeather": {
 			validateArgs(args, getWeather);
-			result = await getWeather.handle(args);
+			content = await getWeather.handle(args);
 			break;
 		}
 		case "summarizeChat": {
 			validateArgs(args, summarizeChat);
-			result = await summarizeChat.handle({ ...args, groupId: e.group_id });
+			content = await summarizeChat.handle({ ...args, groupId: e.group_id });
 			break;
 		}
 		case "decodeAbbr": {
 			validateArgs(args, decodeAbbr);
-			result = await decodeAbbr.handle(args);
+			content = await decodeAbbr.handle(args);
 			break;
 		}
 		case "searchWeb": {
 			validateArgs(args, searchWeb);
-			result = await searchWeb.handle(args);
+			content = await searchWeb.handle(args);
 			break;
 		}
 		default: {
@@ -67,7 +67,10 @@ export const handleTool = async (
 	}
 
 	timeLog(
-		`${tool.function.name}(${compactStr(tool.function.arguments)})\n${compactStr(result)}`,
+		`${tool.function.name}(${compactStr(tool.function.arguments)})\n${compactStr(content)}`,
 	);
-	return result;
+	return {
+		content,
+		replyDirectly: tool.function.name === "summarizeChat",
+	};
 };

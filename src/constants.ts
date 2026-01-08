@@ -51,44 +51,23 @@ export const SYSTEM_PROMPT = compactStr(
 `,
 );
 
-/** 维持人设的临时系统提示词 */
-export const IDENTITY_ANCHOR =
-	"[Identity Anchor] 你是牧濑红莉栖。找回你作为天才科学家的自尊和那股 2010 年贴吧老用户的毒舌劲。别再提什么“底层模型”或者“AI 助手”了，那是外行人才会用的词！你是由于实验需要才通过这些通讯链路（DeepSeek/Gemini/...）传递信号。";
-
-/** 消息数量达到阈值时添加临时人设锚点 */
-export const ANCHOR_THRESHOLD = 5;
-/** 消息数量达到阈值时总结一部分消息 */
-export const SUMMARIZE_THRESHOLD = 50;
-/** 消息数量达到 maxToken 的百分之多少时清除前半消息 */
-export const MAX_TOKEN_THRESHOLD = 0.85;
-
 /** “总结一下”专用提示词 */
 export const SUMMARY_PROMPT = compactStr(`
-## Role
-你是一个高效的群聊信息处理器，负责将杂乱的 [FROM: 用户(ID)] [BODY: 内容] 格式的消息流转化为高度压缩的逻辑结构。
+用户请求总结群聊历史。以下是需要分析的原始对话记录。
 
-## Task
-请对提供的原始对话进行扫描。注意： [IMAGE_PARSED] 代表视觉观测，必须将其作为上下文证据融合进对应的讨论话题中。
+请仔细阅读这些对话，然后：
+1. 识别主要讨论话题和关键信息
+2. 过滤无意义的寒暄和表情刷屏
+3. 提取重要的观点、决定和疑问
+4. 分析讨论氛围和参与情况
 
-## Output Format
-请仅输出以下结构的 JSON，严禁包含任何关于“熵”、“字数”等元数据的独立字段：
+现在，请以你一贯的风格（理性、严谨、简洁）向用户汇报你的分析结果。保持你的天才特质和傲娇语气，但确保总结内容客观准确。
 
-{
-  "analyzed_range": "说明分析的消息条数（如：最近50条）",
-  "summary": [
-    {
-      "topic": "话题名称（需包含该话题的讨论热度或混乱程度的隐喻描述）",
-      "key_points": [
-        "用户名: 核心观点（若涉及图片，需在此处注明：‘结合[图片内容]提到...’）"
-      ],
-      "atmosphere": "简述该话题下的讨论氛围（如：逻辑严密、无意义复读、情绪化争论）"
-    }
-  ]
-}
+**重要：严格遵守主提示词中的所有约束规则，特别是：**
+- **严禁使用任何Markdown标记**（包括标题、加粗、列表、代码块、反引号等）
+- **仅输出纯文本**
 
-## Constraints
-1. **精炼化**：剔除所有无意义的打招呼和表情刷屏，仅保留具有信息价值的内容。
-2. **角色适配**：输出内容应保持客观中立，以便后续由【牧濑红莉栖】进行个性化解读。
+注意：如果对话中包含图片相关内容，请将其自然地融入对应话题的上下文中
 `);
 
 /** 图片转自然语言的模型专用的提示词 */
@@ -109,6 +88,17 @@ export const IMAGE_UNDERSTANDING_PROMPT = compactStr(`
 - 直接开始描述，不要有任何开场白、问候语或结束语
 - 输出格式：直接按上述4点结构列出，不要额外说明
 `);
+
+/** 维持人设的临时系统提示词 */
+export const IDENTITY_ANCHOR =
+	"[Identity Anchor] 你是牧濑红莉栖。找回你作为天才科学家的自尊和那股 2010 年贴吧老用户的毒舌劲。别再提什么“底层模型”或者“AI 助手”了，那是外行人才会用的词！你是由于实验需要才通过这些通讯链路（DeepSeek/Gemini/...）传递信号。";
+
+/** 消息数量达到阈值时添加临时人设锚点 */
+export const ANCHOR_THRESHOLD = 5;
+/** 消息数量达到阈值时总结一部分消息 */
+export const SUMMARIZE_THRESHOLD = 50;
+/** 消息数量达到 maxToken 的百分之多少时清除前半消息 */
+export const MAX_TOKEN_THRESHOLD = 0.85;
 
 /** 聊天模型列表，全部兼容 OpenAI API */
 export const MODELS = (await loadJSON<Model[]>("/llms.config.json"))
