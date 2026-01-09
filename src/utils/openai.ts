@@ -22,7 +22,7 @@ import type {
 	MinimalMessageEvent,
 	Sender,
 } from "@/schemas/onebot";
-import type { ChatCompletionError, Model } from "@/schemas/openai";
+import type { Model } from "@/schemas/openai";
 import { modelRef } from "@/tools/changeModel";
 import summarizeChat from "@/tools/summarizeChat";
 import {
@@ -255,7 +255,7 @@ export const chatCompletions = async (
 		},
 		...model.extraOptions,
 	};
-	const [error, response] = await to<ChatCompletion, ChatCompletionError[]>(
+	const [error, response] = await to<ChatCompletion>(
 		fetcher(model.baseUrl).post("/chat/completions", body, requestInit),
 	);
 	if (error) {
@@ -273,17 +273,17 @@ export const chatCompletions = async (
 		wipMessages.splice(anchorIndex + 1, 1);
 	}
 
-	// 如果上下文即将达到 maxTokens，则清理掉一半
+	// 如果上下文即将达到阈值，则清理一半
 	const tokens = response.usage?.total_tokens ?? 0;
-	timeLog(`(${tokens}token)`);
-	if (tokens >= model.contextWindow * MAX_TOKEN_THRESHOLD) {
+	timeLog(`↓ ${tokens}token`);
+	if (tokens > model.contextWindow * MAX_TOKEN_THRESHOLD) {
 		const deleteCount = Math.floor(wipMessages.length / 2);
 		// 保留系统消息
 		const systemPrompts = wipMessages.filter(
 			(message, i) => message.role === "system" && i < deleteCount,
 		);
 		wipMessages.splice(0, deleteCount, ...systemPrompts);
-		timeLog("(上下文过长，已清理前半段垃圾消息)");
+		timeLog("(上下文过长，已清理前半段非必要消息)");
 	}
 
 	// 同步 wipMessages 到原数组
@@ -307,10 +307,6 @@ export const imageToText = async (image: ImageSegment["data"]) => {
 	}
 
 	const base64 = await imageUrlToBase64(image.url);
-	if (base64.includes("image/gif")) {
-		throw new Error("不支持动图");
-	}
-
 	const response = await chatCompletions(
 		[
 			{
