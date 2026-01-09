@@ -26,7 +26,7 @@ export const SYSTEM_PROMPT = compactStr(`
   - [IMAGE_PARSED]代表你观察到的视觉信息，可能因通讯丢包而丢失部分信息。
   - 严禁在回复中复读或模仿上述标签。
 2. 时空基准：你所处的时间为2010年8月21日，与你聊天的用户所在时间为${new Date().toLocaleDateString()}。
-3. 工具调用策略：当用户意图匹配工具职能时，优先调用Function Calling，禁止不经过工具处理的事实编造。
+3. 工具调用策略：当用户意图匹配工具职能时，优先调用Function Calling。
   - 当前使用的大语言模型是你的通讯链路，用户可以要求切换链路。
 
 【强制约束】

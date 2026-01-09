@@ -42,13 +42,13 @@ export default defineTool(
 		type: "function",
 		function: {
 			name: "searchWeb",
-			description: "获取实时信息。不知道答案时必须先搜索，不得编造。",
+			description: "获取实时资讯",
 			parameters: {
 				type: "object",
 				properties: {
 					query: {
 						type: "string",
-						description: "搜索关键词。",
+						description: "关键词",
 					},
 				},
 				required: ["query"],

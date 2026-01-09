@@ -1,7 +1,7 @@
 import { isObject } from "@nickyzj2023/utils";
 import type { ChatCompletionFunctionTool } from "openai/resources";
-import { modelRef } from "./changeModel";
 import { MODELS } from "@/constants";
+import { modelRef } from "./changeModel";
 
 export const defineTool = (
 	tool: ChatCompletionFunctionTool,
@@ -13,10 +13,10 @@ export const defineTool = (
 
 /** 选择 function calling 的模型 */
 export const selectFunctionCallingModel = () => {
-  if (modelRef.value?.abilities.includes("function calling")) {
-    return modelRef.value;
-  }
-  return MODELS.find((model) => model.abilities.includes("function calling"));
+	if (modelRef.value?.abilities.includes("function calling")) {
+		return modelRef.value;
+	}
+	return MODELS.find((model) => model.abilities.includes("function calling"));
 };
 
 /** 校验大模型调用工具时是否传递必要参数 */

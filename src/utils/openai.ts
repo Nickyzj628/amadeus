@@ -275,7 +275,7 @@ export const chatCompletions = async (
 
 	// 如果上下文即将达到阈值，则清理一半
 	const tokens = response.usage?.total_tokens ?? 0;
-	timeLog(`↓ ${tokens}token`);
+	timeLog(`-${tokens}token`);
 	if (tokens > model.contextWindow * MAX_TOKEN_THRESHOLD) {
 		const deleteCount = Math.floor(wipMessages.length / 2);
 		// 保留系统消息

@@ -16,13 +16,13 @@ export default defineTool(
 		type: "function",
 		function: {
 			name: "decodeAbbr",
-			description: "解释用户输入的陌生拼音缩写的含义。",
+			description: "把用户输入的未知拼音缩写转换成可能的释义",
 			parameters: {
 				type: "object",
 				properties: {
 					abbr: {
 						type: "string",
-						description: "待解释的缩写。",
+						description: "待转换的拼音缩写",
 					},
 				},
 				required: ["abbr"],
@@ -32,22 +32,22 @@ export default defineTool(
 	async ({ abbr }) => {
 		const [error, response] = await to(api.post("/guess", { text: abbr }));
 		if (error) {
-			return `暗号解密失败：${error.message}`;
+			return `缩写解密失败：${error.message}`;
 		}
 
 		const validation = safeParse(Schema, response);
 		if (!validation.success) {
-			return `暗号解密失败：${validation.issues[0].message}`;
+			return `缩写解密失败：${validation.issues[0].message}`;
 		}
 		const item = validation.output[0];
 		if (!item) {
-			return `暗号解密失败：响应体为空`;
+			return `缩写解密失败：响应体为空`;
 		}
 
 		const items = item.trans || [];
 		if (items.length === 0) {
-			return "未查询到结果，这在我的数据库里没有啊！";
+			return "未找到任何缩写释义";
 		}
-		return `你想说的是不是：${items.join("、")}`;
+		return `用户想说的可能是：${items.join("、")}`;
 	},
 );

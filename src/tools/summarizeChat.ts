@@ -1,9 +1,8 @@
 import { to } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageParam } from "openai/resources";
-import { MODELS, SUMMARY_PROMPT } from "@/constants";
+import { SUMMARY_PROMPT } from "@/constants";
 import { getGroupMessageHistory } from "@/utils/onebot";
 import { chatCompletions, onebotToOpenai } from "@/utils/openai";
-import { modelRef } from "./changeModel";
 import { defineTool } from "./utils";
 
 export default defineTool(
@@ -11,13 +10,13 @@ export default defineTool(
 		type: "function",
 		function: {
 			name: "summarizeChat",
-			description: "分析并总结当前群聊的消息历史。",
+			description: "分析并总结群聊消息历史",
 			parameters: {
 				type: "object",
 				properties: {
 					count: {
 						type: "number",
-						description: "需要追溯的消息条数。",
+						description: "需要追溯的消息条数",
 						default: 30,
 					},
 				},
@@ -58,10 +57,10 @@ export default defineTool(
 
 		// 丢给模型总结
 		const [error2, completion] = await to(
-			chatCompletions([
-				{ role: "system", content: SUMMARY_PROMPT },
-				...messages,
-			]),
+			chatCompletions(
+				[{ role: "system", content: SUMMARY_PROMPT }, ...messages],
+				{ disableMessagesOptimization: true },
+			),
 		);
 		if (error2) {
 			return `总结失败：${error2.message}`;
