@@ -8,7 +8,7 @@ import {
 } from "@/constants";
 import { GroupMessageEventSchema } from "@/schemas/onebot";
 import { handleTool, tools } from "@/tools";
-import { isAtSelfSegment, normalizeText, reply } from "@/utils/onebot";
+import { isAtSelfSegment, reply } from "@/utils/onebot";
 import {
 	chatCompletions,
 	onebotToOpenai,
@@ -77,8 +77,7 @@ export const rootRoute = {
 						}
 						// 调用模型所需工具
 						for (const tool of toolCalls) {
-							let { content, replyDirectly } = await handleTool(tool, e);
-							content = normalizeText(content);
+							const { content, replyDirectly } = await handleTool(tool, e);
 							// 工具说可以直接把结果回复给用户
 							if (replyDirectly) {
 								// 清除工具调用痕迹，伪装成模型的直接回复
@@ -112,7 +111,6 @@ export const rootRoute = {
 		pendingGroups.splice(pendingGroups.indexOf(groupId), 1);
 
 		// 回复消息
-		console.log(messages);
 		if (error) {
 			return reply([error.message], { atSender });
 		} else if (response.content) {
