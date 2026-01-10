@@ -167,8 +167,13 @@ export const normalizeText = (text: string) => {
 // ================================
 
 /** 回复当前发送人，不传参则返回空响应（必须响应请求，否则 OneBot 将一直等待直到超时） */
-export const reply = (...segments: Segment[] | string[]) => {
-	const isEmpty = segments.length === 0;
+export const reply = (
+	segments?: (string | Segment)[],
+	options?: { atSender?: boolean },
+) => {
+	const { atSender = true } = options ?? {};
+
+	const isEmpty = !segments?.length;
 	if (isEmpty) {
 		return new Response(null, { status: 204 });
 	}
@@ -176,6 +181,8 @@ export const reply = (...segments: Segment[] | string[]) => {
 	const normalizedSegments = segments.map((segment) => {
 		if (typeof segment === "string") {
 			return textToSegment(segment);
+		} else if (isTextSegment(segment)) {
+			segment.data.text = normalizeText(segment.data.text);
 		}
 		return segment;
 	});
@@ -183,7 +190,7 @@ export const reply = (...segments: Segment[] | string[]) => {
 	return new Response(
 		JSON.stringify({
 			reply: normalizedSegments,
-			at_sender: true,
+			at_sender: atSender,
 		}),
 	);
 };

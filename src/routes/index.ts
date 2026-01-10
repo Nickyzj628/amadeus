@@ -29,6 +29,7 @@ export const rootRoute = {
 
 		// 拦截不是 @ 当前机器人的消息（极小概率放行）
 		const atSegmentIndex = e.message.findIndex(isAtSelfSegment);
+		const atSender = atSegmentIndex !== -1;
 		if (atSegmentIndex === -1 && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
 			return reply();
 		}
@@ -113,13 +114,11 @@ export const rootRoute = {
 		// 回复消息
 		console.log(messages);
 		if (error) {
-			return reply(error.message);
+			return reply([error.message], { atSender });
+		} else if (response.content) {
+			timeLog(compactStr(response.content) + "\n");
+			return reply([response.content], { atSender });
 		}
-		if (response.content) {
-			const content = normalizeText(response.content);
-			timeLog(compactStr(content) + "\n");
-			return reply(content);
-		}
-		return reply("……");
+		return reply(["?"], { atSender });
 	},
 };

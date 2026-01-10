@@ -1,7 +1,7 @@
 import { timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { StreamEventSchema } from "@/schemas/brec";
-import { http, reply, sendGroupMessage, textToSegment } from "@/utils/onebot";
+import { reply, sendGroupMessage, textToSegment } from "@/utils/onebot";
 
 export const brecRoute = {
 	POST: async (req: Request) => {
