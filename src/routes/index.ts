@@ -8,7 +8,12 @@ import {
 } from "@/constants";
 import { GroupMessageEventSchema } from "@/schemas/onebot";
 import { handleTool, tools } from "@/tools";
-import { isAtSelfSegment, reply } from "@/utils/onebot";
+import {
+	isAtSelfSegment,
+	reply,
+	sendGroupMessage,
+	textToSegment,
+} from "@/utils/onebot";
 import {
 	chatCompletions,
 	onebotToOpenai,
@@ -29,8 +34,8 @@ export const rootRoute = {
 
 		// 拦截不是 @ 当前机器人的消息（极小概率放行）
 		const atSegmentIndex = e.message.findIndex(isAtSelfSegment);
-		const atSender = atSegmentIndex !== -1;
-		if (atSegmentIndex === -1 && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
+		const isAtSelf = atSegmentIndex !== -1;
+		if (!isAtSelf && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
 			return reply();
 		}
 
@@ -111,12 +116,22 @@ export const rootRoute = {
 		pendingGroups.splice(pendingGroups.indexOf(groupId), 1);
 
 		// 回复消息
-		if (error) {
-			return reply([error.message], { atSender });
-		} else if (response.content) {
-			timeLog(compactStr(response.content) + "\n");
-			return reply([response.content], { atSender });
+		// 被动
+		if (isAtSelf) {
+			if (error) {
+				return reply(error.message);
+			} else if (response.content) {
+				timeLog(compactStr(response.content), "\n");
+				return reply(response.content);
+			}
 		}
-		return reply(["?"], { atSender });
+		// 主动
+		else {
+			if (!error && response.content) {
+				timeLog(compactStr(response.content), "\n");
+				sendGroupMessage(groupId, [textToSegment(response.content)]);
+			}
+		}
+		return reply();
 	},
 };

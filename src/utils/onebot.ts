@@ -167,12 +167,7 @@ export const normalizeText = (text: string) => {
 // ================================
 
 /** 回复当前发送人，不传参则返回空响应（必须响应请求，否则 OneBot 将一直等待直到超时） */
-export const reply = (
-	segments?: (string | Segment)[],
-	options?: { atSender?: boolean },
-) => {
-	const { atSender = true } = options ?? {};
-
+export const reply = (...segments: (string | Segment)[]) => {
 	const isEmpty = !segments?.length;
 	if (isEmpty) {
 		return new Response(null, { status: 204 });
@@ -190,7 +185,6 @@ export const reply = (
 	return new Response(
 		JSON.stringify({
 			reply: normalizedSegments,
-			at_sender: atSender,
 		}),
 	);
 };
