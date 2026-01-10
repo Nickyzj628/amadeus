@@ -185,6 +185,7 @@ export const reply = (...segments: (string | Segment)[]) => {
 	return new Response(
 		JSON.stringify({
 			reply: normalizedSegments,
+			at_sender: true,
 		}),
 	);
 };
