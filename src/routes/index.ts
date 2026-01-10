@@ -111,6 +111,7 @@ export const rootRoute = {
 		pendingGroups.splice(pendingGroups.indexOf(groupId), 1);
 
 		// 回复消息
+		console.log(messages);
 		if (error) {
 			return reply(error.message);
 		}

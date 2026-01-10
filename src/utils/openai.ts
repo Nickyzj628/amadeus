@@ -13,7 +13,6 @@ import {
 	ANCHOR_THRESHOLD,
 	IDENTITY_ANCHOR,
 	IMAGE_UNDERSTANDING_PROMPT,
-	MAX_TOKEN_THRESHOLD,
 	MODELS,
 	SUMMARIZE_THRESHOLD,
 } from "@/constants";
@@ -221,25 +220,23 @@ export const chatCompletions = async (
 		wipMessages.splice(
 			firstUserMessageIndex,
 			count,
-			textToMessage(`[MEMORANDUM] ${summarized}`, { role: "system" }),
+			textToMessage(`[MEMORANDUM] ${summarized}`, { role: "user" }),
 		);
 	}
 
 	// 如果消息仍超过 Y 条，则添加临时人设锚点
 	const needIdentityAnchor =
 		!disableMessagesOptimization && wipMessages.length > ANCHOR_THRESHOLD;
-	let anchorIndex = -1;
-	if (needIdentityAnchor) {
-		anchorIndex = wipMessages.findLastIndex(
+	const anchorIndex =
+		wipMessages.findLastIndex(
 			(message) => message.role !== "system" && message.role !== "tool",
+		) + 1;
+	if (needIdentityAnchor && anchorIndex) {
+		wipMessages.splice(
+			anchorIndex,
+			0,
+			textToMessage(IDENTITY_ANCHOR, { role: "system" }),
 		);
-		if (anchorIndex !== -1) {
-			wipMessages.splice(
-				anchorIndex,
-				0,
-				textToMessage(IDENTITY_ANCHOR, { role: "system" }),
-			);
-		}
 	}
 
 	// 发起请求
@@ -269,14 +266,14 @@ export const chatCompletions = async (
 	}
 
 	// 如果启用了临时人设锚点，则在使用后移除
-	if (anchorIndex !== -1) {
-		wipMessages.splice(anchorIndex + 1, 1);
+	if (anchorIndex) {
+		wipMessages.splice(anchorIndex, 1);
 	}
 
 	// 如果上下文即将达到阈值，则清理一半
 	const tokens = response.usage?.total_tokens ?? 0;
 	timeLog(`-${tokens}token`);
-	if (tokens > model.contextWindow * MAX_TOKEN_THRESHOLD) {
+	if (tokens > model.contextWindow * 0.8) {
 		const deleteCount = Math.floor(wipMessages.length / 2);
 		// 保留系统消息
 		const systemPrompts = wipMessages.filter(
