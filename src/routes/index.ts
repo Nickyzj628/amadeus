@@ -19,9 +19,9 @@ import {
 	onebotToOpenai,
 	pendingGroupIds,
 	readGroupMessages,
+	saveGroupMessages,
 	textToMessage,
 } from "@/utils/openai";
-import { saveJSON } from "@/utils/common";
 
 export const rootRoute = {
 	POST: async (req: Request) => {
@@ -83,16 +83,19 @@ export const rootRoute = {
 						const { content, replyDirectly } = await handleTool(tool, e);
 						// 工具说可以把结果直接回复给用户
 						if (replyDirectly) {
-							return textToMessage(content, {
-								role: "assistant",
-								disableDecoration: true,
-							}) as ChatCompletionMessage;
+							messages.push(
+								textToMessage(content, {
+									role: "assistant",
+								}),
+							);
+							return { content } as ChatCompletionMessage;
 						}
 						// 带着工具结果进入下个循环
 						messages.push(
 							textToMessage(content, {
 								role: "tool",
 								tool_call_id: tool.id,
+								disableDecoration: true,
 							}),
 						);
 					}
@@ -107,23 +110,24 @@ export const rootRoute = {
 		);
 		pendingGroupIds.splice(pendingGroupIds.indexOf(groupId), 1);
 
+		// 如果报错，则撤回本轮消息
+		if (error2) {
+			messages.splice(currentMessageIndex, messages.length);
+		}
+		if (error2 && isAtSelf) {
+			return reply(error2.message);
+		}
+		if (!response?.content) {
+			return reply();
+		}
+
 		// 回复消息
-		// 被动
+		timeLog(compactStr(response.content), "\n");
+		to(saveGroupMessages(groupId, messages, { disableGC: true }));
 		if (isAtSelf) {
-			if (error2) {
-				return reply(error2.message);
-			} else if (response.content) {
-				timeLog(compactStr(response.content), "\n");
-				return reply(response.content);
-			}
+			return reply(response.content);
 		}
-		// 主动
-		else {
-			if (!error2 && response.content) {
-				timeLog(compactStr(response.content), "\n");
-				sendGroupMessage(groupId, [textToSegment(response.content)]);
-			}
-		}
+		sendGroupMessage(groupId, [textToSegment(response.content)]);
 		return reply();
 	},
 };

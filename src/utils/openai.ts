@@ -40,7 +40,7 @@ const groupMessagesMap = new Map<number, ChatCompletionMessageParam[]>();
 export const pendingGroupIds: number[] = [];
 
 /**
- * 根据群号读取消息数组（仅和机器人相关的）
+ * 根据群号读取消息数组
  * @param groupId 群号
  * @param initialMessages 如果群里没有存放消息，则用它来作为初始消息
  */
@@ -81,14 +81,21 @@ export const readGroupMessages = async (
 	return messages;
 };
 
+/** 根据群号保存消息数组 */
 export const saveGroupMessages = async (
 	groupId: number,
 	messages: ChatCompletionMessageParam[],
 	options?: {
 		/** 是否在保存消息后释放内存 */
-		freeMemory?: boolean;
+		disableGC?: boolean;
 	},
-) => {};
+) => {
+	await saveJSON(`/data/${groupId}.json`, messages);
+	if (!options?.disableGC) {
+		groupMessagesMap.delete(groupId);
+		timeLog(`释放了${groupId}的消息内存`);
+	}
+};
 
 /**
  * 构造 OpenAI API 消息对象
@@ -234,29 +241,29 @@ export const chatCompletions = async (
 	const wipMessages = [...messages];
 
 	// 如果消息超过 X 条，则总结一部分消息，并替代原消息
-	const needSummarize =
-		!disableMessagesOptimization && wipMessages.length > SUMMARIZE_THRESHOLD;
-	if (needSummarize) {
-		const firstUserMessageIndex = wipMessages.findIndex(
-			(message) => message.role === "user",
-		);
+	// const needSummarize =
+	// 	!disableMessagesOptimization && wipMessages.length > SUMMARIZE_THRESHOLD;
+	// if (needSummarize) {
+	// 	const firstUserMessageIndex = wipMessages.findIndex(
+	// 		(message) => message.role === "user",
+	// 	);
 
-		const count = Math.floor(SUMMARIZE_THRESHOLD * 0.8);
-		const providedMessages = wipMessages.slice(
-			firstUserMessageIndex,
-			firstUserMessageIndex + count,
-		);
-		const summarized = await summarizeChat.handle({
-			count,
-			providedMessages,
-		});
+	// 	const count = Math.floor(SUMMARIZE_THRESHOLD * 0.8);
+	// 	const providedMessages = wipMessages.slice(
+	// 		firstUserMessageIndex,
+	// 		firstUserMessageIndex + count,
+	// 	);
+	// 	const summarized = await summarizeChat.handle({
+	// 		count,
+	// 		providedMessages,
+	// 	});
 
-		wipMessages.splice(
-			firstUserMessageIndex,
-			count,
-			textToMessage(`[MEMORANDUM] ${summarized}`, { role: "user" }),
-		);
-	}
+	// 	wipMessages.splice(
+	// 		firstUserMessageIndex,
+	// 		count,
+	// 		textToMessage(`[MEMORANDUM] ${summarized}`, { role: "user" }),
+	// 	);
+	// }
 
 	// 如果消息仍超过 Y 条，则添加临时人设锚点
 	const anchorIndex =

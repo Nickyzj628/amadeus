@@ -35,3 +35,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # 聊天模型配置文件
 llms.config.json
+
+# 消息文件
+data
