@@ -2,7 +2,7 @@ import { compactStr, loopUntil, timeLog, to } from "@nickyzj2023/utils";
 import type { ChatCompletionMessage } from "openai/resources";
 import { safeParse } from "valibot";
 import {
-	MAX_TOOL_CALL_COUNT,
+	MAX_REQUEST_COUNT,
 	REPLY_PROBABILITY_NOT_BE_AT,
 	SYSTEM_PROMPT,
 } from "@/constants";
@@ -17,10 +17,11 @@ import {
 import {
 	chatCompletions,
 	onebotToOpenai,
-	pendingGroups,
+	pendingGroupIds,
 	readGroupMessages,
 	textToMessage,
 } from "@/utils/openai";
+import { saveJSON } from "@/utils/common";
 
 export const rootRoute = {
 	POST: async (req: Request) => {
@@ -41,15 +42,21 @@ export const rootRoute = {
 
 		// 限制每个群只能同时处理一条消息
 		const groupId = e.group_id;
-		if (pendingGroups.includes(groupId)) {
+		if (pendingGroupIds.includes(groupId)) {
 			return reply();
 		}
-		pendingGroups.push(groupId);
+		pendingGroupIds.push(groupId);
 
-		// 读取机器人相关群聊消息
-		const messages = readGroupMessages(groupId, [
-			textToMessage(SYSTEM_PROMPT, { role: "system" }),
-		]);
+		// 读取群聊消息
+		const [error, messages] = await to(
+			readGroupMessages(groupId, [
+				textToMessage(SYSTEM_PROMPT, { role: "system" }),
+			]),
+		);
+		if (error) {
+			return reply(`读取群聊消息失败：${error.message}`);
+		}
+
 		const currentMessageIndex = messages.length;
 		const currentMessage = await onebotToOpenai(e, {
 			enableImageUnderstanding: true,
@@ -58,7 +65,7 @@ export const rootRoute = {
 		timeLog(currentMessage.content);
 
 		// 不断请求模型，直到给出回复
-		const [error, response] = await to(
+		const [error2, response] = await to(
 			loopUntil(
 				async (count) => {
 					// 发出请求
@@ -68,58 +75,43 @@ export const rootRoute = {
 					});
 					messages.push(completion);
 
-					// 调用工具
-					const toolCalls = (completion.tool_calls ?? []).filter(
+					// 处理 function calling
+					const functionCalls = (completion.tool_calls ?? []).filter(
 						(call) => call.type === "function",
 					);
-					if (toolCalls.length > 0) {
-						// 如果在调用工具时超过最大请求次数，则撤回本轮消息，并抛出异常
-						if (count === MAX_TOOL_CALL_COUNT) {
-							messages.splice(currentMessageIndex);
-							throw new Error(
-								`单次聊天调用的工具次数超过限制（${MAX_TOOL_CALL_COUNT}），已终止响应`,
-							);
+					for (const tool of functionCalls) {
+						const { content, replyDirectly } = await handleTool(tool, e);
+						// 工具说可以把结果直接回复给用户
+						if (replyDirectly) {
+							return textToMessage(content, {
+								role: "assistant",
+								disableDecoration: true,
+							}) as ChatCompletionMessage;
 						}
-						// 调用模型所需工具
-						for (const tool of toolCalls) {
-							const { content, replyDirectly } = await handleTool(tool, e);
-							// 工具说可以直接把结果回复给用户
-							if (replyDirectly) {
-								// 清除工具调用痕迹，伪装成模型的直接回复
-								messages.splice(
-									currentMessageIndex + 1,
-									messages.length,
-									textToMessage(content, {
-										role: "assistant",
-									}),
-								);
-								return { content } as ChatCompletionMessage;
-							}
-							// 带着工具结果，进入下个循环
-							messages.push(
-								textToMessage(content, {
-									role: "tool",
-									tool_call_id: tool.id,
-								}),
-							);
-						}
+						// 带着工具结果进入下个循环
+						messages.push(
+							textToMessage(content, {
+								role: "tool",
+								tool_call_id: tool.id,
+							}),
+						);
 					}
 
 					return completion;
 				},
 				{
-					maxRetries: MAX_TOOL_CALL_COUNT,
+					maxRetries: MAX_REQUEST_COUNT,
 					shouldStop: (completion) => !completion.tool_calls,
 				},
 			),
 		);
-		pendingGroups.splice(pendingGroups.indexOf(groupId), 1);
+		pendingGroupIds.splice(pendingGroupIds.indexOf(groupId), 1);
 
 		// 回复消息
 		// 被动
 		if (isAtSelf) {
-			if (error) {
-				return reply(error.message);
+			if (error2) {
+				return reply(error2.message);
 			} else if (response.content) {
 				timeLog(compactStr(response.content), "\n");
 				return reply(response.content);
@@ -127,7 +119,7 @@ export const rootRoute = {
 		}
 		// 主动
 		else {
-			if (!error && response.content) {
+			if (!error2 && response.content) {
 				timeLog(compactStr(response.content), "\n");
 				sendGroupMessage(groupId, [textToSegment(response.content)]);
 			}

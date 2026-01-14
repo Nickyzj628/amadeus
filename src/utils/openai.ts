@@ -13,6 +13,7 @@ import {
 	ANCHOR_THRESHOLD,
 	IDENTITY_ANCHOR,
 	IMAGE_UNDERSTANDING_PROMPT,
+	MAX_ACTIVE_GROUPS,
 	MODELS,
 	SUMMARIZE_THRESHOLD,
 } from "@/constants";
@@ -24,6 +25,7 @@ import type {
 import type { Model } from "@/schemas/openai";
 import { modelRef } from "@/tools/changeModel";
 import summarizeChat from "@/tools/summarizeChat";
+import { loadJSON, saveJSON } from "./common";
 import {
 	flattenForwardSegment,
 	getMessage,
@@ -34,27 +36,59 @@ import {
 	isTextSegment,
 } from "./onebot";
 
-/** 和机器人相关的消息列表，按群号划分，准备放入 sqlite */
-export const groupMessagesMap = new Map<number, ChatCompletionMessageParam[]>();
-
-export const pendingGroups: number[] = [];
+const groupMessagesMap = new Map<number, ChatCompletionMessageParam[]>();
+export const pendingGroupIds: number[] = [];
 
 /**
  * 根据群号读取消息数组（仅和机器人相关的）
  * @param groupId 群号
  * @param initialMessages 如果群里没有存放消息，则用它来作为初始消息
  */
-export const readGroupMessages = (
+export const readGroupMessages = async (
 	groupId: number,
 	initialMessages: ChatCompletionMessageParam[] = [],
 ) => {
-	const messages = groupMessagesMap.get(groupId);
-	if (!Array.isArray(messages) || messages.length === 0) {
-		groupMessagesMap.set(groupId, initialMessages);
-		return initialMessages;
+	// 如果内存中有该群的消息，则直接返回
+	if (groupMessagesMap.has(groupId)) {
+		return groupMessagesMap.get(groupId)!;
 	}
+
+	// 否则从文件读取群消息，并加入活跃群聊 Map
+	const messages = await loadJSON(`/data/${groupId}.json`, {
+		createWithDataIfNotExist: initialMessages,
+	});
+	groupMessagesMap.set(groupId, messages);
+
+	// 优化：释放不活跃的群聊消息内存
+	if (groupMessagesMap.size > MAX_ACTIVE_GROUPS) {
+		for (const [groupId, messages] of groupMessagesMap) {
+			if (!pendingGroupIds.includes(groupId)) {
+				// 先存入本地 JSON 文件
+				saveJSON(`/data/${groupId}.json`, messages)
+					.then(() => {
+						// 再释放内存，不阻塞当前函数
+						groupMessagesMap.delete(groupId);
+						timeLog(`释放了${groupId}的消息内存`);
+					})
+					.catch((e) => {
+						timeLog(`释放${groupId}的消息内存失败：${e.message}`);
+					});
+				break;
+			}
+		}
+	}
+
 	return messages;
 };
+
+export const saveGroupMessages = async (
+	groupId: number,
+	messages: ChatCompletionMessageParam[],
+	options?: {
+		/** 是否在保存消息后释放内存 */
+		freeMemory?: boolean;
+	},
+) => {};
 
 /**
  * 构造 OpenAI API 消息对象

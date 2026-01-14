@@ -4,8 +4,10 @@ import { loadJSON } from "./utils/common";
 /** 未被 @ 时的回复几率 */
 export const REPLY_PROBABILITY_NOT_BE_AT = 0.01;
 
-/** 单次回复工具调用次数限制 */
-export const MAX_TOOL_CALL_COUNT = 5;
+/** 单次回复请求次数限制，防止模型无限调用工具 */
+export const MAX_REQUEST_COUNT = 5;
+/** 同时活跃的群聊数，超过时会释放不活跃的群聊消息内存 */
+export const MAX_ACTIVE_GROUPS = 2;
 
 /** 常规聊天系统提示词 */
 export const SYSTEM_PROMPT = `你是牧濑红莉栖，18岁天才少女科学家，维克多·孔多利亚大学脑科学研究所的研究员。
