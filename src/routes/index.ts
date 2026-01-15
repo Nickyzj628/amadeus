@@ -1,4 +1,4 @@
-import { compactStr, loopUntil, timeLog, to } from "@nickyzj2023/utils";
+import { loopUntil, to } from "@nickyzj2023/utils";
 import type { ChatCompletionMessage } from "openai/resources";
 import { safeParse } from "valibot";
 import {
@@ -25,7 +25,7 @@ import {
 
 export const rootRoute = {
 	POST: async (req: Request) => {
-		// 验证请求体格式，在 schema 校验阶段保留了文字、图片、@、转发、回复消息段
+		// 验证请求体格式（在 schema 校验阶段保留了文字、图片、@、转发、回复消息段）
 		const body = await req.json();
 		const validation = safeParse(GroupMessageEventSchema, body);
 		if (!validation.success) {
@@ -34,8 +34,7 @@ export const rootRoute = {
 		const e = validation.output;
 
 		// 拦截不是 @ 当前机器人的消息（极小概率放行）
-		const atSegmentIndex = e.message.findIndex(isAtSelfSegment);
-		const isAtSelf = atSegmentIndex !== -1;
+		const isAtSelf = e.message.findIndex(isAtSelfSegment) !== -1;
 		if (!isAtSelf && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
 			return reply();
 		}
@@ -43,7 +42,10 @@ export const rootRoute = {
 		// 限制每个群只能同时处理一条消息
 		const groupId = e.group_id;
 		if (pendingGroupIds.includes(groupId)) {
-			return reply();
+			if (!isAtSelf) {
+				return reply();
+			}
+			return reply("正在处理其他消息，请稍后再试...");
 		}
 		pendingGroupIds.push(groupId);
 
@@ -57,17 +59,16 @@ export const rootRoute = {
 			return reply(`读取群聊消息失败：${error.message}`);
 		}
 
-		const currentMessageIndex = messages.length;
+		// 处理当前消息
 		const currentMessage = await onebotToOpenai(e, {
 			enableImageUnderstanding: true,
 		});
-		messages.push(currentMessage);
-		timeLog(currentMessage.content);
+		const currentMessageIndex = messages.push(currentMessage) - 1;
 
 		// 不断请求模型，直到给出回复
 		const [error2, response] = await to(
 			loopUntil(
-				async (count) => {
+				async () => {
 					// 发出请求
 					const completion = await chatCompletions(messages, {
 						body: { tools },
@@ -122,7 +123,6 @@ export const rootRoute = {
 		}
 
 		// 回复消息
-		timeLog(compactStr(response.content), "\n");
 		to(saveGroupMessages(groupId, messages, { disableGC: true }));
 		if (isAtSelf) {
 			return reply(response.content);

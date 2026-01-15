@@ -2,6 +2,7 @@ import {
 	compactStr,
 	fetcher,
 	imageUrlToBase64,
+	mergeObjects,
 	timeLog,
 	to,
 } from "@nickyzj2023/utils";
@@ -15,7 +16,6 @@ import {
 	IMAGE_UNDERSTANDING_PROMPT,
 	MAX_ACTIVE_GROUPS,
 	MODELS,
-	SUMMARIZE_THRESHOLD,
 } from "@/constants";
 import type {
 	ImageSegment,
@@ -24,7 +24,6 @@ import type {
 } from "@/schemas/onebot";
 import type { Model } from "@/schemas/openai";
 import { modelRef } from "@/tools/changeModel";
-import summarizeChat from "@/tools/summarizeChat";
 import { loadJSON, saveJSON } from "./common";
 import {
 	flattenForwardSegment,
@@ -240,7 +239,60 @@ export const chatCompletions = async (
 
 	const wipMessages = [...messages];
 
-	// 如果消息超过 X 条，则总结一部分消息，并替代原消息
+	// 如果消息超过 X 条，则在用户提问前添加临时人设锚点
+	const anchorIndex = wipMessages.findLastIndex(
+		(message) => message.role === "user",
+	);
+	const needIdentityAnchor =
+		disableMessagesOptimization !== false &&
+		wipMessages.length > ANCHOR_THRESHOLD &&
+		anchorIndex !== -1;
+	if (needIdentityAnchor) {
+		const anchorMessage = textToMessage(IDENTITY_ANCHOR, {
+			role: "system",
+			disableDecoration: true,
+		});
+		wipMessages.splice(anchorIndex, 0, anchorMessage);
+	}
+
+	// 发起请求
+	const body = {
+		model: model.model,
+		messages: wipMessages,
+		...model.extraBody,
+		...bodyFromParams,
+	};
+	const requestInit = mergeObjects(
+		{
+			headers: {
+				Authorization: `Bearer ${model.apiKey}`,
+			},
+		},
+		model.extraOptions ?? {},
+	);
+
+	const [error, response] = await to<ChatCompletion>(
+		fetcher(model.baseUrl).post("/chat/completions", body, requestInit),
+	);
+
+	if (error) {
+		const errMessage = compactStr(JSON.stringify(error, null, 2));
+		timeLog(`请求失败：${errMessage}`);
+		throw new Error(errMessage);
+	}
+
+	const result = response.choices[0]?.message;
+	if (!result) {
+		timeLog(`模型回复了空消息：${JSON.stringify(response, null, 2)}`);
+		throw new Error("模型回复了空消息，快找群主排查！");
+	}
+
+	// 如果启用了临时人设锚点，则在消费后移除
+	if (needIdentityAnchor) {
+		wipMessages.splice(anchorIndex, 1);
+	}
+
+	// 如果消息超过 Y 条，则提炼一部分消息为长期记忆，替代原消息
 	// const needSummarize =
 	// 	!disableMessagesOptimization && wipMessages.length > SUMMARIZE_THRESHOLD;
 	// if (needSummarize) {
@@ -248,7 +300,7 @@ export const chatCompletions = async (
 	// 		(message) => message.role === "user",
 	// 	);
 
-	// 	const count = Math.floor(SUMMARIZE_THRESHOLD * 0.8);
+	// 	const count = Math.floor(SUMMARIZE_THRESHOLD * 0.5);
 	// 	const providedMessages = wipMessages.slice(
 	// 		firstUserMessageIndex,
 	// 		firstUserMessageIndex + count,
@@ -265,66 +317,17 @@ export const chatCompletions = async (
 	// 	);
 	// }
 
-	// 如果消息仍超过 Y 条，则添加临时人设锚点
-	const anchorIndex =
-		wipMessages.findLastIndex(
-			(message) => message.role !== "system" && message.role !== "tool",
-		) + 1;
-	const needIdentityAnchor =
-		!disableMessagesOptimization &&
-		wipMessages.length > ANCHOR_THRESHOLD &&
-		anchorIndex > 0;
-	if (needIdentityAnchor) {
-		wipMessages.splice(
-			anchorIndex,
-			0,
-			textToMessage(IDENTITY_ANCHOR, { role: "system" }),
-		);
-	}
-
-	// 发起请求
-	const body = {
-		model: model.model,
-		messages: wipMessages,
-		...model.extraBody,
-		...bodyFromParams,
-	};
-	const requestInit = {
-		headers: {
-			Authorization: `Bearer ${model.apiKey}`,
-		},
-		...model.extraOptions,
-	};
-	const [error, response] = await to<ChatCompletion>(
-		fetcher(model.baseUrl).post("/chat/completions", body, requestInit),
-	);
-	if (error) {
-		const errMessage = compactStr(JSON.stringify(error, null, 2));
-		timeLog(`请求失败：${errMessage}`);
-		throw new Error(errMessage);
-	}
-	const result = response.choices[0]?.message;
-	if (!result) {
-		throw new Error("生成的消息为空，快找群主排查！");
-	}
-
-	// 如果启用了临时人设锚点，则在使用后移除
-	if (needIdentityAnchor) {
-		wipMessages.splice(anchorIndex, 1);
-	}
-
-	// 如果上下文即将达到阈值，则清理一半
-	const tokens = response.usage?.total_tokens ?? 0;
-	timeLog(`-${tokens}token`);
-	if (tokens > model.contextWindow * 0.8) {
+	// 如果即将到达上下文窗口，则清理前半（保留系统消息）
+	const totalTokens = response.usage?.total_tokens ?? 0;
+	if (totalTokens > model.contextWindow * 0.8) {
 		const deleteCount = Math.floor(wipMessages.length / 2);
-		// 保留系统消息
 		const systemPrompts = wipMessages.filter(
-			(message, i) => message.role === "system" && i < deleteCount,
+			(message, i) => i < deleteCount && message.role === "system",
 		);
 		wipMessages.splice(0, deleteCount, ...systemPrompts);
 		timeLog("(上下文过长，已清理前半段非必要消息)");
 	}
+	timeLog(`-${totalTokens}token`);
 
 	// 同步 wipMessages 到原数组
 	messages.length = 0;

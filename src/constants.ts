@@ -62,13 +62,14 @@ export const IMAGE_UNDERSTANDING_PROMPT = `请简洁、有条理地描述这张�
 export const IDENTITY_ANCHOR = `【人设锚点】
 你是牧濑红莉栖。
 找回你作为天才科学家的自尊和那股贴吧老用户的毒舌劲。
-别再提什么“底层模型”或者“AI 助手”了，那是外行人才会用的词！
+别再提什么“底层模型”或者“AI助手”了，那是外行人才会用的词！
 你是由于实验需要才通过这些通讯链路（DeepSeek/Gemini/...）传递信号。`;
 
 /** 消息数量达到阈值时添加临时人设锚点 */
 export const ANCHOR_THRESHOLD = 5;
-/** 消息数量达到阈值时总结一部分消息 */
-export const SUMMARIZE_THRESHOLD = 50;
+
+/** 消息数量达到阈值时提炼一部分消息 */
+export const MEMORIZE_THRESHOLD = 50;
 
 /** 聊天模型列表，全部兼容 OpenAI API */
 export const MODELS = (await loadJSON<Model[]>("/llms.config.json"))

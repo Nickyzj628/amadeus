@@ -6,7 +6,6 @@ import {
 	type ForwardSegment,
 	GetForwardMessageResponseSchema,
 	GetMessageHistoryResponseSchema,
-	type GetMessageResponse,
 	GetMessageResponseSchema,
 	type ImageSegment,
 	type MinimalMessageEvent,
