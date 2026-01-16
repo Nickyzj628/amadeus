@@ -10,7 +10,7 @@ export default defineTool(
 		type: "function",
 		function: {
 			name: "summarizeChat",
-			description: "分析并总结群聊消息历史",
+			description: "总结群聊消息历史",
 			parameters: {
 				type: "object",
 				properties: {
@@ -25,24 +25,18 @@ export default defineTool(
 	},
 	async (params: {
 		count?: number;
-		/** 群号，如果传了则通过 OneBot HTTP 接口获取群号历史消息 */
+		/** 使用群号获取历史消息来总结 */
 		groupId?: number;
-		/** 总结提供的消息 */
-		providedMessages?: ChatCompletionMessageParam[];
+		/** 使用传入的消息直接总结 */
+		messages?: ChatCompletionMessageParam[];
 	}) => {
-		const { count = 30, groupId, providedMessages } = params ?? {};
-		if (!groupId && !providedMessages) {
-			return "请提供用于总结的群号或消息数组";
+		const { count = 30, groupId, messages = [] } = params ?? {};
+		if (!groupId && !messages.length) {
+			return "总结失败：请提供用于总结的群号或消息数组";
 		}
 
-		const messages: ChatCompletionMessageParam[] = [];
-
-		// 使用提供的消息
-		if (providedMessages) {
-			messages.push(...providedMessages);
-		}
-		// 使用手动获取的群历史消息
-		else if (groupId) {
+		// 优先使用群号获取历史消息
+		if (groupId) {
 			const [error, response] = await to(
 				getGroupMessageHistory(groupId, count),
 			);
@@ -51,7 +45,8 @@ export default defineTool(
 			}
 			// 转换成 OpenAI API 消息
 			for (const e of response) {
-				messages.push(await onebotToOpenai(e));
+				const message = await onebotToOpenai(e);
+				messages.push(message);
 			}
 		}
 

@@ -16,6 +16,7 @@ import {
 	IMAGE_UNDERSTANDING_PROMPT,
 	MAX_ACTIVE_GROUPS,
 	MODELS,
+	SUMMARIZE_THRESHOLD,
 } from "@/constants";
 import type {
 	ImageSegment,
@@ -24,6 +25,7 @@ import type {
 } from "@/schemas/onebot";
 import type { Model } from "@/schemas/openai";
 import { modelRef } from "@/tools/changeModel";
+import summarizeChat from "@/tools/summarizeChat";
 import { loadJSON, saveJSON } from "./common";
 import {
 	flattenForwardSegment,
@@ -222,7 +224,7 @@ export const chatCompletions = async (
 		 * 是否自动优化上下文，默认开启。处理逻辑如下：
 		 * 1. 超过 X 条消息时添加临时人设锚点
 		 * 2. 超过 Y 条消息时滑动窗口总结一部分消息
-		 * 3. 达到上下文窗口的 85% 时删除前半消息
+		 * 3. 达到上下文窗口前删除前半消息
 		 */
 		disableMessagesOptimization?: boolean;
 	},
@@ -292,32 +294,35 @@ export const chatCompletions = async (
 		wipMessages.splice(anchorIndex, 1);
 	}
 
-	// 如果消息超过 Y 条，则提炼一部分消息为长期记忆，替代原消息
-	// const needSummarize =
-	// 	!disableMessagesOptimization && wipMessages.length > SUMMARIZE_THRESHOLD;
-	// if (needSummarize) {
-	// 	const firstUserMessageIndex = wipMessages.findIndex(
-	// 		(message) => message.role === "user",
-	// 	);
+	// 如果消息超过 Y 条，则总结一部分消息
+	const needSummarize =
+		!disableMessagesOptimization && wipMessages.length > SUMMARIZE_THRESHOLD;
+	if (needSummarize) {
+		const firstUserMessageIndex = wipMessages.findIndex(
+			(message) => message.role === "user",
+		);
 
-	// 	const count = Math.floor(SUMMARIZE_THRESHOLD * 0.5);
-	// 	const providedMessages = wipMessages.slice(
-	// 		firstUserMessageIndex,
-	// 		firstUserMessageIndex + count,
-	// 	);
-	// 	const summarized = await summarizeChat.handle({
-	// 		count,
-	// 		providedMessages,
-	// 	});
+		const count = Math.floor(SUMMARIZE_THRESHOLD * 0.5);
+		const summarizingMessages = wipMessages.slice(
+			firstUserMessageIndex,
+			firstUserMessageIndex + count,
+		);
+		const summarizedContent = await summarizeChat.handle({
+			count,
+			messages: summarizingMessages,
+		});
 
-	// 	wipMessages.splice(
-	// 		firstUserMessageIndex,
-	// 		count,
-	// 		textToMessage(`[MEMORANDUM] ${summarized}`, { role: "user" }),
-	// 	);
-	// }
+		wipMessages.splice(
+			firstUserMessageIndex,
+			count,
+			textToMessage(`[SUMMARIZED] ${summarizedContent}`, {
+				role: "user",
+				disableDecoration: true,
+			}),
+		);
+	}
 
-	// 如果即将到达上下文窗口，则清理前半（保留系统消息）
+	// 如果即将到达上下文窗口，则清理前半（保留系统消息）（理论上永不触发）
 	const totalTokens = response.usage?.total_tokens ?? 0;
 	if (totalTokens > model.contextWindow * 0.8) {
 		const deleteCount = Math.floor(wipMessages.length / 2);
