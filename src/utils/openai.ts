@@ -1,16 +1,4 @@
 import {
-	compactStr,
-	fetcher,
-	imageUrlToBase64,
-	mergeObjects,
-	timeLog,
-	to,
-} from "@nickyzj2023/utils";
-import type {
-	ChatCompletion,
-	ChatCompletionMessageParam,
-} from "openai/resources";
-import {
 	ANCHOR_THRESHOLD,
 	IDENTITY_ANCHOR,
 	IMAGE_UNDERSTANDING_PROMPT,
@@ -26,6 +14,18 @@ import type {
 import type { Model } from "@/schemas/openai";
 import { modelRef } from "@/tools/changeModel";
 import summarizeChat from "@/tools/summarizeChat";
+import {
+	compactStr,
+	fetcher,
+	imageUrlToBase64,
+	mergeObjects,
+	timeLog,
+	to,
+} from "@nickyzj2023/utils";
+import type {
+	ChatCompletion,
+	ChatCompletionMessageParam,
+} from "openai/resources";
 import { loadJSON, saveJSON } from "./common";
 import {
 	flattenForwardSegment,
@@ -315,8 +315,8 @@ export const chatCompletions = async (
 		wipMessages.splice(
 			firstUserMessageIndex,
 			count,
-			textToMessage(`[SUMMARIZED] ${summarizedContent}`, {
-				role: "user",
+			textToMessage(`[SUMMARIZED ${count} MESSAGES] ${summarizedContent}`, {
+				role: "assistant",
 				disableDecoration: true,
 			}),
 		);

@@ -27,5 +27,5 @@ export const loadJSON = async <T>(
 /** 将数据保存为 JSON 文件 */
 export const saveJSON = async <T>(path: string, data: T): Promise<void> => {
 	const fullPath = `${process.cwd()}${path}`;
-	await Bun.write(fullPath, JSON.stringify(data));
+	await Bun.write(fullPath, JSON.stringify(data, null, 2));
 };
