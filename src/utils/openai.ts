@@ -332,7 +332,6 @@ export const chatCompletions = async (
 		wipMessages.splice(0, deleteCount, ...systemPrompts);
 		timeLog("(上下文过长，已清理前半段非必要消息)");
 	}
-	timeLog(`-${totalTokens}token`);
 
 	// 同步 wipMessages 到原数组
 	messages.length = 0;

@@ -1,7 +1,7 @@
-import { compactStr, isObject, timeLog } from "@nickyzj2023/utils";
-import type { ChatCompletionMessageFunctionToolCall } from "openai/resources";
 import type { GroupMessageEvent } from "@/schemas/onebot";
 import { normalizeText } from "@/utils/onebot";
+import { compactStr, isObject, timeLog } from "@nickyzj2023/utils";
+import type { ChatCompletionMessageFunctionToolCall } from "openai/resources";
 import changeModel, { modelRef } from "./changeModel";
 import decodeAbbr from "./decodeAbbr";
 import getWeather from "./getWeather";
@@ -16,6 +16,8 @@ export const tools = [
 	decodeAbbr,
 	searchWeb,
 ].map((item) => item.tool);
+
+const replyDirectlyToolNames = ["summarizeChat"];
 
 /**
  * 根据传入的 function tool call，返回工具调用结果
@@ -68,10 +70,12 @@ export const handleTool = async (
 	}
 
 	timeLog(
-		`${tool.function.name}(${compactStr(tool.function.arguments)})\n${compactStr(content)}`,
+		`${tool.function.name}(${compactStr(
+			tool.function.arguments,
+		)})\n${compactStr(content)}`,
 	);
 	return {
 		content: normalizeText(content),
-		replyDirectly: tool.function.name === "summarizeChat",
+		replyDirectly: replyDirectlyToolNames.includes(tool.function.name),
 	};
 };

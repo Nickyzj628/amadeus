@@ -10,7 +10,7 @@ export default defineTool(
 		type: "function",
 		function: {
 			name: "changeModel",
-			description: "切换作为通讯链路的大语言模型",
+			description: "切换作为通讯频道的大语言模型",
 			parameters: {
 				type: "object",
 				properties: {

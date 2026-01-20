@@ -1,6 +1,3 @@
-import { loopUntil, to } from "@nickyzj2023/utils";
-import type { ChatCompletionMessage } from "openai/resources";
-import { safeParse } from "valibot";
 import {
 	MAX_REQUEST_COUNT,
 	REPLY_PROBABILITY_NOT_BE_AT,
@@ -22,6 +19,9 @@ import {
 	saveGroupMessages,
 	textToMessage,
 } from "@/utils/openai";
+import { loopUntil, to } from "@nickyzj2023/utils";
+import type { ChatCompletionMessage } from "openai/resources";
+import { safeParse } from "valibot";
 
 export const rootRoute = {
 	POST: async (req: Request) => {
@@ -82,9 +82,11 @@ export const rootRoute = {
 					);
 					for (const tool of functionCalls) {
 						const { content, replyDirectly } = await handleTool(tool, e);
-						// 工具说可以把结果直接回复给用户
+						// 如果工具结果可以直接回复给用户，则先清除调用痕迹，再回复
 						if (replyDirectly) {
-							messages.push(
+							messages.splice(
+								currentMessageIndex + 1,
+								messages.length,
 								textToMessage(content, {
 									role: "assistant",
 								}),
