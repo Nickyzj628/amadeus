@@ -1,3 +1,6 @@
+import { loopUntil, to } from "@nickyzj2023/utils";
+import type { ChatCompletionMessage } from "openai/resources";
+import { safeParse } from "valibot";
 import {
 	MAX_REQUEST_COUNT,
 	REPLY_PROBABILITY_NOT_BE_AT,
@@ -19,9 +22,6 @@ import {
 	saveGroupMessages,
 	textToMessage,
 } from "@/utils/openai";
-import { loopUntil, to } from "@nickyzj2023/utils";
-import type { ChatCompletionMessage } from "openai/resources";
-import { safeParse } from "valibot";
 
 export const rootRoute = {
 	POST: async (req: Request) => {
@@ -62,6 +62,7 @@ export const rootRoute = {
 		// 处理当前消息
 		const currentMessage = await onebotToOpenai(e, {
 			enableImageUnderstanding: true,
+			enableExtraContextBlock: !isAtSelf,
 		});
 		const currentMessageIndex = messages.push(currentMessage) - 1;
 

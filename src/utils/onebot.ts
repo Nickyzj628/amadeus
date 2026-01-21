@@ -20,12 +20,12 @@ export const http = fetcher(`http://127.0.0.1:${Bun.env.ONEBOT_HTTP_PORT}`);
 // 消息段相关工具
 // ================================
 
-/** 是否为@某人的消息段 */
+/** 是否为 @ 某人的消息段 */
 export const isAtSegment = (segment?: CommonSegment): segment is AtSegment => {
 	return !isNil(segment) && segment.type === "at";
 };
 
-/** 是否为@当前机器人的消息段 */
+/** 是否为 @ 当前机器人的消息段 */
 export const isAtSelfSegment = (
 	segment?: CommonSegment,
 ): segment is AtSegment => {

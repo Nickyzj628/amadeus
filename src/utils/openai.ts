@@ -1,4 +1,16 @@
 import {
+	compactStr,
+	fetcher,
+	imageUrlToBase64,
+	mergeObjects,
+	timeLog,
+	to,
+} from "@nickyzj2023/utils";
+import type {
+	ChatCompletion,
+	ChatCompletionMessageParam,
+} from "openai/resources";
+import {
 	ANCHOR_THRESHOLD,
 	IDENTITY_ANCHOR,
 	IMAGE_UNDERSTANDING_PROMPT,
@@ -14,21 +26,10 @@ import type {
 import type { Model } from "@/schemas/openai";
 import { modelRef } from "@/tools/changeModel";
 import summarizeChat from "@/tools/summarizeChat";
-import {
-	compactStr,
-	fetcher,
-	imageUrlToBase64,
-	mergeObjects,
-	timeLog,
-	to,
-} from "@nickyzj2023/utils";
-import type {
-	ChatCompletion,
-	ChatCompletionMessageParam,
-} from "openai/resources";
 import { loadJSON, saveJSON } from "./common";
 import {
 	flattenForwardSegment,
+	getGroupMessageHistory,
 	getMessage,
 	isAtSegment,
 	isForwardSegment,
@@ -145,8 +146,14 @@ export const onebotToOpenai = async (
 	options?: {
 		/** 是否调用视觉模型，把图片翻译为自然语言 */
 		enableImageUnderstanding?: boolean;
+		/** 是否忽略回复的消息 */
+		ignoreReply?: boolean;
+		/** 是否忽略合并转发消息 */
+		ignoreForward?: boolean;
 		/** 每条转发消息允许递归获取的消息数 */
 		forwardCount?: number;
+		/** 是否补充上下文背景，推荐在主动发言时开启 */
+		enableExtraContextBlock?: boolean;
 	},
 ) => {
 	const { sender } = e;
@@ -160,6 +167,18 @@ export const onebotToOpenai = async (
 		}
 		return content;
 	};
+
+	// 如果启用了补充上下文背景，则从群历史消息中获取最近 2 条消息
+	if (options?.enableExtraContextBlock && "group_id" in e) {
+		const extraMessages = await getGroupMessageHistory(e.group_id as number, 3);
+		for (const e of extraMessages.slice(0, -1)) {
+			const message = await onebotToOpenai(e, {
+				ignoreForward: true,
+				ignoreReply: true,
+			});
+			contextBlockItems.push(message.content as string);
+		}
+	}
 
 	// 解析消息段数组
 	const contentItems: string[] = [];
@@ -183,7 +202,7 @@ export const onebotToOpenai = async (
 			contentItems.push(`@${segment.data.qq}`);
 		}
 		// 合并转发
-		else if (isForwardSegment(segment)) {
+		else if (isForwardSegment(segment) && !options?.ignoreForward) {
 			const forwardedMessages = await flattenForwardSegment(segment.data.id, {
 				count: options?.forwardCount,
 				processMessageEvent: onebotToOpenai,
@@ -193,7 +212,7 @@ export const onebotToOpenai = async (
 			);
 		}
 		// 回复
-		else if (isReplySegment(segment)) {
+		else if (isReplySegment(segment) && !options?.ignoreReply) {
 			const e = await getMessage(segment.data.id);
 			if (e) {
 				const flatRepliedMessage = await onebotToOpenai(e, options);
@@ -206,10 +225,11 @@ export const onebotToOpenai = async (
 	const contextBlock = consumeContextBlock();
 	return textToMessage(content, {
 		sender,
-		makeContent: (mixedContent) =>
-			compactStr(
-				[contextBlock, content && mixedContent].filter(Boolean).join("\n"),
-			),
+		makeContent: (formattedContent) => {
+			return [contextBlock, content && formattedContent]
+				.filter(Boolean)
+				.join("\n");
+		},
 	});
 };
 
