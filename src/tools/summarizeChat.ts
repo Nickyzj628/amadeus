@@ -1,6 +1,6 @@
 import { to } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageParam } from "openai/resources";
-import { SUMMARY_PROMPT } from "@/constants";
+import { SUMMARY_PROMPT, SYSTEM_PROMPT } from "@/constants";
 import { getGroupMessageHistory } from "@/utils/onebot";
 import { chatCompletions, onebotToOpenai } from "@/utils/openai";
 import { defineTool } from "./utils";
@@ -35,7 +35,7 @@ export default defineTool(
 			return "总结失败：请提供用于总结的群号或消息数组";
 		}
 
-		// 优先使用群号获取历史消息
+		// 如果提供群号，则手动获取群聊历史消息
 		if (groupId) {
 			const [error, response] = await to(
 				getGroupMessageHistory(groupId, count),
@@ -53,8 +53,17 @@ export default defineTool(
 		// 丢给模型总结
 		const [error2, completion] = await to(
 			chatCompletions(
-				[{ role: "system", content: SUMMARY_PROMPT }, ...messages],
-				{ disableMessagesOptimization: true },
+				[
+					// 注入人设
+					{ role: "system", content: SYSTEM_PROMPT },
+					// 移除触发工具的“总结一下”消息
+					...messages.slice(0, -1),
+					// 伪造总结指令
+					{ role: "user", content: SUMMARY_PROMPT },
+				],
+				{
+					disableMessagesOptimization: true,
+				},
 			),
 		);
 		if (error2) {

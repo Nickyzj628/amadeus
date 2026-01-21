@@ -1,7 +1,7 @@
-import type { GroupMessageEvent } from "@/schemas/onebot";
-import { normalizeText } from "@/utils/onebot";
 import { compactStr, isObject, timeLog } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageFunctionToolCall } from "openai/resources";
+import type { GroupMessageEvent } from "@/schemas/onebot";
+import { normalizeText } from "@/utils/onebot";
 import changeModel, { modelRef } from "./changeModel";
 import decodeAbbr from "./decodeAbbr";
 import getWeather from "./getWeather";
