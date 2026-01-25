@@ -145,10 +145,10 @@ export const onebotToOpenai = async (
 		forwardCount?: number;
 		/** 是否补充上下文背景，推荐在主动发言时开启 */
 		enableExtraContextBlock?: boolean;
+		/** 是否按原样返回 content，不使用 JSON.stringify() */
+		disableJSONStringify?: boolean;
 	},
 ) => {
-	const { sender } = e;
-
 	const textItems: string[] = [];
 	const parsedMediaItems: string[] = [];
 	const mentionedIdItems: string[] = [];
@@ -161,6 +161,7 @@ export const onebotToOpenai = async (
 			const message = await onebotToOpenai(e, {
 				ignoreForward: true,
 				ignoreReply: true,
+				disableJSONStringify: true,
 			});
 			contextItems.push(message.content as string);
 		}
@@ -193,7 +194,10 @@ export const onebotToOpenai = async (
 		else if (isForwardSegment(segment) && !options?.ignoreForward) {
 			const forwardedMessages = await flattenForwardSegment(segment.data.id, {
 				count: options?.forwardCount,
-				processMessageEvent: onebotToOpenai,
+				processMessageEvent: (e) =>
+					onebotToOpenai(e, {
+						disableJSONStringify: true,
+					}),
 			});
 			contextItems.push(
 				...forwardedMessages.map((message) => message.content as string),
@@ -203,40 +207,43 @@ export const onebotToOpenai = async (
 		else if (isReplySegment(segment) && !options?.ignoreReply) {
 			const e = await getMessage(segment.data.id);
 			if (e) {
-				const flatRepliedMessage = await onebotToOpenai(e, options);
+				const flatRepliedMessage = await onebotToOpenai(e, {
+					...options,
+					disableJSONStringify: true,
+				});
 				contextItems.push(flatRepliedMessage.content as string);
 			}
 		}
 	}
 
 	// 把散落的消息合并为一个 content 字符串
-	const content = JSON.stringify(
-		mapValues(
+	const rawContent = mapValues(
+		mapKeys(
 			{
-				...mapKeys(
-					{
-						userId: String(e.sender.user_id),
-						userName: e.sender.nickname,
-						contexts: contextItems,
-						mentionedIds: mentionedIdItems,
-						text: textItems.join("\n"),
-						parsedMedia: parsedMediaItems,
-					},
-					camelToSnake,
-				),
+				userId: String(e.sender.user_id),
+				userName: e.sender.nickname,
+				contexts: contextItems,
+				mentionedIds: mentionedIdItems,
+				text: textItems.join("\n"),
+				parsedMedia: parsedMediaItems,
 			},
-			(value) => value,
-			{
-				filter: (value) => {
-					if (Array.isArray(value)) {
-						return value.length > 0;
-					}
-					return !isNil(value);
-				},
-			},
+			camelToSnake,
 		),
+		(value) => value,
+		{
+			filter: (value) => {
+				if (Array.isArray(value)) {
+					return value.length > 0;
+				}
+				return !isNil(value);
+			},
+		},
 	);
-	return textToMessage(content);
+	return textToMessage(
+		options?.disableJSONStringify
+			? (rawContent as unknown as string)
+			: JSON.stringify(rawContent),
+	);
 };
 
 /** openai.chat.completions() 的替代实现，返回response.choices[0].message */
