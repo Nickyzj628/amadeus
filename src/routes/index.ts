@@ -90,7 +90,6 @@ export const rootRoute = {
 								messages.length,
 								textToMessage(content, {
 									role: "assistant",
-									disableDecoration: true,
 								}),
 							);
 							return { content } as ChatCompletionMessage;
@@ -100,7 +99,6 @@ export const rootRoute = {
 							textToMessage(content, {
 								role: "tool",
 								tool_call_id: tool.id,
-								disableDecoration: true,
 							}),
 						);
 					}

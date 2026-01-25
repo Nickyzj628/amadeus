@@ -1,7 +1,9 @@
 import {
+	camelToSnake,
 	compactStr,
 	fetcher,
 	imageUrlToBase64,
+	mapKeys,
 	mergeObjects,
 	timeLog,
 	to,
@@ -108,31 +110,21 @@ export const textToMessage = <K extends ChatCompletionMessageParam["role"]>(
 	options?: {
 		/** 修改消息对应的角色，默认 user */
 		role?: K;
-		/** 修改发送人信息，默认 user */
-		sender?: Sender;
 		/** 从外部篡改即将完成的消息 content 字段 */
 		makeContent?: (content: string) => string;
-		/** 禁止装饰 text 后，将不再携带 [FROM]、[BODY]、[CONTEXT_BLOCK] 等标签，默认不禁 */
-		disableDecoration?: boolean;
 	} & Partial<
 		Omit<Extract<ChatCompletionMessageParam, { role: K }>, "content" | "role">
 	>,
 ): ChatCompletionMessageParam => {
 	const {
 		role = "user" as K,
-		sender,
 		makeContent = (content: string) => content,
-		disableDecoration = false,
 		...restOptions
 	} = options ?? {};
 
-	const from = sender ? `${sender.nickname}(${sender.user_id})` : role;
-
 	return {
 		role,
-		content: makeContent(
-			disableDecoration ? text : `[FROM: ${from}][BODY: ${text}]`,
-		),
+		content: makeContent(text),
 		...restOptions,
 	} as ChatCompletionMessageParam;
 };
@@ -158,48 +150,45 @@ export const onebotToOpenai = async (
 ) => {
 	const { sender } = e;
 
-	const contextBlockItems: string[] = [];
-	const consumeContextBlock = () => {
-		let content = "";
-		if (contextBlockItems.length > 0) {
-			content = `[CONTEXT_BLOCK:\n${contextBlockItems.join("\n")}]`;
-			contextBlockItems.length = 0;
-		}
-		return content;
-	};
+	const textItems: string[] = [];
+	const parsedMediaItems: string[] = [];
+	const mentionedIdItems: string[] = [];
+	const contextItems: string[] = [];
 
-	// 如果启用了补充上下文背景，则从群历史消息中获取最近 2 条消息
+	// 如果启用了补充上下文背景，则从群历史消息中获取最近 3 条消息
 	if (options?.enableExtraContextBlock && "group_id" in e) {
-		const extraMessages = await getGroupMessageHistory(e.group_id as number, 3);
+		const extraMessages = await getGroupMessageHistory(e.group_id as number, 4);
 		for (const e of extraMessages.slice(0, -1)) {
 			const message = await onebotToOpenai(e, {
 				ignoreForward: true,
 				ignoreReply: true,
 			});
-			contextBlockItems.push(message.content as string);
+			contextItems.push(message.content as string);
 		}
 	}
 
 	// 解析消息段数组
-	const contentItems: string[] = [];
 	for (const segment of e.message) {
 		// 文字
 		if (isTextSegment(segment)) {
-			contentItems.push(segment.data.text);
+			textItems.push(segment.data.text);
 		}
 		// 图片
-		else if (isImageSegment(segment) && options?.enableImageUnderstanding) {
+		else if (
+			isImageSegment(segment) &&
+			options?.enableImageUnderstanding === true
+		) {
 			const [error, description] = await to(imageToText(segment.data));
 			if (error) {
 				timeLog(`图片识别失败：${error.message}`);
-				contentItems.push("[IMAGE_PARSED: 图片识别失败]");
+				parsedMediaItems.push("图片识别失败");
 			} else {
-				contentItems.push(`[IMAGE_PARSED: ${description}]`);
+				parsedMediaItems.push(description);
 			}
 		}
 		// @某人
 		else if (isAtSegment(segment)) {
-			contentItems.push(`@${segment.data.qq}`);
+			mentionedIdItems.push(segment.data.qq);
 		}
 		// 合并转发
 		else if (isForwardSegment(segment) && !options?.ignoreForward) {
@@ -207,7 +196,7 @@ export const onebotToOpenai = async (
 				count: options?.forwardCount,
 				processMessageEvent: onebotToOpenai,
 			});
-			contextBlockItems.push(
+			contextItems.push(
 				...forwardedMessages.map((message) => message.content as string),
 			);
 		}
@@ -216,21 +205,26 @@ export const onebotToOpenai = async (
 			const e = await getMessage(segment.data.id);
 			if (e) {
 				const flatRepliedMessage = await onebotToOpenai(e, options);
-				contextBlockItems.push(flatRepliedMessage.content as string);
+				contextItems.push(flatRepliedMessage.content as string);
 			}
 		}
 	}
 
-	const content = contentItems.join(" ");
-	const contextBlock = consumeContextBlock();
-	return textToMessage(content, {
-		sender,
-		makeContent: (formattedContent) => {
-			return [contextBlock, content && formattedContent]
-				.filter(Boolean)
-				.join("\n");
-		},
-	});
+	// 把散落的消息合并为一个 content 字符串
+	const content = JSON.stringify(
+		mapKeys(
+			{
+				userId: String(e.sender.user_id),
+				userName: e.sender.nickname,
+				contexts: contextItems,
+				mentionedIds: mentionedIdItems,
+				text: textItems.join("\n"),
+				parsedMedia: parsedMediaItems,
+			},
+			camelToSnake,
+		),
+	);
+	return textToMessage(content);
 };
 
 /** openai.chat.completions() 的替代实现，返回response.choices[0].message */
@@ -272,7 +266,6 @@ export const chatCompletions = async (
 	if (needIdentityAnchor) {
 		const anchorMessage = textToMessage(IDENTITY_ANCHOR, {
 			role: "system",
-			disableDecoration: true,
 		});
 		wipMessages.splice(anchorIndex, 0, anchorMessage);
 	}
@@ -298,7 +291,9 @@ export const chatCompletions = async (
 	);
 
 	if (error) {
-		const errMessage = compactStr(JSON.stringify(error, null, 2));
+		const errMessage = compactStr(JSON.stringify(error, null, 2), {
+			disableNewLineReplace: true,
+		});
 		timeLog(`请求失败：${errMessage}`);
 		throw new Error(errMessage);
 	}
@@ -335,9 +330,8 @@ export const chatCompletions = async (
 		wipMessages.splice(
 			firstUserMessageIndex,
 			count,
-			textToMessage(`[SUMMARIZED ${count} MESSAGES] ${summarizedContent}`, {
-				role: "assistant",
-				disableDecoration: true,
+			textToMessage(`清理了前${count}条消息并总结为：${summarizedContent}`, {
+				role: "user",
 			}),
 		);
 	}
