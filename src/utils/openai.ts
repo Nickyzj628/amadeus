@@ -3,7 +3,9 @@ import {
 	compactStr,
 	fetcher,
 	imageUrlToBase64,
+	isNil,
 	mapKeys,
+	mapValues,
 	mergeObjects,
 	timeLog,
 	to,
@@ -18,13 +20,10 @@ import {
 	IMAGE_UNDERSTANDING_PROMPT,
 	MAX_ACTIVE_GROUPS,
 	MODELS,
+	SAFE_WORD,
 	SUMMARIZE_THRESHOLD,
 } from "@/constants";
-import type {
-	ImageSegment,
-	MinimalMessageEvent,
-	Sender,
-} from "@/schemas/onebot";
+import type { ImageSegment, MinimalMessageEvent } from "@/schemas/onebot";
 import type { Model } from "@/schemas/openai";
 import { modelRef } from "@/tools/changeModel";
 import summarizeChat from "@/tools/summarizeChat";
@@ -212,16 +211,29 @@ export const onebotToOpenai = async (
 
 	// 把散落的消息合并为一个 content 字符串
 	const content = JSON.stringify(
-		mapKeys(
+		mapValues(
 			{
-				userId: String(e.sender.user_id),
-				userName: e.sender.nickname,
-				contexts: contextItems,
-				mentionedIds: mentionedIdItems,
-				text: textItems.join("\n"),
-				parsedMedia: parsedMediaItems,
+				...mapKeys(
+					{
+						userId: String(e.sender.user_id),
+						userName: e.sender.nickname,
+						contexts: contextItems,
+						mentionedIds: mentionedIdItems,
+						text: textItems.join("\n"),
+						parsedMedia: parsedMediaItems,
+					},
+					camelToSnake,
+				),
 			},
-			camelToSnake,
+			(value) => value,
+			{
+				filter: (value) => {
+					if (Array.isArray(value)) {
+						return value.length > 0;
+					}
+					return !isNil(value);
+				},
+			},
 		),
 	);
 	return textToMessage(content);
@@ -254,20 +266,39 @@ export const chatCompletions = async (
 	}
 
 	const wipMessages = [...messages];
+	const getLastUserMessage = () => {
+		const index = wipMessages.findLastIndex(
+			(message) => message.role === "user",
+		);
+		const message = wipMessages[index];
+		return [message, index] as const;
+	};
+
+	// 如果消息中包含安全词，则在用户提问前添加永久人设锚点
+	let [lastUserMessage, lastUserMessageIndex] = getLastUserMessage();
+	if (
+		lastUserMessage !== undefined &&
+		typeof lastUserMessage.content === "string" &&
+		lastUserMessage.content.includes(SAFE_WORD)
+	) {
+		const identityAnchorMessage = textToMessage(IDENTITY_ANCHOR, {
+			role: "system",
+		});
+		wipMessages.splice(lastUserMessageIndex, 0, identityAnchorMessage);
+		lastUserMessage.content = lastUserMessage.content.replace(SAFE_WORD, "");
+		lastUserMessageIndex++;
+	}
 
 	// 如果消息超过 X 条，则在用户提问前添加临时人设锚点
-	const anchorIndex = wipMessages.findLastIndex(
-		(message) => message.role === "user",
-	);
-	const needIdentityAnchor =
+	const needTempIdentityAnchor =
 		disableMessagesOptimization !== false &&
 		wipMessages.length > ANCHOR_THRESHOLD &&
-		anchorIndex !== -1;
-	if (needIdentityAnchor) {
+		lastUserMessageIndex !== -1;
+	if (needTempIdentityAnchor) {
 		const anchorMessage = textToMessage(IDENTITY_ANCHOR, {
 			role: "system",
 		});
-		wipMessages.splice(anchorIndex, 0, anchorMessage);
+		wipMessages.splice(lastUserMessageIndex, 0, anchorMessage);
 	}
 
 	// 发起请求
@@ -305,8 +336,8 @@ export const chatCompletions = async (
 	}
 
 	// 如果启用了临时人设锚点，则在消费后移除
-	if (needIdentityAnchor) {
-		wipMessages.splice(anchorIndex, 1);
+	if (needTempIdentityAnchor) {
+		wipMessages.splice(lastUserMessageIndex, 1);
 	}
 
 	// 如果消息超过 Y 条，则总结一部分消息
