@@ -2,7 +2,7 @@ import type { Model } from "./schemas/openai";
 import { loadJSON } from "./utils/common";
 
 /** 未被 @ 时的回复几率 */
-export const REPLY_PROBABILITY_NOT_BE_AT = 0.0;
+export const REPLY_PROBABILITY_NOT_BE_AT = 0.01;
 
 /** 单次回复请求次数限制，防止模型无限调用工具 */
 export const MAX_REQUEST_COUNT = 5;
