@@ -104,26 +104,20 @@ export const saveGroupMessages = async (
  * 构造 OpenAI API 消息对象
  * @remarks 通过泛型 K 捕获 role 的具体类型，从而精准推导剩余字段
  */
-export const textToMessage = <K extends ChatCompletionMessageParam["role"]>(
-	text: string,
+export const contentToMessage = <K extends ChatCompletionMessageParam["role"]>(
+	content: ChatCompletionMessageParam["content"],
 	options?: {
 		/** 修改消息对应的角色，默认 user */
 		role?: K;
-		/** 从外部篡改即将完成的消息 content 字段 */
-		makeContent?: (content: string) => string;
 	} & Partial<
 		Omit<Extract<ChatCompletionMessageParam, { role: K }>, "content" | "role">
 	>,
 ): ChatCompletionMessageParam => {
-	const {
-		role = "user" as K,
-		makeContent = (content: string) => content,
-		...restOptions
-	} = options ?? {};
+	const { role = "user" as K, ...restOptions } = options ?? {};
 
 	return {
 		role,
-		content: makeContent(text),
+		content,
 		...restOptions,
 	} as ChatCompletionMessageParam;
 };
@@ -132,59 +126,43 @@ export const textToMessage = <K extends ChatCompletionMessageParam["role"]>(
  * 把消息格式从 OneBot 转成 OpenAI API
  * @remarks 保证安全返回消息对象
  */
-export const onebotToOpenaiMessage = async (
+export const onebotToOpenaiMessages = async (
 	e: MinimalMessageEvent,
 	options?: {
 		/** 是否调用视觉模型，把图片翻译为自然语言 */
 		enableImageUnderstanding?: boolean;
-		/** 是否补充上下文背景，推荐在主动发言时开启 */
-		enableExtraContextBlock?: boolean;
-		/** 是否按原样返回 content，而非转换成字符串 */
-		disableRawContent?: boolean;
 		/** 是否忽略回复的消息 */
 		ignoreReply?: boolean;
 		/** 是否忽略合并转发消息 */
 		ignoreForward?: boolean;
 		/** 每条转发消息允许递归获取的消息数 */
 		forwardCount?: number;
+		/** 是否为被引用的上下文消息 */
+		isQuoted?: boolean;
 	},
-) => {
+): Promise<ChatCompletionMessageParam[]> => {
 	const {
 		enableImageUnderstanding,
-		enableExtraContextBlock,
-		disableRawContent,
 		ignoreReply,
 		ignoreForward,
 		forwardCount,
+		isQuoted,
 	} = options ?? {};
 
-	const textItems: string[] = [];
+	const bodyItems: string[] = [];
 	const mediaItems: string[] = [];
-	const mentionedIdItems: string[] = [];
-	const contextItems: string[] = [];
+	const mentionedUserIds: string[] = [];
+	const quotedMessages: ChatCompletionMessageParam[] = [];
 
 	const hasVisionUnderstanding = modelRef.value?.abilities.includes(
 		"vision-understanding",
 	);
 
-	// 如果启用了补充上下文背景，则从群历史消息中获取最近 3 条消息
-	if (enableExtraContextBlock && "group_id" in e) {
-		const extraMessages = await getGroupMessageHistory(e.group_id as number, 4);
-		for (const e of extraMessages.slice(0, -1)) {
-			const message = await onebotToOpenaiMessage(e, {
-				disableRawContent: true,
-				ignoreForward: true,
-				ignoreReply: true,
-			});
-			contextItems.push(message.content as string);
-		}
-	}
-
 	// 解析消息段数组
 	for (const segment of e.message) {
 		// 文字
 		if (isTextSegment(segment)) {
-			textItems.push(segment.data.text);
+			bodyItems.push(segment.data.text);
 		}
 		// 图片
 		else if (isImageSegment(segment) && enableImageUnderstanding === true) {
@@ -203,84 +181,84 @@ export const onebotToOpenaiMessage = async (
 				}
 			}
 		}
-		// @某人
+		// @ 某人
 		else if (isAtSegment(segment)) {
-			mentionedIdItems.push(segment.data.qq);
+			mentionedUserIds.push(segment.data.qq);
 		}
 		// 合并转发
 		else if (isForwardSegment(segment) && !ignoreForward) {
-			const forwardedMessages = await flattenForwardSegment(segment.data.id, {
-				count: forwardCount,
-				processMessageEvent: (e) =>
-					onebotToOpenaiMessage(e, {
-						disableRawContent: true,
-						...options,
-					}),
-			});
-			contextItems.push(
-				...forwardedMessages.map((message) => message.content as string),
-			);
+			const forwardedMessages = (
+				await flattenForwardSegment(segment.data.id, {
+					count: forwardCount,
+					processMessageEvent: (e) =>
+						onebotToOpenaiMessages(e, {
+							...options,
+							isQuoted: true,
+						}),
+				})
+			).flat();
+
+			quotedMessages.push(...forwardedMessages);
 		}
 		// 回复
 		else if (isReplySegment(segment) && !ignoreReply) {
 			const e = await getMessage(segment.data.id);
 			if (e) {
-				const flatRepliedMessage = await onebotToOpenaiMessage(e, {
-					disableRawContent: true,
+				const repliedMessages = await onebotToOpenaiMessages(e, {
 					...options,
+					isQuoted: true,
 				});
-				contextItems.push(flatRepliedMessage.content as string);
+				quotedMessages.push(...repliedMessages);
 			}
 		}
 	}
 
-	// 把散落的消息合并为一个 contents 数组
-	const contents: any[] = [
-		{
-			type: "text",
-			text: JSON.stringify(
-				mapValues(
-					mapKeys(
+	// 把散落的消息合并为一个复合数组返回
+	return [
+		// 上下文消息
+		...quotedMessages,
+		// 当前消息
+		contentToMessage([
+			{
+				type: "text",
+				text: JSON.stringify(
+					mapValues(
+						mapKeys(
+							{
+								isQuoted,
+								userId: String(e.sender.user_id),
+								userName: e.sender.nickname,
+								body: bodyItems.join("\n"),
+								parsedMedia: hasVisionUnderstanding ? [] : mediaItems, // 如果当前模型具备视觉理解能力，则改为另外插入 image_url 类型的 content
+								mentionedUserIds,
+							},
+							camelToSnake,
+						),
+						(value) => value,
 						{
-							userId: String(e.sender.user_id),
-							userName: e.sender.nickname,
-							mentionedIds: mentionedIdItems,
-							text: textItems.join("\n"),
-							parsedMedia: hasVisionUnderstanding ? [] : mediaItems, // 如果当前模型具备视觉理解能力，则改为另外插入 image_url 类型的 content
+							filter: (value) => {
+								if (Array.isArray(value)) {
+									return value.length > 0;
+								}
+								return !isNil(value);
+							},
 						},
-						camelToSnake,
 					),
-					(value) => value,
-					{
-						filter: (value) => {
-							if (Array.isArray(value)) {
-								return value.length > 0;
-							}
-							return !isNil(value);
-						},
-					},
 				),
-			),
-		},
-	];
-
-	// 添加 image_url content
-	if (hasVisionUnderstanding && mediaItems.length > 0) {
-		contents.push(
-			...mediaItems.map((item) => ({
-				type: "image_url",
-				image_url: {
-					url: item,
+			},
+		]),
+		// 当前图片消息
+		...mediaItems.map((item) =>
+			contentToMessage([
+				{
+					type: "image_url",
+					image_url: {
+						url: item,
+					},
 				},
-			})),
-		);
-	}
-
-	return textToMessage(
-		disableRawContent
-			? JSON.stringify(contents[0])
-			: (contents as unknown as string),
-	);
+			]),
+		),
+	];
 };
 
 /** openai.chat.completions() 的替代实现，返回response.choices[0].message */
@@ -325,7 +303,7 @@ export const chatCompletions = async (
 		typeof lastUserMessage.content === "string" &&
 		lastUserMessage.content.includes(SAFE_WORD)
 	) {
-		const identityAnchorMessage = textToMessage(IDENTITY_ANCHOR, {
+		const identityAnchorMessage = contentToMessage(IDENTITY_ANCHOR, {
 			role: "system",
 		});
 		wipMessages.splice(lastUserMessageIndex, 0, identityAnchorMessage);
@@ -339,7 +317,7 @@ export const chatCompletions = async (
 		wipMessages.length > ANCHOR_THRESHOLD &&
 		lastUserMessageIndex !== -1;
 	if (needTempIdentityAnchor) {
-		const anchorMessage = textToMessage(IDENTITY_ANCHOR, {
+		const anchorMessage = contentToMessage(IDENTITY_ANCHOR, {
 			role: "system",
 		});
 		wipMessages.splice(lastUserMessageIndex, 0, anchorMessage);
@@ -405,7 +383,7 @@ export const chatCompletions = async (
 		wipMessages.splice(
 			firstUserMessageIndex,
 			count,
-			textToMessage(`清理了前${count}条消息并总结为：${summarizedContent}`, {
+			contentToMessage(`清理了前${count}条消息并总结为：${summarizedContent}`, {
 				role: "user",
 			}),
 		);

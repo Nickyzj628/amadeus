@@ -91,7 +91,10 @@ const getForwardMessages = async (
 			}
 			// 添加当前消息
 			else {
-				result.push({ sender, message: [segment] });
+				result.push({
+					sender,
+					message: [segment],
+				});
 			}
 		}
 	}

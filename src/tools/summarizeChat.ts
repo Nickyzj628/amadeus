@@ -2,7 +2,7 @@ import { to } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { SUMMARY_PROMPT, SYSTEM_PROMPT } from "@/constants";
 import { getGroupMessageHistory } from "@/utils/onebot";
-import { chatCompletions, onebotToOpenaiMessage } from "@/utils/openai";
+import { chatCompletions, onebotToOpenaiMessages } from "@/utils/openai";
 import { defineTool } from "./utils";
 
 export default defineTool(
@@ -45,7 +45,7 @@ export default defineTool(
 			}
 			// 转换成 OpenAI API 消息
 			for (const e of response) {
-				const message = await onebotToOpenaiMessage(e);
+				const message = await onebotToOpenaiMessages(e);
 				messages.push(message);
 			}
 		}

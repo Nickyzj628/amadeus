@@ -16,11 +16,11 @@ import {
 } from "@/utils/onebot";
 import {
 	chatCompletions,
-	onebotToOpenaiMessage,
+	contentToMessage,
+	onebotToOpenaiMessages,
 	pendingGroupIdsSet,
 	readGroupMessages,
 	saveGroupMessages,
-	textToMessage,
 } from "@/utils/openai";
 
 export const rootRoute = {
@@ -34,9 +34,11 @@ export const rootRoute = {
 
 		const e = validation.output;
 		const groupId = e.group_id;
+
 		if (groupId !== 669751957) {
 			return reply();
 		}
+
 		const isAtSelf = e.message.findIndex(isAtSelfSegment) !== -1;
 
 		// 限制每个群只能同时处理一条消息
@@ -51,7 +53,7 @@ export const rootRoute = {
 		// 读取群聊消息
 		const [error, messages] = await to(
 			readGroupMessages(groupId, [
-				textToMessage(SYSTEM_PROMPT, { role: "system" }),
+				contentToMessage(SYSTEM_PROMPT, { role: "system" }),
 			]),
 		);
 		if (error) {
@@ -59,12 +61,11 @@ export const rootRoute = {
 		}
 
 		// 处理当前消息
-		const currentMessage = await onebotToOpenaiMessage(e, {
+		const currentMessages = await onebotToOpenaiMessages(e, {
 			enableImageUnderstanding: true,
-			// enableExtraContextBlock: !isAtSelf,
 		});
-		const currentMessageIndex = messages.length;
-		messages.push(currentMessage);
+		const currentIndex = messages.length;
+		messages.push(...currentMessages);
 
 		// 拦截不是 @ 当前机器人的消息（极小概率放行）
 		if (!isAtSelf && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
@@ -92,9 +93,9 @@ export const rootRoute = {
 						// 如果工具结果可以直接回复给用户，则先清除调用痕迹，再回复
 						if (replyDirectly) {
 							messages.splice(
-								currentMessageIndex + 1,
+								currentIndex + 1,
 								messages.length,
-								textToMessage(content, {
+								contentToMessage(content, {
 									role: "assistant",
 								}),
 							);
@@ -102,7 +103,7 @@ export const rootRoute = {
 						}
 						// 带着工具结果进入下个循环
 						messages.push(
-							textToMessage(content, {
+							contentToMessage(content, {
 								role: "tool",
 								tool_call_id: tool.id,
 							}),
@@ -121,7 +122,7 @@ export const rootRoute = {
 
 		// 如果报错，则撤回本轮消息
 		if (error2) {
-			messages.splice(currentMessageIndex, messages.length);
+			messages.splice(currentIndex, messages.length);
 		}
 		// 如果是在 @ 机器人时报错，则需要汇报错误信息
 		if (error2 && isAtSelf) {
