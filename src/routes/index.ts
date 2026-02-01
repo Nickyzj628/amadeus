@@ -1,5 +1,4 @@
 import { loopUntil, to } from "@nickyzj2023/utils";
-import type { ChatCompletionMessage } from "openai/resources";
 import { safeParse } from "valibot";
 import {
 	MAX_REQUEST_COUNT,

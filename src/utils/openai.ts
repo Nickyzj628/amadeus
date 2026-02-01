@@ -18,6 +18,7 @@ import {
 	IDENTITY_ANCHOR,
 	MAX_ACTIVE_GROUPS,
 	SAFE_WORD,
+	SUMMARIZE_PROMPT,
 	SUMMARIZE_THRESHOLD,
 } from "@/constants";
 import type { MinimalMessageEvent } from "@/schemas/onebot";
@@ -240,8 +241,8 @@ export const chatCompletions = async (
 		body?: Record<string, any>;
 		/**
 		 * 是否自动优化上下文，默认开启。处理逻辑如下：
-		 * 1. 超过 X 条消息时添加临时人设锚点
-		 * 2. 超过 Y 条消息时滑动窗口总结一部分消息
+		 * 1. 超过 X 条消息时总结一部分消息
+		 * 2. 超过 Y 条消息时添加临时人设锚点
 		 * 3. 达到上下文窗口前删除前半消息
 		 */
 		disableMessagesOptimization?: boolean;
@@ -267,6 +268,38 @@ export const chatCompletions = async (
 	};
 
 	/**
+	 * 如果消息超过 X 条，则总结一部分消息
+	 */
+
+	const needSummarize =
+		!disableMessagesOptimization && wipMessages.length > SUMMARIZE_THRESHOLD;
+
+	if (needSummarize) {
+		const firstUserMessageIndex = wipMessages.findIndex(
+			(message) => message.role === "user",
+		);
+
+		const count = Math.floor(wipMessages.length * 0.25);
+		const summarizingMessages = wipMessages.slice(
+			firstUserMessageIndex,
+			firstUserMessageIndex + count,
+		);
+		summarizingMessages.push(contentToMessage(SUMMARIZE_PROMPT));
+
+		const summarizedCompletion = await chatCompletions(summarizingMessages, {
+			disableMessagesOptimization: true,
+		});
+
+		wipMessages.splice(
+			firstUserMessageIndex,
+			count,
+			contentToMessage(
+				`清理了前${count}条消息并总结为：${summarizedCompletion.content}`,
+			),
+		);
+	}
+
+	/**
 	 * 如果消息中包含安全词，则在用户提问前添加永久人设锚点
 	 */
 
@@ -286,7 +319,7 @@ export const chatCompletions = async (
 	}
 
 	/**
-	 * 如果消息超过 X 条，则在用户提问前添加临时人设锚点
+	 * 如果消息超过 Y 条，则在用户提问前添加临时人设锚点
 	 */
 
 	const needTempIdentityAnchor =
@@ -345,45 +378,6 @@ export const chatCompletions = async (
 	}
 
 	/**
-	 * 如果消息超过 Y 条，则总结一部分消息
-	 */
-
-	const needSummarize =
-		!disableMessagesOptimization && wipMessages.length > SUMMARIZE_THRESHOLD;
-
-	if (needSummarize) {
-		const firstUserMessageIndex = wipMessages.findIndex(
-			(message) => message.role === "user",
-		);
-
-		const count = Math.floor(SUMMARIZE_THRESHOLD * 0.5);
-		const summarizingMessages = wipMessages.slice(
-			firstUserMessageIndex,
-			firstUserMessageIndex + count,
-		);
-		summarizingMessages.push(
-			contentToMessage(
-				"我们之间的通信上下文快要溢出了 能否把之前的历史消息提炼一下 不用加开场白和结尾之类多余的内容",
-			),
-		);
-
-		const summarizedCompletion = await chatCompletions(summarizingMessages, {
-			disableMessagesOptimization: true,
-		});
-
-		wipMessages.splice(
-			firstUserMessageIndex,
-			count,
-			contentToMessage(
-				`清理了前${count}条消息并总结为：${summarizedCompletion.content}`,
-				{
-					role: "user",
-				},
-			),
-		);
-	}
-
-	/**
 	 * 如果即将到达上下文窗口，则清理前半（保留系统消息）（理论上永不触发）
 	 */
 
@@ -398,7 +392,7 @@ export const chatCompletions = async (
 		timeLog("(上下文过长，已清理前半段非必要消息)");
 	}
 
-	// 同步 wipMessages 到原数组
+	// 同步 wipMessages 回原数组
 	messages.length = 0;
 	messages.push(...wipMessages);
 

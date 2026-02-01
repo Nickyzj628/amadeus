@@ -2,11 +2,11 @@ import { compactStr, isObject, timeLog } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageFunctionToolCall } from "openai/resources";
 import type { GroupMessageEvent } from "@/schemas/onebot";
 import { normalizeText } from "@/utils/onebot";
-import changeModel, { modelRef } from "./changeModel";
+import changeModel from "./changeModel";
 import decodeAbbr from "./decodeAbbr";
 import getWeather from "./getWeather";
 import searchWeb from "./searchWeb";
-import { selectFunctionCallingModel, validateArgs } from "./utils";
+import { validateArgs } from "./utils";
 
 export const tools = [changeModel, getWeather, decodeAbbr, searchWeb].map(
 	(item) => item.tool,
@@ -23,11 +23,6 @@ export const handleTool = async (
 	const args = JSON.parse(tool.function.arguments);
 	if (!isObject(args)) {
 		throw new Error("参数必须是对象");
-	}
-
-	modelRef.value = selectFunctionCallingModel();
-	if (!modelRef.value) {
-		throw new Error("必须先配置一个支持 Function Calling 的模型");
 	}
 
 	let content = "";
