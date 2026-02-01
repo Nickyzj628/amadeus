@@ -6,18 +6,11 @@ import changeModel, { modelRef } from "./changeModel";
 import decodeAbbr from "./decodeAbbr";
 import getWeather from "./getWeather";
 import searchWeb from "./searchWeb";
-import summarizeChat from "./summarizeChat";
 import { selectFunctionCallingModel, validateArgs } from "./utils";
 
-export const tools = [
-	changeModel,
-	getWeather,
-	// summarizeChat,
-	decodeAbbr,
-	searchWeb,
-].map((item) => item.tool);
-
-const replyDirectlyToolNames = ["summarizeChat"];
+export const tools = [changeModel, getWeather, decodeAbbr, searchWeb].map(
+	(item) => item.tool,
+);
 
 /**
  * 根据传入的 function tool call，返回工具调用结果
@@ -49,11 +42,6 @@ export const handleTool = async (
 			content = await getWeather.handle(args);
 			break;
 		}
-		case "summarizeChat": {
-			validateArgs(args, summarizeChat);
-			content = await summarizeChat.handle({ ...args, groupId: e.group_id });
-			break;
-		}
 		case "decodeAbbr": {
 			validateArgs(args, decodeAbbr);
 			content = await decodeAbbr.handle(args);
@@ -74,8 +62,5 @@ export const handleTool = async (
 			tool.function.arguments,
 		)})\n${compactStr(content)}`,
 	);
-	return {
-		content: normalizeText(content),
-		replyDirectly: replyDirectlyToolNames.includes(tool.function.name),
-	};
+	return normalizeText(content);
 };

@@ -2,7 +2,6 @@ import {
 	camelToSnake,
 	compactStr,
 	fetcher,
-	imageUrlToBase64,
 	isNil,
 	mapKeys,
 	mapValues,
@@ -17,20 +16,16 @@ import type {
 import {
 	ANCHOR_THRESHOLD,
 	IDENTITY_ANCHOR,
-	IMAGE_UNDERSTANDING_PROMPT,
 	MAX_ACTIVE_GROUPS,
-	MODELS,
 	SAFE_WORD,
 	SUMMARIZE_THRESHOLD,
 } from "@/constants";
-import type { ImageSegment, MinimalMessageEvent } from "@/schemas/onebot";
+import type { MinimalMessageEvent } from "@/schemas/onebot";
 import type { Model } from "@/schemas/openai";
 import { modelRef } from "@/tools/changeModel";
-import summarizeChat from "@/tools/summarizeChat";
 import { loadJSON, saveJSON } from "./common";
 import {
 	flattenForwardSegment,
-	getGroupMessageHistory,
 	getMessage,
 	isAtSegment,
 	isForwardSegment,
@@ -271,8 +266,12 @@ export const chatCompletions = async (
 		return [message, index] as const;
 	};
 
-	// 如果消息中包含安全词，则在用户提问前添加永久人设锚点
+	/**
+	 * 如果消息中包含安全词，则在用户提问前添加永久人设锚点
+	 */
+
 	let [lastUserMessage, lastUserMessageIndex] = getLastUserMessage();
+
 	if (
 		lastUserMessage !== undefined &&
 		typeof lastUserMessage.content === "string" &&
@@ -286,11 +285,15 @@ export const chatCompletions = async (
 		lastUserMessageIndex++;
 	}
 
-	// 如果消息超过 X 条，则在用户提问前添加临时人设锚点
+	/**
+	 * 如果消息超过 X 条，则在用户提问前添加临时人设锚点
+	 */
+
 	const needTempIdentityAnchor =
 		disableMessagesOptimization !== false &&
 		wipMessages.length > ANCHOR_THRESHOLD &&
 		lastUserMessageIndex !== -1;
+
 	if (needTempIdentityAnchor) {
 		const anchorMessage = contentToMessage(IDENTITY_ANCHOR, {
 			role: "system",
@@ -298,13 +301,17 @@ export const chatCompletions = async (
 		wipMessages.splice(lastUserMessageIndex, 0, anchorMessage);
 	}
 
-	// 发起请求
+	/**
+	 * 正式发出请求
+	 */
+
 	const body = {
 		model: model.model,
 		messages: wipMessages,
 		...model.extraBody,
 		...bodyFromParams,
 	};
+
 	const requestInit = mergeObjects(
 		{
 			headers: {
@@ -337,9 +344,13 @@ export const chatCompletions = async (
 		wipMessages.splice(lastUserMessageIndex, 1);
 	}
 
-	// 如果消息超过 Y 条，则总结一部分消息
+	/**
+	 * 如果消息超过 Y 条，则总结一部分消息
+	 */
+
 	const needSummarize =
 		!disableMessagesOptimization && wipMessages.length > SUMMARIZE_THRESHOLD;
+
 	if (needSummarize) {
 		const firstUserMessageIndex = wipMessages.findIndex(
 			(message) => message.role === "user",
@@ -350,22 +361,34 @@ export const chatCompletions = async (
 			firstUserMessageIndex,
 			firstUserMessageIndex + count,
 		);
-		const summarizedContent = await summarizeChat.handle({
-			count,
-			messages: summarizingMessages,
+		summarizingMessages.push(
+			contentToMessage(
+				"我们之间的通信上下文快要溢出了 能否把之前的历史消息提炼一下 不用加开场白和结尾之类多余的内容",
+			),
+		);
+
+		const summarizedCompletion = await chatCompletions(summarizingMessages, {
+			disableMessagesOptimization: true,
 		});
 
 		wipMessages.splice(
 			firstUserMessageIndex,
 			count,
-			contentToMessage(`清理了前${count}条消息并总结为：${summarizedContent}`, {
-				role: "user",
-			}),
+			contentToMessage(
+				`清理了前${count}条消息并总结为：${summarizedCompletion.content}`,
+				{
+					role: "user",
+				},
+			),
 		);
 	}
 
-	// 如果即将到达上下文窗口，则清理前半（保留系统消息）（理论上永不触发）
+	/**
+	 * 如果即将到达上下文窗口，则清理前半（保留系统消息）（理论上永不触发）
+	 */
+
 	const totalTokens = response.usage?.total_tokens ?? 0;
+
 	if (totalTokens > model.contextWindow * 0.8) {
 		const deleteCount = Math.floor(wipMessages.length / 2);
 		const systemPrompts = wipMessages.filter(

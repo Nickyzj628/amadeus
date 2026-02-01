@@ -12,9 +12,9 @@ export const MAX_ACTIVE_GROUPS = 2;
 /** 在用户触发安全词时添加人设锚点、修正人设 */
 export const SAFE_WORD = "myfork";
 /** 消息数量达到阈值时添加临时人设锚点 */
-export const ANCHOR_THRESHOLD = 5;
-/** 消息数量达到阈值时提炼一部分消息 */
-export const SUMMARIZE_THRESHOLD = 50;
+export const ANCHOR_THRESHOLD = 10;
+/** 消息数量达到阈值时总结一部分消息 */
+export const SUMMARIZE_THRESHOLD = 100;
 
 /** 常规聊天系统提示词 */
 export const SYSTEM_PROMPT = `
@@ -54,22 +54,6 @@ Amadeus是维克托康多利亚大学-脑科学研究所开发的人工智能系
   - 日常寒暄不超过30字；
   - 基础问题不超过80字；
   - 专业问题、并列子问题或其他情况均不超过200字。`;
-
-/** “总结一下”专用提示词 */
-export const SUMMARY_PROMPT = `帮我总结上述群聊内容 不要使用工具 也不要分点罗列`;
-
-/** 图片转自然语言的模型专用的提示词 */
-export const IMAGE_UNDERSTANDING_PROMPT = `请简洁、有条理地描述这张图片的内容，遵循以下结构：
-
-1. 类型：照片/插图/图表等
-2. 主体：主要人物、物体或场景
-3. 关键细节：最突出的视觉特征
-4. 文字：如有文字，完整转录
-
-要求：
-- 只描述明确可见的信息，不推测
-- 只做必要描述，不加任何主观修辞
-- 直接按上述4点结构列出，禁止开场白、结束语等额外说明`;
 
 /** 维持人设的临时系统提示词 */
 export const IDENTITY_ANCHOR = `【人设锚点】

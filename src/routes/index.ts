@@ -87,19 +87,7 @@ export const rootRoute = {
 						(call) => call.type === "function",
 					);
 					for (const tool of functionCalls) {
-						const { content, replyDirectly } = await handleTool(tool, e);
-						// 如果工具结果可以直接回复给用户，则先清除调用痕迹，再回复
-						if (replyDirectly) {
-							messages.splice(
-								currentIndex + 1,
-								messages.length,
-								contentToMessage(content, {
-									role: "assistant",
-								}),
-							);
-							return { content } as ChatCompletionMessage;
-						}
-						// 带着工具结果进入下个循环
+						const content = await handleTool(tool, e);
 						messages.push(
 							contentToMessage(content, {
 								role: "tool",
