@@ -27,6 +27,7 @@ export const handleTool = async (
 	tool: ChatCompletionMessageFunctionToolCall,
 	e: GroupMessageEvent,
 ) => {
+	timeLog(tool.function);
 	const args = JSON.parse(tool.function.arguments);
 	if (!isObject(args)) {
 		throw new Error("参数必须是对象");

@@ -3,6 +3,7 @@ import { safeParse } from "valibot";
 import { StreamEventSchema } from "@/schemas/brec";
 import { reply, sendGroupMessage, textToSegment } from "@/utils/onebot";
 
+/** 直播推送 Webhook */
 export const brecRoute = {
 	POST: async (req: Request) => {
 		// 验证请求体格式

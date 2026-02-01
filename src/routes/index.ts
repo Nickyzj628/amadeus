@@ -1,4 +1,4 @@
-import { isNil, loopUntil, mapValues, to } from "@nickyzj2023/utils";
+import { loopUntil, to } from "@nickyzj2023/utils";
 import type { ChatCompletionMessage } from "openai/resources";
 import { safeParse } from "valibot";
 import {
@@ -16,8 +16,8 @@ import {
 } from "@/utils/onebot";
 import {
 	chatCompletions,
-	onebotToOpenai,
-	pendingGroupIds,
+	onebotToOpenaiMessage,
+	pendingGroupIdsSet,
 	readGroupMessages,
 	saveGroupMessages,
 	textToMessage,
@@ -41,13 +41,13 @@ export const rootRoute = {
 
 		// 限制每个群只能同时处理一条消息
 		const groupId = e.group_id;
-		if (pendingGroupIds.includes(groupId)) {
+		if (pendingGroupIdsSet.has(groupId)) {
 			if (!isAtSelf) {
 				return reply();
 			}
 			return reply("正在处理其他消息，请稍后再试...");
 		}
-		pendingGroupIds.push(groupId);
+		pendingGroupIdsSet.add(groupId);
 
 		// 读取群聊消息
 		const [error, messages] = await to(
@@ -60,10 +60,11 @@ export const rootRoute = {
 		}
 
 		// 处理当前消息
-		const currentMessage = await onebotToOpenai(e, {
+		const currentMessage = await onebotToOpenaiMessage(e, {
 			enableImageUnderstanding: true,
 			enableExtraContextBlock: !isAtSelf,
 		});
+		console.log(currentMessage);
 		const currentMessageIndex = messages.push(currentMessage) - 1;
 
 		// 不断请求模型，直到给出回复
@@ -77,7 +78,7 @@ export const rootRoute = {
 					});
 					messages.push(completion);
 
-					// 处理 function calling
+					// 处理工具调用请求
 					const functionCalls = (completion.tool_calls ?? []).filter(
 						(call) => call.type === "function",
 					);
@@ -111,24 +112,29 @@ export const rootRoute = {
 				},
 			),
 		);
-		pendingGroupIds.splice(pendingGroupIds.indexOf(groupId), 1);
+		pendingGroupIdsSet.delete(groupId);
 
 		// 如果报错，则撤回本轮消息
 		if (error2) {
 			messages.splice(currentMessageIndex, messages.length);
 		}
+		// 如果是在 @ 机器人时报错，则需要汇报错误信息
 		if (error2 && isAtSelf) {
 			return reply(error2.message);
 		}
+		// 抑制空信息
 		if (!response?.content) {
 			return reply();
 		}
 
-		// 回复消息
 		to(saveGroupMessages(groupId, messages, { disableGC: true }));
+
+		// 回复被动消息
 		if (isAtSelf) {
 			return reply(response.content);
 		}
+
+		// 回复主动消息
 		sendGroupMessage(groupId, [textToSegment(response.content)]);
 		return reply();
 	},

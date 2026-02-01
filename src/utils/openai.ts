@@ -40,7 +40,7 @@ import {
 } from "./onebot";
 
 const groupMessagesMap = new Map<number, ChatCompletionMessageParam[]>();
-export const pendingGroupIds: number[] = [];
+export const pendingGroupIdsSet = new Set<number>();
 
 /**
  * 根据群号读取消息数组
@@ -65,7 +65,7 @@ export const readGroupMessages = async (
 	// 优化：释放不活跃的群聊消息内存
 	if (groupMessagesMap.size > MAX_ACTIVE_GROUPS) {
 		for (const [groupId, messages] of groupMessagesMap) {
-			if (!pendingGroupIds.includes(groupId)) {
+			if (!pendingGroupIdsSet.has(groupId)) {
 				// 先存入本地 JSON 文件
 				saveJSON(`/data/${groupId}.json`, messages)
 					.then(() => {
@@ -132,36 +132,49 @@ export const textToMessage = <K extends ChatCompletionMessageParam["role"]>(
  * 把消息格式从 OneBot 转成 OpenAI API
  * @remarks 保证安全返回消息对象
  */
-export const onebotToOpenai = async (
+export const onebotToOpenaiMessage = async (
 	e: MinimalMessageEvent,
 	options?: {
 		/** 是否调用视觉模型，把图片翻译为自然语言 */
 		enableImageUnderstanding?: boolean;
+		/** 是否补充上下文背景，推荐在主动发言时开启 */
+		enableExtraContextBlock?: boolean;
+		/** 是否按原样返回 content，而非转换成字符串 */
+		disableRawContent?: boolean;
 		/** 是否忽略回复的消息 */
 		ignoreReply?: boolean;
 		/** 是否忽略合并转发消息 */
 		ignoreForward?: boolean;
 		/** 每条转发消息允许递归获取的消息数 */
 		forwardCount?: number;
-		/** 是否补充上下文背景，推荐在主动发言时开启 */
-		enableExtraContextBlock?: boolean;
-		/** 是否按原样返回 content，不使用 JSON.stringify() */
-		disableJSONStringify?: boolean;
 	},
 ) => {
+	const {
+		enableImageUnderstanding,
+		enableExtraContextBlock,
+		disableRawContent,
+		ignoreReply,
+		ignoreForward,
+		forwardCount,
+	} = options ?? {};
+
 	const textItems: string[] = [];
-	const parsedMediaItems: string[] = [];
+	const mediaItems: string[] = [];
 	const mentionedIdItems: string[] = [];
 	const contextItems: string[] = [];
 
+	const hasVisionUnderstanding = modelRef.value?.abilities.includes(
+		"vision-understanding",
+	);
+
 	// 如果启用了补充上下文背景，则从群历史消息中获取最近 3 条消息
-	if (options?.enableExtraContextBlock && "group_id" in e) {
+	if (enableExtraContextBlock && "group_id" in e) {
 		const extraMessages = await getGroupMessageHistory(e.group_id as number, 4);
 		for (const e of extraMessages.slice(0, -1)) {
-			const message = await onebotToOpenai(e, {
+			const message = await onebotToOpenaiMessage(e, {
+				disableRawContent: true,
 				ignoreForward: true,
 				ignoreReply: true,
-				disableJSONStringify: true,
 			});
 			contextItems.push(message.content as string);
 		}
@@ -174,16 +187,20 @@ export const onebotToOpenai = async (
 			textItems.push(segment.data.text);
 		}
 		// 图片
-		else if (
-			isImageSegment(segment) &&
-			options?.enableImageUnderstanding === true
-		) {
-			const [error, description] = await to(imageToText(segment.data));
-			if (error) {
-				timeLog(`图片识别失败：${error.message}`);
-				parsedMediaItems.push("图片识别失败");
-			} else {
-				parsedMediaItems.push(description);
+		else if (isImageSegment(segment) && enableImageUnderstanding === true) {
+			// 如果当前模型具备视觉能力，则直接使用图片 url
+			if (hasVisionUnderstanding) {
+				mediaItems.push(segment.data.url);
+			}
+			// 否则调用视觉理解模型，使用它翻译后的自然语言
+			else {
+				const [error, description] = await to(imageToText(segment.data));
+				if (error) {
+					timeLog(`图片识别失败：${error.message}`);
+					mediaItems.push("图片识别失败");
+				} else {
+					mediaItems.push(description);
+				}
 			}
 		}
 		// @某人
@@ -191,12 +208,13 @@ export const onebotToOpenai = async (
 			mentionedIdItems.push(segment.data.qq);
 		}
 		// 合并转发
-		else if (isForwardSegment(segment) && !options?.ignoreForward) {
+		else if (isForwardSegment(segment) && !ignoreForward) {
 			const forwardedMessages = await flattenForwardSegment(segment.data.id, {
-				count: options?.forwardCount,
+				count: forwardCount,
 				processMessageEvent: (e) =>
-					onebotToOpenai(e, {
-						disableJSONStringify: true,
+					onebotToOpenaiMessage(e, {
+						disableRawContent: true,
+						...options,
 					}),
 			});
 			contextItems.push(
@@ -204,45 +222,62 @@ export const onebotToOpenai = async (
 			);
 		}
 		// 回复
-		else if (isReplySegment(segment) && !options?.ignoreReply) {
+		else if (isReplySegment(segment) && !ignoreReply) {
 			const e = await getMessage(segment.data.id);
 			if (e) {
-				const flatRepliedMessage = await onebotToOpenai(e, {
+				const flatRepliedMessage = await onebotToOpenaiMessage(e, {
+					disableRawContent: true,
 					...options,
-					disableJSONStringify: true,
 				});
 				contextItems.push(flatRepliedMessage.content as string);
 			}
 		}
 	}
 
-	// 把散落的消息合并为一个 content 字符串
-	const rawContent = mapValues(
-		mapKeys(
-			{
-				userId: String(e.sender.user_id),
-				userName: e.sender.nickname,
-				contexts: contextItems,
-				mentionedIds: mentionedIdItems,
-				text: textItems.join("\n"),
-				parsedMedia: parsedMediaItems,
-			},
-			camelToSnake,
+	// 把散落的消息合并为一个 contents 数组
+	const contents = [
+		JSON.stringify(
+			mapValues(
+				mapKeys(
+					{
+						userId: String(e.sender.user_id),
+						userName: e.sender.nickname,
+						contexts: contextItems,
+						mentionedIds: mentionedIdItems,
+						text: textItems.join("\n"),
+						parsedMedia: hasVisionUnderstanding ? [] : mediaItems, // 如果当前模型具备视觉理解能力，则改为另外插入 image_url 类型的 content
+					},
+					camelToSnake,
+				),
+				(value) => value,
+				{
+					filter: (value) => {
+						if (Array.isArray(value)) {
+							return value.length > 0;
+						}
+						return !isNil(value);
+					},
+				},
+			),
 		),
-		(value) => value,
-		{
-			filter: (value) => {
-				if (Array.isArray(value)) {
-					return value.length > 0;
-				}
-				return !isNil(value);
-			},
-		},
-	);
+	];
+
+	// 添加 image_url content
+	if (hasVisionUnderstanding && mediaItems.length > 0) {
+		contents.push(
+			...mediaItems.map((item) => ({
+				type: "image_url",
+				image_url: {
+					url: item,
+				},
+			})),
+		);
+	}
+
 	return textToMessage(
-		options?.disableJSONStringify
-			? (rawContent as unknown as string)
-			: JSON.stringify(rawContent),
+		disableRawContent
+			? JSON.stringify(contents[0])
+			: (contents as unknown as string),
 	);
 };
 

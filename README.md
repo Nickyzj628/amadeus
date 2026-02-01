@@ -30,3 +30,10 @@ bun run build && bun run start
 ```
 
 This project was created using `bun init` in bun v1.3.2. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+
+### TODO:
+
+1. 移除 contexts，添加 isQuote
+2. 添加 time
+3. 保存全量 messages
+4. 定期更新系统提示词
