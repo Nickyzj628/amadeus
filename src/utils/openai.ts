@@ -231,6 +231,7 @@ export const onebotToOpenaiMessages = async (
 								body: bodyItems.join("\n"),
 								parsedMedia: hasVisionUnderstanding ? [] : mediaItems, // 如果当前模型具备视觉理解能力，则改为另外插入 image_url 类型的 content
 								mentionedUserIds,
+								time: new Date().toLocaleString(),
 							},
 							camelToSnake,
 						),

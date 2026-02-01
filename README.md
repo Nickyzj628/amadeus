@@ -33,6 +33,4 @@ This project was created using `bun init` in bun v1.3.2. [Bun](https://bun.com) 
 
 ### TODO:
 
-1. 添加 time
-2. 定期更新系统提示词
-3. 移除纯视觉理解模型，保留多模态模型
+1. 移除纯视觉理解模型，保留多模态模型
