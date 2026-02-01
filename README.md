@@ -33,7 +33,6 @@ This project was created using `bun init` in bun v1.3.2. [Bun](https://bun.com) 
 
 ### TODO:
 
-1. 移除 contexts，添加 isQuote
+1. 修改回复、转发的上下文消息为平铺结构：移除 contexts，添加 isQuote
 2. 添加 time
-3. 保存全量 messages
-4. 定期更新系统提示词
+3. 定期更新系统提示词

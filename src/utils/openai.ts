@@ -235,31 +235,33 @@ export const onebotToOpenaiMessage = async (
 	}
 
 	// 把散落的消息合并为一个 contents 数组
-	const contents = [
-		JSON.stringify(
-			mapValues(
-				mapKeys(
+	const contents: any[] = [
+		{
+			type: "text",
+			text: JSON.stringify(
+				mapValues(
+					mapKeys(
+						{
+							userId: String(e.sender.user_id),
+							userName: e.sender.nickname,
+							mentionedIds: mentionedIdItems,
+							text: textItems.join("\n"),
+							parsedMedia: hasVisionUnderstanding ? [] : mediaItems, // 如果当前模型具备视觉理解能力，则改为另外插入 image_url 类型的 content
+						},
+						camelToSnake,
+					),
+					(value) => value,
 					{
-						userId: String(e.sender.user_id),
-						userName: e.sender.nickname,
-						contexts: contextItems,
-						mentionedIds: mentionedIdItems,
-						text: textItems.join("\n"),
-						parsedMedia: hasVisionUnderstanding ? [] : mediaItems, // 如果当前模型具备视觉理解能力，则改为另外插入 image_url 类型的 content
+						filter: (value) => {
+							if (Array.isArray(value)) {
+								return value.length > 0;
+							}
+							return !isNil(value);
+						},
 					},
-					camelToSnake,
 				),
-				(value) => value,
-				{
-					filter: (value) => {
-						if (Array.isArray(value)) {
-							return value.length > 0;
-						}
-						return !isNil(value);
-					},
-				},
 			),
-		),
+		},
 	];
 
 	// 添加 image_url content

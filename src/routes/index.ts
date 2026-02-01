@@ -31,21 +31,20 @@ export const rootRoute = {
 		if (!validation.success) {
 			return reply();
 		}
-		const e = validation.output;
 
-		// 拦截不是 @ 当前机器人的消息（极小概率放行）
-		const isAtSelf = e.message.findIndex(isAtSelfSegment) !== -1;
-		if (!isAtSelf && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
+		const e = validation.output;
+		const groupId = e.group_id;
+		if (groupId !== 669751957) {
 			return reply();
 		}
+		const isAtSelf = e.message.findIndex(isAtSelfSegment) !== -1;
 
 		// 限制每个群只能同时处理一条消息
-		const groupId = e.group_id;
 		if (pendingGroupIdsSet.has(groupId)) {
 			if (!isAtSelf) {
 				return reply();
 			}
-			return reply("正在处理其他消息，请稍后再试...");
+			return reply(isAtSelf ? "正在处理其他消息，请稍后再试..." : "");
 		}
 		pendingGroupIdsSet.add(groupId);
 
@@ -62,10 +61,16 @@ export const rootRoute = {
 		// 处理当前消息
 		const currentMessage = await onebotToOpenaiMessage(e, {
 			enableImageUnderstanding: true,
-			enableExtraContextBlock: !isAtSelf,
+			// enableExtraContextBlock: !isAtSelf,
 		});
-		console.log(currentMessage);
-		const currentMessageIndex = messages.push(currentMessage) - 1;
+		const currentMessageIndex = messages.length;
+		messages.push(currentMessage);
+
+		// 拦截不是 @ 当前机器人的消息（极小概率放行）
+		if (!isAtSelf && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
+			pendingGroupIdsSet.delete(groupId);
+			return reply();
+		}
 
 		// 不断请求模型，直到给出回复
 		const [error2, response] = await to(

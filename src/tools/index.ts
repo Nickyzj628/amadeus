@@ -12,7 +12,7 @@ import { selectFunctionCallingModel, validateArgs } from "./utils";
 export const tools = [
 	changeModel,
 	getWeather,
-	summarizeChat,
+	// summarizeChat,
 	decodeAbbr,
 	searchWeb,
 ].map((item) => item.tool);
