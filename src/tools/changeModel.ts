@@ -16,9 +16,7 @@ export default defineTool(
 				properties: {
 					provider: {
 						type: "string",
-						enum: MODELS.filter((model) =>
-							model.abilities.includes("chat"),
-						).map((model) => model.provider),
+						enum: MODELS.map((model) => model.provider),
 						description: "模型名称，需要把用户的描述映射到对应枚举值",
 					},
 				},
@@ -27,9 +25,7 @@ export default defineTool(
 		},
 	},
 	({ provider }) => {
-		const targetModel = MODELS.filter((model) =>
-			model.abilities.includes("chat"),
-		).find((model) => model.provider === provider);
+		const targetModel = MODELS.find((model) => model.provider === provider);
 		if (!targetModel) {
 			return "切换失败，模型不存在";
 		}

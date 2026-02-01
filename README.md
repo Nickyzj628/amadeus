@@ -12,6 +12,13 @@
 
 参考`.env.example`，只有`SELF_ID`（机器人QQ号）、`ONEBOT_HTTP_PORT`（OntBot HTTP服务端口号）、`ONEBOT_HTTP_POST_PORT`（OneBot HTTP POST服务端口号）是必填的。
 
+### 配置模型
+
+参考`llms.config.example.json`，尽量填写多模态大模型：
+
+1. 如果没有视觉理解能力，会无法识别消息中的图片等附件；
+2. 如果没有Function Calling能力，会无法调用查询天气等工具。
+
 ### 安装依赖:
 
 ```bash
@@ -30,7 +37,3 @@ bun run build && bun run start
 ```
 
 This project was created using `bun init` in bun v1.3.2. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
-
-### TODO:
-
-1. 移除纯视觉理解模型，保留多模态模型

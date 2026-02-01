@@ -129,8 +129,6 @@ export const contentToMessage = <K extends ChatCompletionMessageParam["role"]>(
 export const onebotToOpenaiMessages = async (
 	e: MinimalMessageEvent,
 	options?: {
-		/** 是否调用视觉模型，把图片翻译为自然语言 */
-		enableImageUnderstanding?: boolean;
 		/** 是否忽略回复的消息 */
 		ignoreReply?: boolean;
 		/** 是否忽略合并转发消息 */
@@ -141,22 +139,12 @@ export const onebotToOpenaiMessages = async (
 		isQuoted?: boolean;
 	},
 ): Promise<ChatCompletionMessageParam[]> => {
-	const {
-		enableImageUnderstanding,
-		ignoreReply,
-		ignoreForward,
-		forwardCount,
-		isQuoted,
-	} = options ?? {};
+	const { ignoreReply, ignoreForward, forwardCount, isQuoted } = options ?? {};
 
 	const bodyItems: string[] = [];
 	const mediaItems: string[] = [];
 	const mentionedUserIds: string[] = [];
 	const quotedMessages: ChatCompletionMessageParam[] = [];
-
-	const hasVisionUnderstanding = modelRef.value?.abilities.includes(
-		"vision-understanding",
-	);
 
 	// 解析消息段数组
 	for (const segment of e.message) {
@@ -165,21 +153,8 @@ export const onebotToOpenaiMessages = async (
 			bodyItems.push(segment.data.text);
 		}
 		// 图片
-		else if (isImageSegment(segment) && enableImageUnderstanding === true) {
-			// 如果当前模型具备视觉能力，则直接使用图片 url
-			if (hasVisionUnderstanding) {
-				mediaItems.push(segment.data.url);
-			}
-			// 否则调用视觉理解模型，使用它翻译后的自然语言
-			else {
-				const [error, description] = await to(imageToText(segment.data));
-				if (error) {
-					timeLog(`图片识别失败：${error.message}`);
-					mediaItems.push("图片识别失败");
-				} else {
-					mediaItems.push(description);
-				}
-			}
+		else if (isImageSegment(segment)) {
+			mediaItems.push(segment.data.url);
 		}
 		// @ 某人
 		else if (isAtSegment(segment)) {
@@ -229,7 +204,6 @@ export const onebotToOpenaiMessages = async (
 								userId: String(e.sender.user_id),
 								userName: e.sender.nickname,
 								body: bodyItems.join("\n"),
-								parsedMedia: hasVisionUnderstanding ? [] : mediaItems, // 如果当前模型具备视觉理解能力，则改为另外插入 image_url 类型的 content
 								mentionedUserIds,
 								time: new Date().toLocaleString(),
 							},
@@ -406,39 +380,4 @@ export const chatCompletions = async (
 	messages.push(...wipMessages);
 
 	return result;
-};
-
-/**
- * 把图片识别成自然语言
- * @param image 图片消息段里的 data 对象
- * @see https://docs.bigmodel.cn/api-reference/%E6%A8%A1%E5%9E%8B-api/%E5%AF%B9%E8%AF%9D%E8%A1%A5%E5%85%A8#%E5%9B%BE%E7%89%87
- */
-export const imageToText = async (image: ImageSegment["data"]) => {
-	const model = MODELS.find((model) =>
-		model.abilities.includes("vision-understanding"),
-	);
-	if (!model) {
-		throw new Error("请先配置一个视觉理解模型");
-	}
-
-	const base64 = await imageUrlToBase64(image.url);
-	const response = await chatCompletions(
-		[
-			{
-				role: "user",
-				content: [
-					{ type: "image_url", image_url: { url: base64 } },
-					{ type: "text", text: IMAGE_UNDERSTANDING_PROMPT },
-				],
-			},
-		],
-		{
-			model,
-		},
-	);
-	if (!response.content) {
-		throw new Error("图片识别失败");
-	}
-
-	return response.content;
 };

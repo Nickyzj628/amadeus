@@ -61,9 +61,7 @@ export const rootRoute = {
 		}
 
 		// 处理当前消息
-		const currentMessages = await onebotToOpenaiMessages(e, {
-			enableImageUnderstanding: true,
-		});
+		const currentMessages = await onebotToOpenaiMessages(e);
 		const currentIndex = messages.length;
 		messages.push(...currentMessages);
 
