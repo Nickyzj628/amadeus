@@ -34,11 +34,6 @@ export const rootRoute = {
 
 		const e = validation.output;
 		const groupId = e.group_id;
-
-		if (groupId !== 669751957) {
-			return reply();
-		}
-
 		const isAtSelf = e.message.findIndex(isAtSelfSegment) !== -1;
 
 		// 限制每个群只能同时处理一条消息
