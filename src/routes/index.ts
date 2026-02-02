@@ -51,6 +51,7 @@ export const rootRoute = {
 			]),
 		);
 		if (error) {
+			pendingGroupIdsSet.delete(groupId);
 			return reply(`读取群聊消息失败：${error.message}`);
 		}
 

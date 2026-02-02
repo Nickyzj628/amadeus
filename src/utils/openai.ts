@@ -258,7 +258,7 @@ export const chatCompletions = async (
 		throw new Error("当前没有运行中的模型，@我并输入“切换到XX模型”启用一个");
 	}
 
-	const wipMessages = [...messages];
+	let wipMessages = [...messages];
 	const getLastUserMessage = () => {
 		const index = wipMessages.findLastIndex(
 			(message) => message.role === "user",
@@ -376,6 +376,14 @@ export const chatCompletions = async (
 	if (needTempIdentityAnchor) {
 		wipMessages.splice(lastUserMessageIndex, 1);
 	}
+
+	// 阅后即焚图片，防止图片过期导致模型请求报错
+	wipMessages = wipMessages.filter((message) => {
+		if (!Array.isArray(message.content)) {
+			return true;
+		}
+		return message.content.every((part) => part.type !== "image_url");
+	});
 
 	/**
 	 * 如果即将到达上下文窗口，则清理前半（保留系统消息）（理论上永不触发）
