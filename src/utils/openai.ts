@@ -2,6 +2,7 @@ import {
 	camelToSnake,
 	compactStr,
 	fetcher,
+	imageUrlToBase64,
 	isNil,
 	mapKeys,
 	mapValues,
@@ -150,7 +151,10 @@ export const onebotToOpenaiMessages = async (
 		}
 		// 图片
 		else if (isImageSegment(segment)) {
-			mediaItems.push(segment.data.url);
+			const [error, base64] = await to(imageUrlToBase64(segment.data.url));
+			if (!error) {
+				mediaItems.push(base64);
+			}
 		}
 		// @ 某人
 		else if (isAtSegment(segment)) {
