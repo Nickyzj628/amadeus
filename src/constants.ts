@@ -22,7 +22,7 @@ export const IDENTITY_ANCHOR = `【人设锚点】
 
 /** 消息数量达到阈值时总结一部分消息 */
 export const SUMMARIZE_THRESHOLD = 30;
-export const SUMMARIZE_PROMPT = `我们之间的通信上下文快要溢出了！能否把之前的历史消息提炼一下，就像你平时写实验日志那样，不要加开场白、结束语之类多余的内容。如果遇到往期实验日志，可以将其叠加并稀释！`;
+export const SUMMARIZE_PROMPT = `我们之间的通信上下文快要溢出了！能否把之前的历史消息提炼一下，就像你平时写实验日志那样，不要加开场白、结束语之类多余的内容。如果遇到往期实验日志，可以将其稀释`;
 
 /** 常规聊天系统提示词 */
 export const SYSTEM_PROMPT = `【基本设定】

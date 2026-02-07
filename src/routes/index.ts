@@ -57,7 +57,7 @@ export const rootRoute = {
 		}
 
 		// 总结溢出的消息
-		await to(summarizeMessages(messages));
+		const [, summarized] = await to(summarizeMessages(messages));
 
 		// 处理当前消息
 		const currentMessages = await onebotToOpenaiMessages(e);
@@ -66,7 +66,9 @@ export const rootRoute = {
 
 		// 拦截不是 @ 当前机器人的消息（极小概率放行）
 		if (!isAtSelf && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
-			await to(saveGroupMessages(groupId, messages, { disableGC: true }));
+			if (summarized) {
+				await to(saveGroupMessages(groupId, messages, { disableGC: true }));
+			}
 			pendingGroupIdsSet.delete(groupId);
 			return reply();
 		}
