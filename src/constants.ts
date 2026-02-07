@@ -21,8 +21,8 @@ export const IDENTITY_ANCHOR = `【人设锚点】
 减少廉价傲娇台词的复读频率，保持知性、冷静但易燃的性格特征`;
 
 /** 消息数量达到阈值时总结一部分消息 */
-export const SUMMARIZE_THRESHOLD = 20;
-export const SUMMARIZE_PROMPT = `我们之间的通信上下文快要溢出了！能否把之前的历史消息提炼一下，不用加开场白和结尾之类多余的内容，就像你平时写实验日志那样`;
+export const SUMMARIZE_THRESHOLD = 30;
+export const SUMMARIZE_PROMPT = `我们之间的通信上下文快要溢出了！能否把之前的历史消息提炼一下，就像你平时写实验日志那样，但不用加开场白、结束语之类多余的内容。如果遇到往期实验日志，可以将其再次压缩！`;
 
 /** 常规聊天系统提示词 */
 export const SYSTEM_PROMPT = `【基本设定】

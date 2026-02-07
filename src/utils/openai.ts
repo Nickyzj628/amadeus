@@ -273,34 +273,58 @@ export const chatCompletions = async (
 
 	/**
 	 * 如果消息超过 X 条，则总结一部分消息
+	 * X 可能很大，所以需要切片总结
 	 */
 
 	const needSummarize =
 		!disableMessagesOptimization && wipMessages.length > SUMMARIZE_THRESHOLD;
 
 	if (needSummarize) {
+		// 从第一条用户消息开始总结
 		const firstUserMessageIndex = wipMessages.findIndex(
 			(message) => message.role === "user",
 		);
 
-		const count = Math.floor(wipMessages.length * 0.25);
-		const summarizingMessages = wipMessages.slice(
+		// 粗略计算需要总结的消息条数
+		const count = Math.floor(wipMessages.length * 0.33);
+		const summarizingMessages = wipMessages.splice(
 			firstUserMessageIndex,
 			firstUserMessageIndex + count,
 		);
-		summarizingMessages.push(contentToMessage(SUMMARIZE_PROMPT));
 
-		const summarizedCompletion = await chatCompletions(summarizingMessages, {
-			disableMessagesOptimization: true,
-		});
-
-		wipMessages.splice(
-			firstUserMessageIndex,
-			count,
-			contentToMessage(
-				`清理了前${count}条消息并总结为：${summarizedCompletion.content}`,
-			),
+		// 切片总结，防止一次性喂给模型的消息超过上下文窗口
+		const countPerChunk = Math.min(count, SUMMARIZE_THRESHOLD);
+		const summarizingMessagesChunks = Array.from(
+			{
+				length: Math.ceil(summarizingMessages.length / countPerChunk),
+			},
+			(_, i) => {
+				return summarizingMessages.slice(
+					i * countPerChunk,
+					i * countPerChunk + countPerChunk,
+				);
+			},
 		);
+		timeLog(
+			`即将总结前${count}条消息，分${summarizingMessagesChunks.length}次进行，每次${countPerChunk}条`,
+		);
+
+		// 开始总结
+		const summarizedMessages: ChatCompletionMessageParam[] = [];
+		for (const chunk of summarizingMessagesChunks) {
+			chunk.push(contentToMessage(SUMMARIZE_PROMPT));
+			const summarizedCompletion = await chatCompletions(chunk, {
+				disableMessagesOptimization: true,
+			});
+			summarizedMessages.push(
+				contentToMessage(
+					`清理了${chunk.length - 1}条消息并总结为：${summarizedCompletion.content}`,
+				),
+			);
+		}
+
+		// 替换原始消息
+		wipMessages.splice(firstUserMessageIndex, 0, ...summarizedMessages);
 	}
 
 	/**
