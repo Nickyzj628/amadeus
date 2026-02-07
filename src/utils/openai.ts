@@ -151,6 +151,7 @@ export const onebotToOpenaiMessages = async (
 		}
 		// 图片
 		else if (isImageSegment(segment)) {
+			timeLog("识别到一条图片消息", segment);
 			const [error, base64] = await to(imageUrlToBase64(segment.data.url));
 			if (!error) {
 				mediaItems.push(base64);
@@ -245,9 +246,7 @@ export const chatCompletions = async (
 		body?: Record<string, any>;
 		/**
 		 * 是否自动优化上下文，默认开启。处理逻辑如下：
-		 * 1. 超过 X 条消息时总结一部分消息
-		 * 2. 超过 Y 条消息时添加临时人设锚点
-		 * 3. 达到上下文窗口前删除前半消息
+		 * 1. 超过 X 条消息时添加临时人设锚点
 		 */
 		disableMessagesOptimization?: boolean;
 	},
@@ -272,62 +271,6 @@ export const chatCompletions = async (
 	};
 
 	/**
-	 * 如果消息超过 X 条，则总结一部分消息
-	 * X 可能很大，所以需要切片总结
-	 */
-
-	const needSummarize =
-		!disableMessagesOptimization && wipMessages.length > SUMMARIZE_THRESHOLD;
-
-	if (needSummarize) {
-		// 从第一条用户消息开始总结
-		const firstUserMessageIndex = wipMessages.findIndex(
-			(message) => message.role === "user",
-		);
-
-		// 粗略计算需要总结的消息条数
-		const count = Math.floor(wipMessages.length * 0.33);
-		const summarizingMessages = wipMessages.splice(
-			firstUserMessageIndex,
-			firstUserMessageIndex + count,
-		);
-
-		// 切片总结，防止一次性喂给模型的消息超过上下文窗口
-		const countPerChunk = Math.min(count, SUMMARIZE_THRESHOLD);
-		const summarizingMessagesChunks = Array.from(
-			{
-				length: Math.ceil(summarizingMessages.length / countPerChunk),
-			},
-			(_, i) => {
-				return summarizingMessages.slice(
-					i * countPerChunk,
-					i * countPerChunk + countPerChunk,
-				);
-			},
-		);
-		timeLog(
-			`即将总结前${count}条消息，分${summarizingMessagesChunks.length}次进行，每次${countPerChunk}条`,
-		);
-
-		// 开始总结
-		const summarizedMessages: ChatCompletionMessageParam[] = [];
-		for (const chunk of summarizingMessagesChunks) {
-			chunk.push(contentToMessage(SUMMARIZE_PROMPT));
-			const summarizedCompletion = await chatCompletions(chunk, {
-				disableMessagesOptimization: true,
-			});
-			summarizedMessages.push(
-				contentToMessage(
-					`清理了${chunk.length - 1}条消息并总结为：${summarizedCompletion.content}`,
-				),
-			);
-		}
-
-		// 替换原始消息
-		wipMessages.splice(firstUserMessageIndex, 0, ...summarizedMessages);
-	}
-
-	/**
 	 * 如果消息中包含安全词，则在用户提问前添加永久人设锚点
 	 */
 
@@ -347,7 +290,7 @@ export const chatCompletions = async (
 	}
 
 	/**
-	 * 如果消息超过 Y 条，则在用户提问前添加临时人设锚点
+	 * 如果消息超过 X 条，则在用户提问前添加临时人设锚点
 	 */
 
 	const needTempIdentityAnchor =
@@ -417,20 +360,75 @@ export const chatCompletions = async (
 	 * 如果即将到达上下文窗口，则清理前半（保留系统消息）（理论上永不触发）
 	 */
 
-	const totalTokens = response.usage?.total_tokens ?? 0;
+	// const totalTokens = response.usage?.total_tokens ?? 0;
 
-	if (totalTokens > model.contextWindow * 0.8) {
-		const deleteCount = Math.floor(wipMessages.length / 2);
-		const systemPrompts = wipMessages.filter(
-			(message, i) => i < deleteCount && message.role === "system",
-		);
-		wipMessages.splice(0, deleteCount, ...systemPrompts);
-		timeLog("(上下文过长，已清理前半段非必要消息)");
-	}
+	// if (totalTokens > model.contextWindow * 0.8) {
+	// 	const deleteCount = Math.floor(wipMessages.length / 2);
+	// 	const systemPrompts = wipMessages.filter(
+	// 		(message, i) => i < deleteCount && message.role === "system",
+	// 	);
+	// 	wipMessages.splice(0, deleteCount, ...systemPrompts);
+	// 	timeLog("(上下文过长，已清理前半段非必要消息)");
+	// }
 
 	// 同步 wipMessages 回原数组
 	messages.length = 0;
 	messages.push(...wipMessages);
 
 	return result;
+};
+
+/** 总结溢出的消息，但保留系统消息 */
+export const summarizeMessages = async (
+	messages: ChatCompletionMessageParam[],
+) => {
+	if (messages.length < SUMMARIZE_THRESHOLD) {
+		return;
+	}
+
+	// 从第一条用户消息开始总结
+	const firstUserMessageIndex = messages.findIndex(
+		(message) => message.role === "user",
+	);
+
+	// 粗略计算需要总结的消息条数
+	const count = Math.floor(messages.length * 0.5);
+	const summarizingMessages = messages.splice(
+		firstUserMessageIndex,
+		firstUserMessageIndex + count,
+	);
+
+	// 切片总结，防止一次性喂给模型的消息超过上下文窗口
+	const countPerChunk = Math.min(count, SUMMARIZE_THRESHOLD);
+	const summarizingMessagesChunks = Array.from(
+		{
+			length: Math.ceil(summarizingMessages.length / countPerChunk),
+		},
+		(_, i) => {
+			return summarizingMessages.slice(
+				i * countPerChunk,
+				i * countPerChunk + countPerChunk,
+			);
+		},
+	);
+	timeLog(
+		`即将总结前${count}条消息，分${summarizingMessagesChunks.length}次进行`,
+	);
+
+	// 开始总结
+	const summarizedMessages: ChatCompletionMessageParam[] = [];
+	for (const chunk of summarizingMessagesChunks) {
+		chunk.push(contentToMessage(SUMMARIZE_PROMPT));
+		const summarizedCompletion = await chatCompletions(chunk, {
+			disableMessagesOptimization: true,
+		});
+		summarizedMessages.push(
+			contentToMessage(
+				`清理了${chunk.length - 1}条消息并总结为：${summarizedCompletion.content}`,
+			),
+		);
+	}
+
+	// 插入原始消息
+	messages.splice(firstUserMessageIndex, 0, ...summarizedMessages);
 };

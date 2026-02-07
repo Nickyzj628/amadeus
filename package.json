@@ -17,7 +17,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@nickyzj2023/utils": "^1.0.41",
+    "@nickyzj2023/utils": "^1.0.43",
     "valibot": "^1.2.0"
   }
 }
