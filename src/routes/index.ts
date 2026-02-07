@@ -33,6 +33,10 @@ export const rootRoute = {
 		}
 
 		const e = validation.output;
+		if (e.message.length === 0) {
+			return reply();
+		}
+
 		const groupId = e.group_id;
 		const isAtSelf = e.message.findIndex(isAtSelfSegment) !== -1;
 

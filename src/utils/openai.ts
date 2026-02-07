@@ -380,13 +380,13 @@ export const chatCompletions = async (
 
 /**
  * 总结溢出的消息，但保留系统消息
- * @returns 如果返回 false 或报错，则表示未能总结消息
+ * @returns 如果返回 null 或报错，则表示未能总结消息
  */
 export const summarizeMessages = async (
 	messages: ChatCompletionMessageParam[],
 ) => {
 	if (messages.length < SUMMARIZE_THRESHOLD) {
-		return false;
+		return null;
 	}
 
 	// 从第一条用户消息开始总结
