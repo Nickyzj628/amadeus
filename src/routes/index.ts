@@ -5,15 +5,17 @@ import {
 	REPLY_PROBABILITY_NOT_BE_AT,
 	SYSTEM_PROMPT,
 } from "@/constants";
-import { type CommonSegment, GroupMessageEventSchema } from "@/schemas/onebot";
+import { GroupMessageEventSchema } from "@/schemas/onebot";
 import { handleTool, tools } from "@/tools";
-import { resolveBiliLink } from "@/utils/bili";
-import { formatNumberCompact } from "@/utils/common";
+import {
+	liveDetailToSegments,
+	resolveBiliLink,
+	videoDetailToSegments,
+} from "@/utils/bili";
 import {
 	isAtSelfSegment,
 	reply,
 	sendGroupMessage,
-	srcToImageSegment,
 	textToSegment,
 } from "@/utils/onebot";
 import {
@@ -59,42 +61,12 @@ export const rootRoute = {
 		);
 		if (resolvedBiliLink) {
 			const { url, videoDetail, liveDetail } = resolvedBiliLink;
-			const segments: CommonSegment[] = [];
-			if (videoDetail) {
-				const { pic, title, owner, duration, stat, pubdate } = videoDetail;
-				segments.push(
-					srcToImageSegment(pic),
-					textToSegment(
-						[
-							title,
-							`@${owner.name}`,
-							"",
-							`视频时长：${Math.floor(duration / 60)}分${duration % 60}秒`,
-							`发布时间：${new Date(pubdate * 1000).toLocaleString()}`,
-							`${formatNumberCompact(stat.view)}播放 ${formatNumberCompact(stat.like)}点赞 ${formatNumberCompact(stat.coin)}硬币 ${formatNumberCompact(stat.favorite)}收藏`,
-							"",
-							url,
-						].join("\n"),
-					),
-				);
-			}
-			if (liveDetail) {
-				const { live_status, live_time, title, user_cover, keyframe } =
-					liveDetail;
-				segments.push(
-					srcToImageSegment(keyframe || user_cover),
-					textToSegment(
-						[
-							title,
-							"",
-							`状态：${live_status === 1 ? "直播中" : "未开播"}`,
-							`开播时间：${live_time}`,
-							"",
-							url,
-						].join("\n"),
-					),
-				);
-			}
+			const segments = (
+				videoDetail
+					? videoDetailToSegments(videoDetail)
+					: liveDetailToSegments(liveDetail)
+			).concat(textToSegment(`\n${url}`));
+
 			sendGroupMessage(groupId, segments);
 			pendingGroupIdsSet.delete(groupId);
 			return reply();

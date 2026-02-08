@@ -1,9 +1,13 @@
-import { fetcher } from "@nickyzj2023/utils";
+import { fetcher, getRealURL } from "@nickyzj2023/utils";
 import { parse } from "valibot";
 import {
+	type LiveDetail,
 	LiveDetailResponseSchema,
+	type VideoDetail,
 	VideoDetailResponseSchema,
 } from "@/schemas/bili";
+import { formatNumberCompact } from "./common";
+import { srcToImageSegment, textToSegment } from "./onebot";
 
 const api = fetcher("https://api.bilibili.com/x/web-interface");
 const liveApi = fetcher("https://api.live.bilibili.com");
@@ -17,16 +21,6 @@ const liveApi = fetcher("https://api.live.bilibili.com");
 const regexp =
 	/https:\/\/\w+\.bilibili\.com\/[A-Za-z0-9?_=&/.]+|https:\/\/b23\.tv\/[A-Za-z0-9]+/;
 
-/** 从 url 响应头获取真实链接 */
-const expandShortURL = async (shortUrl: string) => {
-	const response = await fetch(shortUrl, {
-		redirect: "manual", // 手动处理重定向
-	});
-
-	const location = response.headers.get("location");
-	return location || shortUrl;
-};
-
 /**
  * 解析 bilibili 链接，支持视频（BV号长链接、小程序短链接）、直播
  * @returns 解析后的干净链接 + 视频详情或直播详情 组成的对象
@@ -38,9 +32,7 @@ export const resolveBiliLink = async (text: string) => {
 	}
 
 	// 还原短链接
-	const url = new URL(
-		link.includes("b23.tv") ? await expandShortURL(link) : link,
-	);
+	const url = new URL(link.includes("b23.tv") ? await getRealURL(link) : link);
 
 	// 解析视频
 	if (url.pathname.includes("/video/BV")) {
@@ -77,4 +69,34 @@ export const resolveBiliLink = async (text: string) => {
 			liveDetail: data,
 		};
 	}
+};
+
+export const videoDetailToSegments = (videoDetail: VideoDetail) => {
+	const { pic, title, owner, duration, stat, pubdate } = videoDetail;
+	return [
+		srcToImageSegment(pic),
+		textToSegment(
+			[
+				title,
+				`@${owner.name}\n`,
+				`视频时长：${Math.floor(duration / 60)}分${duration % 60}秒`,
+				`发布时间：${new Date(pubdate * 1000).toLocaleString()}`,
+				`${formatNumberCompact(stat.view)}播放 ${formatNumberCompact(stat.like)}点赞 ${formatNumberCompact(stat.coin)}硬币 ${formatNumberCompact(stat.favorite)}收藏`,
+			].join("\n"),
+		),
+	];
+};
+
+export const liveDetailToSegments = (liveDetail: LiveDetail) => {
+	const { live_status, live_time, title, user_cover, keyframe } = liveDetail;
+	return [
+		srcToImageSegment(keyframe || user_cover),
+		textToSegment(
+			[
+				title,
+				`\n状态：${live_status === 1 ? "直播中" : "未开播"}`,
+				`开播时间：${live_time}`,
+			].join("\n"),
+		),
+	];
 };

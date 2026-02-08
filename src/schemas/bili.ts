@@ -63,6 +63,7 @@ export const VideoDetailResponseSchema = object({
 });
 
 export type VideoDetailResponse = InferOutput<typeof VideoDetailResponseSchema>;
+export type VideoDetail = InferOutput<typeof VideoDetailResponseSchema>["data"];
 
 /**
  * 直播间详情
@@ -87,3 +88,4 @@ export const LiveDetailResponseSchema = object({
 });
 
 export type LiveDetailResponse = InferOutput<typeof LiveDetailResponseSchema>;
+export type LiveDetail = InferOutput<typeof LiveDetailResponseSchema>["data"];
