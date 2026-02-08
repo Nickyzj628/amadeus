@@ -379,27 +379,24 @@ export const chatCompletions = async (
 };
 
 /**
- * 总结溢出的消息，但保留系统消息
- * @returns 如果返回 null 或报错，则表示未能总结消息
+ * 上下文溢出时从前往后总结消息，保留系统消息
+ * @param messages 原始消息数组，会被本函数修改
+ * @returns 是否总结成功，失败时不会改变原数组
  */
 export const summarizeMessages = async (
 	messages: ChatCompletionMessageParam[],
 ) => {
 	if (messages.length < SUMMARIZE_THRESHOLD) {
-		return null;
+		return false;
 	}
 
 	// 从第一条用户消息开始总结
-	const firstUserMessageIndex = messages.findIndex(
-		(message) => message.role === "user",
-	);
+	const startIndex = messages.findIndex((message) => message.role === "user");
 
 	// 粗略计算需要总结的消息条数
 	const count = Math.floor(messages.length * 0.5);
-	const summarizingMessages = messages.splice(
-		firstUserMessageIndex,
-		firstUserMessageIndex + count,
-	);
+	const endIndex = startIndex + count;
+	const summarizingMessages = messages.slice(startIndex, endIndex);
 
 	// 切片总结，防止一次性喂给模型的消息超过上下文窗口
 	const countPerChunk = Math.min(count, SUMMARIZE_THRESHOLD);
@@ -415,16 +412,24 @@ export const summarizeMessages = async (
 		},
 	);
 	timeLog(
-		`即将总结前${count}条消息，分${summarizingMessagesChunks.length}次进行`,
+		`准备总结前${count}条消息，分${summarizingMessagesChunks.length}次进行`,
 	);
 
 	// 开始总结
+	// 使用 for 循环依次请求，而不是用 Promise.all，原因是部分模型对并发请求有严格限制
 	const summarizedMessages: ChatCompletionMessageParam[] = [];
 	for (const chunk of summarizingMessagesChunks) {
 		chunk.push(contentToMessage(SUMMARIZE_PROMPT));
-		const summarizedCompletion = await chatCompletions(chunk, {
-			disableMessagesOptimization: true,
-		});
+
+		const [error, summarizedCompletion] = await to(
+			chatCompletions(chunk, {
+				disableMessagesOptimization: true,
+			}),
+		);
+		if (error) {
+			return false;
+		}
+
 		summarizedMessages.push(
 			contentToMessage(
 				`清理了${chunk.length - 1}条消息并总结为：${summarizedCompletion.content}`,
@@ -432,7 +437,7 @@ export const summarizeMessages = async (
 		);
 	}
 
-	// 插入原始消息
-	messages.splice(firstUserMessageIndex, 0, ...summarizedMessages);
-	return messages;
+	// 修改原始消息数组
+	messages.splice(startIndex, count, ...summarizedMessages);
+	return true;
 };

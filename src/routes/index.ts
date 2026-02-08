@@ -32,6 +32,7 @@ export const rootRoute = {
 			return reply();
 		}
 
+		// 过滤空消息
 		const e = validation.output;
 		if (e.message.length === 0) {
 			return reply();
@@ -60,8 +61,8 @@ export const rootRoute = {
 			return reply(`读取群聊消息失败：${error.message}`);
 		}
 
-		// 总结溢出的消息
-		const [, summarized] = await to(summarizeMessages(messages));
+		// 消息溢出时总结
+		const isSummarized = await summarizeMessages(messages);
 
 		// 处理当前消息
 		const currentMessages = await onebotToOpenaiMessages(e);
@@ -70,8 +71,9 @@ export const rootRoute = {
 
 		// 拦截不是 @ 当前机器人的消息（极小概率放行）
 		if (!isAtSelf && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
-			if (summarized) {
-				await to(saveGroupMessages(groupId, messages, { disableGC: true }));
+			// 如果总结成功，即使不回复，也要保存消息回本地
+			if (isSummarized) {
+				to(saveGroupMessages(groupId, messages, { disableGC: true }));
 			}
 			pendingGroupIdsSet.delete(groupId);
 			return reply();
