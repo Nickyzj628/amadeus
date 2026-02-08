@@ -9,6 +9,7 @@ import {
 	GetMessageResponseSchema,
 	type ImageSegment,
 	type MinimalMessageEvent,
+	type MiniProgramSegment,
 	type ReplySegment,
 	type Segment,
 	type TextSegment,
@@ -141,11 +142,24 @@ export const isImageSegment = (
 	return !isNil(segment) && segment.type === "image";
 };
 
+/** 从图片 URL 构造图片消息段 */
+export const srcToImageSegment = (src: string): ImageSegment => ({
+	type: "image",
+	data: { url: src },
+});
+
 /** 是否为回复消息段 */
 export const isReplySegment = (
 	segment?: CommonSegment,
 ): segment is ReplySegment => {
 	return !isNil(segment) && segment.type === "reply";
+};
+
+/** 是否为小程序消息段 */
+export const isMiniProgramSegment = (
+	segment?: CommonSegment,
+): segment is MiniProgramSegment => {
+	return !isNil(segment) && segment.type === "json";
 };
 
 /** 移除文本中的不自然内容 */

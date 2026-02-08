@@ -5,6 +5,7 @@ import {
 	literal,
 	number,
 	object,
+	optional,
 	pipe,
 	string,
 	transform,
@@ -15,6 +16,7 @@ import {
 	isAtSegment,
 	isForwardSegment,
 	isImageSegment,
+	isMiniProgramSegment,
 	isReplySegment,
 	isTextSegment,
 	normalizeText,
@@ -58,10 +60,10 @@ export type ForwardSegment = InferOutput<typeof ForwardSegmentSchema>;
 export const ImageSegmentSchema = object({
 	type: literal("image"),
 	data: object({
-		file: string(),
-		subType: number(),
+		file: optional(string()),
+		subType: optional(number()),
 		url: string(),
-		file_size: string(),
+		file_size: optional(string()),
 	}),
 });
 export type ImageSegment = InferOutput<typeof ImageSegmentSchema>;
@@ -75,6 +77,15 @@ export const ReplySegmentSchema = object({
 	}),
 });
 export type ReplySegment = InferOutput<typeof ReplySegmentSchema>;
+
+/** 小程序消息段 */
+export const MiniProgramSegmentSchema = object({
+	type: literal("json"),
+	data: object({
+		data: string(),
+	}),
+});
+export type MiniProgramSegment = InferOutput<typeof MiniProgramSegmentSchema>;
 
 /** 通用消息段联合 */
 export const CommonSegmentSchema = object({
@@ -123,6 +134,10 @@ export const GroupMessageEventSchema = object({
 				if (isTextSegment(segment)) {
 					segment.data.text = normalizeText(segment.data.text);
 					return segment.data.text !== "";
+				}
+				if (isMiniProgramSegment(segment)) {
+					segment.data.data = JSON.parse(segment.data.data);
+					return true;
 				}
 				return (
 					isAtSegment(segment) ||

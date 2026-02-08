@@ -5,12 +5,15 @@ import {
 	REPLY_PROBABILITY_NOT_BE_AT,
 	SYSTEM_PROMPT,
 } from "@/constants";
-import { GroupMessageEventSchema } from "@/schemas/onebot";
+import { type CommonSegment, GroupMessageEventSchema } from "@/schemas/onebot";
 import { handleTool, tools } from "@/tools";
+import { resolveBiliLink } from "@/utils/bili";
+import { formatNumberCompact } from "@/utils/common";
 import {
 	isAtSelfSegment,
 	reply,
 	sendGroupMessage,
+	srcToImageSegment,
 	textToSegment,
 } from "@/utils/onebot";
 import {
@@ -25,7 +28,7 @@ import {
 
 export const rootRoute = {
 	POST: async (req: Request) => {
-		// 验证请求体格式（在 schema 校验阶段保留了文字、图片、@、转发、回复消息段）
+		// 验证请求体格式（在 schema 校验阶段保留了文字、图片、@、转发、回复、小程序消息段）
 		const body = await req.json();
 		const validation = safeParse(GroupMessageEventSchema, body);
 		if (!validation.success) {
@@ -49,6 +52,53 @@ export const rootRoute = {
 			return reply(isAtSelf ? "正在处理其他消息，请稍后再试..." : "");
 		}
 		pendingGroupIdsSet.add(groupId);
+
+		// 如果从消息中提取到B站链接，则解析并直接回复消息，不经过模型处理
+		const [, resolvedBiliLink] = await to(
+			resolveBiliLink(JSON.stringify(e.message.map((segment) => segment.data))),
+		);
+		if (resolvedBiliLink) {
+			const { url, videoDetail, liveDetail } = resolvedBiliLink;
+			const segments: CommonSegment[] = [];
+			if (videoDetail) {
+				const { pic, title, owner, duration, stat, pubdate } = videoDetail;
+				segments.push(
+					srcToImageSegment(pic),
+					textToSegment(
+						[
+							title,
+							`@${owner.name}`,
+							"",
+							`视频时长：${Math.floor(duration / 60)}分${duration % 60}秒`,
+							`发布时间：${new Date(pubdate * 1000).toLocaleString()}`,
+							`${formatNumberCompact(stat.view)}播放 ${formatNumberCompact(stat.like)}点赞 ${formatNumberCompact(stat.coin)}硬币 ${formatNumberCompact(stat.favorite)}收藏`,
+							"",
+							url,
+						].join("\n"),
+					),
+				);
+			}
+			if (liveDetail) {
+				const { live_status, live_time, title, user_cover, keyframe } =
+					liveDetail;
+				segments.push(
+					srcToImageSegment(keyframe || user_cover),
+					textToSegment(
+						[
+							title,
+							"",
+							`状态：${live_status === 1 ? "直播中" : "未开播"}`,
+							`开播时间：${live_time}`,
+							"",
+							url,
+						].join("\n"),
+					),
+				);
+			}
+			sendGroupMessage(groupId, segments);
+			pendingGroupIdsSet.delete(groupId);
+			return reply();
+		}
 
 		// 读取群聊消息
 		const [error, messages] = await to(

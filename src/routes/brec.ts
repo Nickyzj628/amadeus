@@ -1,6 +1,6 @@
 import { timeLog, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
-import { StreamEventSchema } from "@/schemas/brec";
+import { StreamEventSchema } from "@/schemas/bili";
 import { reply, sendGroupMessage, textToSegment } from "@/utils/onebot";
 
 /** 直播推送 Webhook */

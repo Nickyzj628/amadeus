@@ -29,3 +29,11 @@ export const saveJSON = async <T>(path: string, data: T): Promise<void> => {
 	const fullPath = `${process.cwd()}${path}`;
 	await Bun.write(fullPath, JSON.stringify(data, null, 2));
 };
+
+/** 格式化数字为紧凑格式，例如 1000 显示为 1k */
+export const formatNumberCompact = (num: number) => {
+	return new Intl.NumberFormat("zh-CN", {
+		notation: "compact",
+		compactDisplay: "short",
+	}).format(num);
+};
