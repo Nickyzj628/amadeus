@@ -74,7 +74,10 @@ export const resolveBiliLink = async (
 			await liveApi.get(`/index/getRoomBaseInfo?room_ids=${roomId}`),
 		);
 
-		const roomInfo = data.by_room_ids[0]!;
+		const roomInfo = Object.values(data.by_room_ids)[0];
+		if (!roomInfo) {
+			return;
+		}
 
 		return {
 			url: `${url.origin}${url.pathname}`,
