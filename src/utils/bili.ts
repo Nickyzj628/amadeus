@@ -10,7 +10,11 @@ import { formatNumberCompact } from "./common";
 import { srcToImageSegment, textToSegment } from "./onebot";
 
 const api = fetcher("https://api.bilibili.com/x/web-interface");
-const liveApi = fetcher("https://api.live.bilibili.com");
+const liveApi = fetcher("https://api.live.bilibili.com/xlive/web-room/v1", {
+	params: {
+		req_biz: "web_room_componet",
+	},
+});
 
 /**
  * 匹配 bilibili 链接的正则表达式
@@ -61,7 +65,9 @@ export const resolveBiliLink = async (text: string) => {
 		const roomId = url.pathname.replace("/", "");
 		const { data } = parse(
 			LiveDetailResponseSchema,
-			await liveApi.get(`/room/v1/Room/get_info?room_id=${roomId}`),
+			await liveApi.get(`/index/getRoomBaseInfo`, {
+				params: { room_ids: roomId },
+			}),
 		);
 
 		return {
@@ -88,13 +94,16 @@ export const videoDetailToSegments = (videoDetail: VideoDetail) => {
 };
 
 export const liveDetailToSegments = (liveDetail: LiveDetail) => {
-	const { live_status, live_time, title, user_cover, keyframe } = liveDetail;
+	const { cover, title, uname, live_status, area_name, live_time } =
+		Object.values(liveDetail.by_room_ids)[0]!;
 	return [
-		srcToImageSegment(keyframe || user_cover),
+		srcToImageSegment(cover),
 		textToSegment(
 			[
 				title,
+				`@${uname}`,
 				`\n状态：${live_status === 1 ? "直播中" : "未开播"}`,
+				`分区：${area_name}`,
 				`开播时间：${live_time}`,
 			].join("\n"),
 		),

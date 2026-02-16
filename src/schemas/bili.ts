@@ -4,6 +4,7 @@ import {
 	literal,
 	number,
 	object,
+	record,
 	string,
 	union,
 } from "valibot";
@@ -73,17 +74,24 @@ export const LiveDetailResponseSchema = object({
 	code: number(),
 	message: string(),
 	data: object({
-		room_id: number(),
-		short_id: number(),
-		/** 1为直播中，其他为未正式开播 */
-		live_status: number(),
-		/** 未开播时为 "0000-00-00 00:00:00" */
-		live_time: string(),
-		title: string(),
-		/** 直播封面 */
-		user_cover: string(),
-		/** 直播截图 */
-		keyframe: string(),
+		// by_uids: record(string(), object({})),
+		by_room_ids: record(
+			string(),
+			object({
+				room_id: number(),
+				short_id: number(),
+				uid: number(),
+				/** 1=直播中，其他都是未开播 */
+				live_status: number(),
+				live_url: string(),
+				live_time: string(),
+				title: string(),
+				parent_area_name: string(),
+				area_name: string(),
+				uname: string(),
+				cover: string(),
+			}),
+		),
 	}),
 });
 
