@@ -1,39 +1,17 @@
 import {
-	boolean,
+	array,
 	type InferOutput,
-	literal,
 	number,
 	object,
 	record,
 	string,
-	union,
 } from "valibot";
-
-/**
- * 直播姬 Webhook 事件
- */
-export const StreamEventSchema = object({
-	EventType: union([literal("StreamStarted"), literal("StreamEnded")]),
-	EventTimestamp: string(),
-	EventId: string(),
-	EventData: object({
-		RoomId: number(),
-		ShortId: number(),
-		Name: string(),
-		Title: string(),
-		AreaNameParent: string(),
-		AreaNameChild: string(),
-		Recording: boolean(),
-		Streaming: boolean(),
-		DanmakuConnected: boolean(),
-	}),
-});
 
 /**
  * 视频详情
  * @see https://api.bilibili.com/x/web-interface/view?bvid={bv}
  */
-export const VideoDetailResponseSchema = object({
+export const GetVideoDetailSchema = object({
 	code: number(),
 	message: string(),
 	data: object({
@@ -62,38 +40,45 @@ export const VideoDetailResponseSchema = object({
 		}),
 	}),
 });
+export type GetVideoDetail = InferOutput<typeof GetVideoDetailSchema>;
 
-export type VideoDetailResponse = InferOutput<typeof VideoDetailResponseSchema>;
-export type VideoDetail = InferOutput<typeof VideoDetailResponseSchema>["data"];
+export const RoomInfoSchema = object({
+	room_id: number(),
+	short_id: number(),
+	uid: number(),
+	/** 1=直播中，其他都是未开播 */
+	live_status: number(),
+	live_url: string(),
+	live_time: string(),
+	title: string(),
+	parent_area_name: string(),
+	area_name: string(),
+	uname: string(),
+	cover: string(),
+});
+export type RoomInfo = InferOutput<typeof RoomInfoSchema>;
 
 /**
  * 直播间详情
  * @see https://api.live.bilibili.com/room/v1/Room/get_info?room_id={roomId}
  */
-export const LiveDetailResponseSchema = object({
+export const GetRoomBaseInfoSchema = object({
 	code: number(),
 	message: string(),
 	data: object({
 		// by_uids: record(string(), object({})),
-		by_room_ids: record(
-			string(),
-			object({
-				room_id: number(),
-				short_id: number(),
-				uid: number(),
-				/** 1=直播中，其他都是未开播 */
-				live_status: number(),
-				live_url: string(),
-				live_time: string(),
-				title: string(),
-				parent_area_name: string(),
-				area_name: string(),
-				uname: string(),
-				cover: string(),
-			}),
-		),
+		by_room_ids: record(string(), RoomInfoSchema),
 	}),
 });
+export type GetRoomBaseInfo = InferOutput<typeof GetRoomBaseInfoSchema>;
 
-export type LiveDetailResponse = InferOutput<typeof LiveDetailResponseSchema>;
-export type LiveDetail = InferOutput<typeof LiveDetailResponseSchema>["data"];
+/**
+ * 直播通知推送
+ * @see backend\src\utils\brec.ts:21
+ */
+export const BrecWebhookSchema = array(
+	object({
+		...RoomInfoSchema.entries,
+		changedField: string(),
+	}),
+);

@@ -1,10 +1,10 @@
 import { fetcher, getRealURL } from "@nickyzj2023/utils";
 import { parse } from "valibot";
 import {
-	type LiveDetail,
-	LiveDetailResponseSchema,
-	type VideoDetail,
-	VideoDetailResponseSchema,
+	GetRoomBaseInfoSchema,
+	type GetVideoDetail,
+	GetVideoDetailSchema,
+	type RoomInfo,
 } from "@/schemas/bili";
 import { formatNumberCompact } from "./common";
 import { srcToImageSegment, textToSegment } from "./onebot";
@@ -18,18 +18,23 @@ const liveApi = fetcher("https://api.live.bilibili.com/xlive/web-room/v1", {
 
 /**
  * 匹配 bilibili 链接的正则表达式
- * - https://www.bilibili.com/video/BV1abc123456
+ * - http://www.bilibili.com/video/BV1abc123456
  * - https://live.bilibili.com/123456
  * - https://b23.tv/abc123XYZ
  */
 const regexp =
-	/https:\/\/\w+\.bilibili\.com\/[A-Za-z0-9?_=&/.]+|https:\/\/b23\.tv\/[A-Za-z0-9]+/;
+	/http[s]?:\/\/\w+\.bilibili\.com\/[A-Za-z0-9?_=&/.]+|https:\/\/b23\.tv\/[A-Za-z0-9]+/;
 
 /**
  * 解析 bilibili 链接，支持视频（BV号长链接、小程序短链接）、直播
  * @returns 解析后的干净链接 + 视频详情或直播详情 组成的对象
  */
-export const resolveBiliLink = async (text: string) => {
+export const resolveBiliLink = async (
+	text: string,
+	options?: { shouldToSegments: boolean },
+) => {
+	const { shouldToSegments = false } = options ?? {};
+
 	const link = text.match(regexp)?.[0];
 	if (!link) {
 		return;
@@ -43,7 +48,7 @@ export const resolveBiliLink = async (text: string) => {
 		// 使用bv号获取详情
 		const bv = url.pathname.match(/BV[a-zA-Z0-9]+/)?.[0];
 		const { data } = parse(
-			VideoDetailResponseSchema,
+			GetVideoDetailSchema,
 			await api.get(`/view?bvid=${bv}`),
 		);
 
@@ -57,6 +62,7 @@ export const resolveBiliLink = async (text: string) => {
 		return {
 			url: `${url.origin}${url.pathname}${params.length > 0 ? `?${params.join("&")}` : ""}`,
 			videoDetail: data,
+			segments: shouldToSegments ? videoDetailToSegments(data) : [],
 		};
 	}
 	// 解析直播
@@ -64,21 +70,22 @@ export const resolveBiliLink = async (text: string) => {
 		// 使用房间号获取详情
 		const roomId = url.pathname.replace("/", "");
 		const { data } = parse(
-			LiveDetailResponseSchema,
-			await liveApi.get(`/index/getRoomBaseInfo`, {
-				params: { room_ids: roomId },
-			}),
+			GetRoomBaseInfoSchema,
+			await liveApi.get(`/index/getRoomBaseInfo?room_ids=${roomId}`),
 		);
+
+		const roomInfo = data.by_room_ids[0]!;
 
 		return {
 			url: `${url.origin}${url.pathname}`,
-			liveDetail: data,
+			roomInfo,
+			segments: shouldToSegments ? roomInfoToSegments(roomInfo) : [],
 		};
 	}
 };
 
-export const videoDetailToSegments = (videoDetail: VideoDetail) => {
-	const { pic, title, owner, duration, stat, pubdate } = videoDetail;
+export const videoDetailToSegments = (videoDetail: GetVideoDetail["data"]) => {
+	const { pic, title, owner, duration, stat, pubdate, bvid } = videoDetail;
 	return [
 		srcToImageSegment(pic),
 		textToSegment(
@@ -88,14 +95,16 @@ export const videoDetailToSegments = (videoDetail: VideoDetail) => {
 				`视频时长：${Math.floor(duration / 60)}分${duration % 60}秒`,
 				`发布时间：${new Date(pubdate * 1000).toLocaleString()}`,
 				`${formatNumberCompact(stat.view)}播放 ${formatNumberCompact(stat.like)}点赞 ${formatNumberCompact(stat.coin)}硬币 ${formatNumberCompact(stat.favorite)}收藏`,
+				`https://www.bilibili.com/video/${bvid}`,
 			].join("\n"),
 		),
 	];
 };
 
-export const liveDetailToSegments = (liveDetail: LiveDetail) => {
-	const { cover, title, uname, live_status, area_name, live_time } =
-		Object.values(liveDetail.by_room_ids)[0]!;
+export const roomInfoToSegments = (roomInfo: RoomInfo) => {
+	const { cover, title, uname, live_status, area_name, live_time, live_url } =
+		roomInfo;
+
 	return [
 		srcToImageSegment(cover),
 		textToSegment(
@@ -105,6 +114,7 @@ export const liveDetailToSegments = (liveDetail: LiveDetail) => {
 				`\n状态：${live_status === 1 ? "直播中" : "未开播"}`,
 				`分区：${area_name}`,
 				`开播时间：${live_time}`,
+				live_url,
 			].join("\n"),
 		),
 	];

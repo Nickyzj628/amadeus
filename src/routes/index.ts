@@ -7,11 +7,7 @@ import {
 } from "@/constants";
 import { GroupMessageEventSchema } from "@/schemas/onebot";
 import { handleTool, tools } from "@/tools";
-import {
-	liveDetailToSegments,
-	resolveBiliLink,
-	videoDetailToSegments,
-} from "@/utils/bili";
+import { resolveBiliLink } from "@/utils/bili";
 import {
 	isAtSelfSegment,
 	reply,
@@ -57,17 +53,13 @@ export const rootRoute = {
 
 		// 如果从消息中提取到B站链接，则解析并直接回复消息，不经过模型处理
 		const [, resolvedBiliLink] = await to(
-			resolveBiliLink(JSON.stringify(e.message.map((segment) => segment.data))),
+			resolveBiliLink(
+				JSON.stringify(e.message.map((segment) => segment.data)),
+				{ shouldToSegments: true },
+			),
 		);
 		if (resolvedBiliLink) {
-			const { url, videoDetail, liveDetail } = resolvedBiliLink;
-			const segments = (
-				videoDetail
-					? videoDetailToSegments(videoDetail)
-					: liveDetailToSegments(liveDetail)
-			).concat(textToSegment(`\n${url}`));
-
-			sendGroupMessage(groupId, segments);
+			sendGroupMessage(groupId, resolvedBiliLink.segments);
 			pendingGroupIdsSet.delete(groupId);
 			return reply();
 		}
