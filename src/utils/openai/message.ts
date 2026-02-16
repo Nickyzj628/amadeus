@@ -180,7 +180,7 @@ export const onebotToOpenaiMessages = async (
 								if (Array.isArray(value)) {
 									return value.length > 0;
 								}
-								return !isNil(value);
+								return !!value;
 							},
 						},
 					),
