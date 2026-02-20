@@ -1,4 +1,4 @@
-import { timeLog } from "@nickyzj2023/utils";
+import { log } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { MAX_ACTIVE_GROUPS } from "@/constants";
 import { loadJSON, saveJSON } from "@/utils/common";
@@ -35,10 +35,10 @@ export const readGroupMessages = async (
 					.then(() => {
 						// 再释放内存，不阻塞当前函数
 						groupMessagesMap.delete(groupId);
-						timeLog(`释放了${groupId}的消息内存`);
+						log(`释放了${groupId}的消息内存`);
 					})
 					.catch((e) => {
-						timeLog(`释放${groupId}的消息内存失败：${e.message}`);
+						log(`释放${groupId}的消息内存失败：${e.message}`);
 					});
 				break;
 			}
@@ -60,6 +60,6 @@ export const saveGroupMessages = async (
 	await saveJSON(`/data/${groupId}.json`, messages);
 	if (!options?.disableGC) {
 		groupMessagesMap.delete(groupId);
-		timeLog(`释放了${groupId}的消息内存`);
+		log(`释放了${groupId}的消息内存`);
 	}
 };

@@ -1,4 +1,4 @@
-import { timeLog } from "@nickyzj2023/utils";
+import { log } from "@nickyzj2023/utils";
 import { rootRoute } from "./routes";
 import { brecRoute } from "./routes/brec";
 import { reply } from "./utils/onebot";
@@ -23,4 +23,4 @@ const server = Bun.serve({
 	},
 });
 
-timeLog(`${server.protocol}://${server.hostname}:${server.port}`);
+log(`${server.protocol}://${server.hostname}:${server.port}`);

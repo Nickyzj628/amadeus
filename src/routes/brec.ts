@@ -1,4 +1,4 @@
-import { sleep, timeLog, to } from "@nickyzj2023/utils";
+import { log, sleep, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { BrecWebhookSchema } from "@/schemas/bili";
 import type { TextSegment } from "@/schemas/onebot";
@@ -42,7 +42,7 @@ export const brecRoute = {
 			for (const groupId of groupIds) {
 				const [error] = await to(sendGroupMessage(groupId, segments));
 				if (error) {
-					timeLog(`直播推送失败：${error.message}`);
+					log(`直播推送失败：${error.message}`);
 					break;
 				}
 				await sleep();

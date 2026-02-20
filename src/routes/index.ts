@@ -23,6 +23,7 @@ import {
 	saveGroupMessages,
 	summarizeMessages,
 } from "@/utils/openai";
+import { pruneMessages } from "@/utils/openai/prune-messages";
 
 export const rootRoute = {
 	POST: async (req: Request) => {
@@ -75,8 +76,11 @@ export const rootRoute = {
 			return reply(`读取群聊消息失败：${error.message}`);
 		}
 
-		// 消息溢出时总结
-		const isSummarized = await summarizeMessages(messages);
+		// 优化历史消息
+		// 消息超过一定内存时，自动修剪
+		await pruneMessages(messages);
+		// 消息超过一定数量时，自动总结一部分
+		await summarizeMessages(messages);
 
 		// 处理当前消息
 		const currentMessages = await onebotToOpenaiMessages(e);
@@ -85,10 +89,6 @@ export const rootRoute = {
 
 		// 拦截不是 @ 当前机器人的消息（极小概率放行）
 		if (!isAtSelf && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
-			// 如果总结成功，即使不回复，也要保存消息回本地
-			if (isSummarized) {
-				to(saveGroupMessages(groupId, messages, { disableGC: true }));
-			}
 			pendingGroupIdsSet.delete(groupId);
 			return reply();
 		}
@@ -141,6 +141,7 @@ export const rootRoute = {
 			return reply();
 		}
 
+		// 保存消息到本地
 		to(saveGroupMessages(groupId, messages, { disableGC: true }));
 
 		// 回复被动消息

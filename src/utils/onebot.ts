@@ -1,4 +1,4 @@
-import { fetcher, isNil, timeLog, to } from "@nickyzj2023/utils";
+import { fetcher, isNil, log, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import {
 	type AtSegment,
@@ -76,7 +76,7 @@ const getForwardMessages = async (
 ): Promise<MinimalMessageEvent[]> => {
 	const [error, response] = await to(getForwardMessage(messageId));
 	if (error) {
-		timeLog(`查询合并转发消息失败：${error.message}`);
+		log(`查询合并转发消息失败：${error.message}`);
 		return [];
 	}
 

@@ -1,4 +1,4 @@
-import { compactStr, isObject, timeLog } from "@nickyzj2023/utils";
+import { compactStr, isObject, log } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageFunctionToolCall } from "openai/resources";
 import type { GroupMessageEvent } from "@/schemas/onebot";
 import { normalizeText } from "@/utils/onebot";
@@ -52,7 +52,7 @@ export const handleTool = async (
 		}
 	}
 
-	timeLog(
+	log(
 		`${tool.function.name}(${compactStr(
 			tool.function.arguments,
 		)})\n${compactStr(content)}`,

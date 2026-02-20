@@ -1,10 +1,4 @@
-import {
-	compactStr,
-	fetcher,
-	mergeObjects,
-	timeLog,
-	to,
-} from "@nickyzj2023/utils";
+import { compactStr, fetcher, log, mergeObjects, to } from "@nickyzj2023/utils";
 import type {
 	ChatCompletion,
 	ChatCompletionMessageParam,
@@ -110,13 +104,13 @@ export const chatCompletions = async (
 		const errMessage = compactStr(JSON.stringify(error, null, 2), {
 			disableNewLineReplace: true,
 		});
-		timeLog(`请求失败：${errMessage}`);
+		log(`请求失败：${errMessage}`);
 		throw new Error(errMessage);
 	}
 
 	const result = response.choices[0]?.message;
 	if (!result) {
-		timeLog(`模型回复了空消息：${JSON.stringify(response, null, 2)}`);
+		log(`模型回复了空消息：${JSON.stringify(response, null, 2)}`);
 		throw new Error("模型回复了空消息，快找群主排查！");
 	}
 
@@ -145,7 +139,7 @@ export const chatCompletions = async (
 	// 		(message, i) => i < deleteCount && message.role === "system",
 	// 	);
 	// 	wipMessages.splice(0, deleteCount, ...systemPrompts);
-	// 	timeLog("(上下文过长，已清理前半段非必要消息)");
+	// 	log("(上下文过长，已清理前半段非必要消息)");
 	// }
 
 	// 同步 wipMessages 回原数组

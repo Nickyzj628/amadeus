@@ -3,6 +3,6 @@ export {
 	pendingGroupIdsSet,
 	readGroupMessages,
 	saveGroupMessages,
-} from "./groupMessages";
+} from "./group-messages";
 export { contentToMessage, onebotToOpenaiMessages } from "./message";
-export { summarizeMessages } from "./summarize";
+export { summarizeMessages } from "./summarize-messages";

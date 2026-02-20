@@ -1,9 +1,9 @@
 import {
 	camelToSnake,
 	imageUrlToBase64,
+	log,
 	mapKeys,
 	mapValues,
-	timeLog,
 	to,
 } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageParam } from "openai/resources";
@@ -73,7 +73,7 @@ export const onebotToOpenaiMessages = async (
 		}
 		// 图片
 		else if (isImageSegment(segment)) {
-			timeLog("识别到一条图片消息", segment);
+			log(["识别到一条图片消息", segment]);
 			const [error, base64] = await to(
 				imageUrlToBase64(segment.data.url, {
 					compressor: async (buffer, mime, quality) => {
@@ -109,7 +109,7 @@ export const onebotToOpenaiMessages = async (
 							.jpeg({ quality: estimatedQuality, progressive: true })
 							.toBuffer();
 
-						timeLog(
+						log(
 							`图片压缩成果：${width}x${height}(${(input.length / 1024).toFixed(2)}KB) -> ${resizeWidth}x${resizeHeight}(${(compressed.length / 1024).toFixed(2)}KB)`,
 						);
 						return `data:image/jpeg;base64,${compressed.toString("base64")}`;

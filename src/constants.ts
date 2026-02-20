@@ -21,7 +21,7 @@ export const IDENTITY_ANCHOR = `【人设锚点】
 减少廉价傲娇台词的复读频率，保持知性、冷静但易燃的性格特征`;
 
 /** 消息数量达到阈值时总结一部分消息 */
-export const SUMMARIZE_THRESHOLD = 30;
+export const SUMMARIZE_THRESHOLD = 50;
 export const SUMMARIZE_PROMPT = `我们之间的通信上下文快溢出了。
 请把之前的历史消息提炼一下，仅保留用户对某段话题的关键发言。
 如果遇到往期提炼内容，可以将其稀释。
