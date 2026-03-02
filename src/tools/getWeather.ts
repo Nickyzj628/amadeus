@@ -1,6 +1,6 @@
 import { fetcher, to } from "@nickyzj2023/utils";
 import { array, type InferOutput, object, safeParse, string } from "valibot";
-import { defineTool } from "./utils";
+import { defineTool } from "./utils.js";
 
 const Schema = object({
 	results: array(
@@ -44,7 +44,7 @@ type Error = {
 
 const api = fetcher("https://api.seniverse.com/v3", {
 	params: {
-		key: Bun.env.SENIVERSE_PRIVATE_KEY,
+		key: process.env.SENIVERSE_PRIVATE_KEY,
 	},
 });
 
@@ -71,9 +71,10 @@ export default defineTool(
 			},
 		},
 	},
-	async ({ city }) => {
+	async (params: Record<string, any>) => {
+		const { city } = params;
 		// 检查 api key
-		const key = Bun.env.SENIVERSE_PRIVATE_KEY;
+		const key = process.env.SENIVERSE_PRIVATE_KEY;
 		if (!key) {
 			return "天气预报查询失败：未配置私钥";
 		}

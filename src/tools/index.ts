@@ -1,12 +1,12 @@
 import { compactStr, isObject, log } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageFunctionToolCall } from "openai/resources";
-import type { GroupMessageEvent } from "@/schemas/onebot";
-import { normalizeText } from "@/utils/onebot";
-import changeModel from "./changeModel";
-import decodeAbbr from "./decodeAbbr";
-import getWeather from "./getWeather";
-import searchWeb from "./searchWeb";
-import { validateArgs } from "./utils";
+import type { GroupMessageEvent } from "@/schemas/onebot.js";
+import { normalizeText } from "@/utils/onebot.js";
+import changeModel from "./changeModel.js";
+import decodeAbbr from "./decodeAbbr.js";
+import getWeather from "./getWeather.js";
+import searchWeb from "./searchWeb.js";
+import { validateArgs } from "./utils.js";
 
 export const tools = [changeModel, getWeather, decodeAbbr, searchWeb].map(
 	(item) => item.tool,

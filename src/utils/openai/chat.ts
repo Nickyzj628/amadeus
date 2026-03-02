@@ -3,10 +3,10 @@ import type {
 	ChatCompletion,
 	ChatCompletionMessageParam,
 } from "openai/resources";
-import { ANCHOR_THRESHOLD, IDENTITY_ANCHOR, SAFE_WORD } from "@/constants";
-import type { Model } from "@/schemas/openai";
-import { modelRef } from "@/tools/changeModel";
-import { contentToMessage } from "./message";
+import { ANCHOR_THRESHOLD, IDENTITY_ANCHOR, SAFE_WORD } from "@/constants.js";
+import type { Model } from "@/schemas/openai.js";
+import { modelRef } from "@/tools/changeModel.js";
+import { contentToMessage } from "./message.js";
 
 /** openai.chat.completions() 的替代实现，返回response.choices[0].message */
 export const chatCompletions = async (
@@ -29,7 +29,7 @@ export const chatCompletions = async (
 	} = options ?? {};
 
 	if (!model) {
-		throw new Error("当前没有运行中的模型，@我并输入“切换到XX模型”启用一个");
+		throw new Error("当前没有运行中的模型，@我并输入「切换到XX模型」启用一个");
 	}
 
 	const wipMessages = [...messages];

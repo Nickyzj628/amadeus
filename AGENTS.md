@@ -2,15 +2,16 @@
 
 ## Project Overview
 
-Amadeus 是一个基于 OneBot 11 协议的 QQ 群聊机器人，使用 TypeScript + Bun 运行时开发。机器人以大语言模型（LLM）作为核心对话引擎，支持多模态理解、工具调用、上下文记忆等功能。
+Amadeus 是一个基于 OneBot 11 协议的 QQ 群聊机器人，使用 TypeScript + Node.js 运行时开发。机器人以大语言模型（LLM）作为核心对话引擎，支持多模态理解、工具调用、上下文记忆等功能。
 
 项目名称来源于《命运石之门》中的 Amadeus 系统，机器人的人格设定基于角色牧濑红莉栖。
 
 ## Technology Stack
 
-- **Runtime**: [Bun](https://bun.sh/) v1.3.2+
+- **Runtime**: [Node.js](https://nodejs.org/) v20+
 - **Language**: TypeScript 5.9.3+
-- **HTTP Server**: Bun 原生 `Bun.serve()`
+- **Package Manager**: [pnpm](https://pnpm.io/)
+- **HTTP Server**: [Hono](https://hono.dev/) + `@hono/node-server`
 - **Schema Validation**: [Valibot](https://valibot.dev/) v1.2.0
 - **HTTP Client**: `@nickyzj2023/utils` 内置 fetcher
 - **Code Quality**: Biome (formatting + linting)
@@ -54,22 +55,22 @@ amadeus/
 
 ```bash
 # 安装依赖
-bun install
+pnpm install
 
 # 开发模式（热重载）
-bun run dev
+pnpm dev
 
 # 生产构建
-bun run build
+pnpm build
 
 # 运行生产构建
-bun run start
+pnpm start
 
 # 代码检查
-bunx biome check .
+pnpm biome check .
 
 # 代码格式化
-bunx biome format --write .
+pnpm biome format --write .
 ```
 
 ## Configuration
@@ -195,7 +196,7 @@ export default defineTool(
 
 本项目目前没有自动化测试。测试方式：
 
-1. **本地运行**: `bun run dev`
+1. **本地运行**: `pnpm dev`
 2. **发送消息**: 在配置好的 QQ 群中 @机器人或发送消息
 3. **查看日志**: 控制台输出包含时间戳的请求/响应日志
 
@@ -236,7 +237,8 @@ export default defineTool(
 
 ### 开发依赖
 - `@biomejs/biome`: 代码规范
-- `@types/bun`: Bun 类型定义
+- `@types/node`: Node.js 类型定义
+- `tsx`: TypeScript 执行器（用于开发模式热重载）
 - `openai`: OpenAI API 类型定义（仅用于类型）
 - `typescript`: TypeScript 编译器
 

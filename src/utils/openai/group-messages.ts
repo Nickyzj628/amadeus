@@ -1,7 +1,7 @@
 import { log } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageParam } from "openai/resources";
-import { MAX_ACTIVE_GROUPS } from "@/constants";
-import { loadJSON, saveJSON } from "@/utils/common";
+import { MAX_ACTIVE_GROUPS } from "@/constants.js";
+import { loadJSON, saveJSON } from "@/utils/common.js";
 
 const groupMessagesMap = new Map<number, ChatCompletionMessageParam[]>();
 export const pendingGroupIdsSet = new Set<number>();

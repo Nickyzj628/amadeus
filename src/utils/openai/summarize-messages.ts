@@ -1,8 +1,8 @@
 import { log, to } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageParam } from "openai/resources";
-import { SUMMARIZE_PROMPT, SUMMARIZE_THRESHOLD } from "@/constants";
-import { chatCompletions } from "./chat";
-import { contentToMessage } from "./message";
+import { SUMMARIZE_PROMPT, SUMMARIZE_THRESHOLD } from "@/constants.js";
+import { chatCompletions } from "./chat.js";
+import { contentToMessage } from "./message.js";
 
 /**
  * 上下文溢出时从前往后总结消息，但保留系统消息

@@ -20,7 +20,7 @@ import {
 	isReplySegment,
 	isTextSegment,
 	normalizeText,
-} from "@/utils/onebot";
+} from "@/utils/onebot.js";
 
 // ================================
 // HTTP POST 相关类型，用于接收消息

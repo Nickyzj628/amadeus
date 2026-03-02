@@ -8,7 +8,7 @@ import {
 } from "@nickyzj2023/utils";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import sharp from "sharp";
-import type { MinimalMessageEvent } from "@/schemas/onebot";
+import type { MinimalMessageEvent } from "@/schemas/onebot.js";
 import {
 	flattenForwardSegment,
 	getMessage,
@@ -17,7 +17,7 @@ import {
 	isImageSegment,
 	isReplySegment,
 	isTextSegment,
-} from "@/utils/onebot";
+} from "@/utils/onebot.js";
 
 /**
  * 构造 OpenAI API 消息对象

@@ -7,7 +7,7 @@ import {
 	safeParse,
 	string,
 } from "valibot";
-import { defineTool } from "./utils";
+import { defineTool } from "./utils.js";
 
 // 定义主数据结构的 schema
 const ResponseSchema = object({
@@ -33,7 +33,7 @@ type Error = InferOutput<typeof ErrorSchema>;
 
 const api = fetcher("https://api.tavily.com", {
 	headers: {
-		Authorization: `Bearer ${Bun.env.TAVILY_API_KEY}`,
+		Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
 	},
 });
 
@@ -55,8 +55,9 @@ export default defineTool(
 			},
 		},
 	},
-	async ({ query }) => {
-		if (!Bun.env.TAVILY_API_KEY) {
+	async (params: Record<string, any>) => {
+		const { query } = params;
+		if (!process.env.TAVILY_API_KEY) {
 			return "无法执行搜索：请先配置TAVILY_API_KEY环境变量";
 		}
 
@@ -80,7 +81,7 @@ export default defineTool(
 		}
 
 		return [
-			`“${query}”的检索结果：`,
+			`"${query}"的检索结果：`,
 			...results.map((result, i) =>
 				compactStr(
 					`

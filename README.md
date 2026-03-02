@@ -22,7 +22,7 @@
 ### 安装依赖:
 
 ```bash
-bun install
+pnpm install
 ```
 
 ### 运行:
@@ -30,10 +30,8 @@ bun install
 可以直接运行，也可以先打包再启动（体积小一些）
 
 ```bash
-bun run dev
+pnpm dev
 
 // 或者
-bun run build && bun run start
+pnpm build && pnpm start
 ```
-
-This project was created using `bun init` in bun v1.3.2. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.

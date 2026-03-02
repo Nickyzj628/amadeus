@@ -1,6 +1,6 @@
 import { fetcher, to } from "@nickyzj2023/utils";
 import { array, object, optional, safeParse, string } from "valibot";
-import { defineTool } from "./utils";
+import { defineTool } from "./utils.js";
 
 const Schema = array(
 	object({
@@ -29,7 +29,8 @@ export default defineTool(
 			},
 		},
 	},
-	async ({ abbr }) => {
+	async (params: Record<string, any>) => {
+		const { abbr } = params;
 		const [error, response] = await to(api.post("/guess", { text: abbr }));
 		if (error) {
 			return `缩写解密失败：${error.message}`;

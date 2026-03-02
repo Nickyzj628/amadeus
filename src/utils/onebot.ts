@@ -13,9 +13,9 @@ import {
 	type ReplySegment,
 	type Segment,
 	type TextSegment,
-} from "@/schemas/onebot";
+} from "@/schemas/onebot.js";
 
-export const http = fetcher(`http://127.0.0.1:${Bun.env.ONEBOT_HTTP_PORT}`);
+export const http = fetcher(`http://127.0.0.1:${process.env.ONEBOT_HTTP_PORT}`);
 
 // ================================
 // 消息段相关工具
@@ -31,7 +31,8 @@ export const isAtSelfSegment = (
 	segment?: CommonSegment,
 ): segment is AtSegment => {
 	return (
-		isAtSegment(segment) && Number(segment.data.qq) === Number(Bun.env.SELF_ID)
+		isAtSegment(segment) &&
+		Number(segment.data.qq) === Number(process.env.SELF_ID)
 	);
 };
 
@@ -42,7 +43,7 @@ export const isTextSegment = (
 	return !isNil(segment) && segment.type === "text";
 };
 
-/** 从纯文本消息段中提取出“/<fn> <...args>” */
+/** 从纯文本消息段中提取出"/<fn> <...args>" */
 export const textSegmentToCommand = (segment: TextSegment) => {
 	const { text } = segment.data;
 	if (!text.startsWith("/")) {

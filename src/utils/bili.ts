@@ -5,9 +5,9 @@ import {
 	type GetVideoDetail,
 	GetVideoDetailSchema,
 	type RoomInfo,
-} from "@/schemas/bili";
-import { formatNumberCompact } from "./common";
-import { srcToImageSegment, textToSegment } from "./onebot";
+} from "@/schemas/bili.js";
+import { formatNumberCompact } from "./common.js";
+import { srcToImageSegment, textToSegment } from "./onebot.js";
 
 const api = fetcher("https://api.bilibili.com/x/web-interface");
 const liveApi = fetcher("https://api.live.bilibili.com/xlive/web-room/v1", {

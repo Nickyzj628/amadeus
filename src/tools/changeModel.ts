@@ -1,5 +1,5 @@
-import { MODELS } from "@/constants";
-import { defineTool } from "./utils";
+import { MODELS } from "@/constants.js";
+import { defineTool } from "./utils.js";
 
 export const modelRef = {
 	value: MODELS[0],
@@ -24,7 +24,8 @@ export default defineTool(
 			},
 		},
 	},
-	({ provider }) => {
+	(params: Record<string, any>) => {
+		const { provider } = params;
 		const targetModel = MODELS.find((model) => model.provider === provider);
 		if (!targetModel) {
 			return "切换失败，模型不存在";
