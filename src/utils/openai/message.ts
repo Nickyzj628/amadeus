@@ -190,11 +190,9 @@ export const onebotToOpenaiMessages = async (
 		...mediaItems.map((item) =>
 			contentToMessage([
 				{
-					type: "image_url",
-					image_url: {
-						url: item,
-					},
-				},
+					type: "image" as any,
+					image: item,
+				} as any,
 			]),
 		),
 	];

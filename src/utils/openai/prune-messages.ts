@@ -24,7 +24,7 @@ const removeMostImages = (messages: ChatCompletionMessageParam[]) => {
 		if (
 			message &&
 			Array.isArray(message.content) &&
-			message.content.some((part) => part.type === "image_url")
+			message.content.some((part: any) => part.type === "image")
 		) {
 			imageMessages.push(message);
 		}
