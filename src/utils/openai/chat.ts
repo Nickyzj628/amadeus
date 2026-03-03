@@ -14,7 +14,7 @@ export const chatCompletions = async (
 ) => {
 	const { disableMessagesOptimization = false } = options ?? {};
 
-	if (!modelRef.value) {
+	if (!modelRef.config) {
 		throw new Error("当前没有运行中的模型，可以对我说“切换到XX模型”启用一个");
 	}
 
