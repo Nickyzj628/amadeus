@@ -1,8 +1,8 @@
 import { fetcher, to } from "@nickyzj2023/utils";
-import { array, type InferOutput, object, safeParse, string } from "valibot";
-import { defineTool } from "./utils.js";
+import { jsonSchema } from "ai";
+import { array, object, safeParse, string } from "valibot";
 
-const Schema = object({
+const ResponseSchema = object({
 	results: array(
 		object({
 			location: object({
@@ -36,12 +36,6 @@ const Schema = object({
 	),
 });
 
-type Response = InferOutput<typeof Schema>;
-type Error = {
-	status: string;
-	status_code: string;
-};
-
 const api = fetcher("https://api.seniverse.com/v3", {
 	params: {
 		key: process.env.SENIVERSE_PRIVATE_KEY,
@@ -53,46 +47,34 @@ const getRelativeDate = (date: string) => {
 	return dates[new Date(date).getDate() - new Date().getDate()] ?? date;
 };
 
-export default defineTool(
-	{
-		type: "function",
-		function: {
-			name: "getWeather",
-			description: "获取指定城市三日内的天气情况",
-			parameters: {
-				type: "object",
-				properties: {
-					city: {
-						type: "string",
-						description: "城市名称，如上海、哈尔滨",
-					},
-				},
-				required: ["city"],
+export const getWeatherTool: any = {
+	description: "获取指定城市三日内的天气情况",
+	inputSchema: jsonSchema({
+		type: "object",
+		properties: {
+			city: {
+				type: "string",
+				description: "城市名称，如上海、哈尔滨",
 			},
 		},
-	},
-	async (params: Record<string, any>) => {
-		const { city } = params;
-		// 检查 api key
+		required: ["city"],
+	}),
+	execute: async ({ city }: { city: string }) => {
 		const key = process.env.SENIVERSE_PRIVATE_KEY;
 		if (!key) {
 			return "天气预报查询失败：未配置私钥";
 		}
 
-		// 发送请求
-		const [error, response] = await to<Response, Error>(
-			api.get(`/weather/daily.json`, {
-				params: {
-					location: city,
-				},
+		const [error, response] = await to<unknown>(
+			api.get("/weather/daily.json", {
+				params: { location: city },
 			}),
 		);
 		if (error) {
-			return `天气查询失败：${error.status}`;
+			return `天气查询失败：${(error as any).status}`;
 		}
 
-		// 验证数据
-		const dataValidation = safeParse(Schema, response);
+		const dataValidation = safeParse(ResponseSchema, response);
 		if (!dataValidation.success) {
 			return dataValidation.issues[0].message;
 		}
@@ -113,4 +95,4 @@ export default defineTool(
 			`数据更新时间：${new Date(result.last_update).toLocaleString()}`,
 		].join("\n");
 	},
-);
+};

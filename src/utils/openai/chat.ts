@@ -1,61 +1,45 @@
-import { compactStr, fetcher, log, mergeObjects, to } from "@nickyzj2023/utils";
-import type {
-	ChatCompletion,
-	ChatCompletionMessageParam,
-} from "openai/resources";
+import { compactStr, log } from "@nickyzj2023/utils";
+import { generateText, stepCountIs } from "ai";
 import { ANCHOR_THRESHOLD, IDENTITY_ANCHOR, SAFE_WORD } from "@/constants.js";
-import type { Model } from "@/schemas/openai.js";
-import { modelRef } from "@/tools/changeModel.js";
-import { contentToMessage } from "./message.js";
+import { tools } from "@/tools/index.js";
+import { createModel, modelRef } from "./provider.js";
 
-/** openai.chat.completions() 的替代实现，返回response.choices[0].message */
+/** 聊天补全函数，使用 Vercel AI SDK */
 export const chatCompletions = async (
-	messages: ChatCompletionMessageParam[],
+	messages: any[],
 	options?: {
-		/** 使用指定模型发出请求，默认全局正在使用的模型 */
-		model?: Model;
-		body?: Record<string, any>;
-		/**
-		 * 是否自动优化上下文，默认开启。处理逻辑如下：
-		 * 1. 超过 X 条消息时添加临时人设锚点
-		 */
+		/** 禁用消息优化（如添加人设锚点） */
 		disableMessagesOptimization?: boolean;
 	},
 ) => {
-	const {
-		model = modelRef.value,
-		body: bodyFromParams = {},
-		disableMessagesOptimization = false,
-	} = options ?? {};
+	const { disableMessagesOptimization = false } = options ?? {};
 
-	if (!model) {
-		throw new Error("当前没有运行中的模型，@我并输入「切换到XX模型」启用一个");
+	if (!modelRef.value) {
+		throw new Error("当前没有运行中的模型，可以对我说“切换到XX模型”启用一个");
 	}
 
 	const wipMessages = [...messages];
+
+	// 找到最后一条用户消息
 	const getLastUserMessage = () => {
-		const index = wipMessages.findLastIndex(
-			(message) => message.role === "user",
-		);
-		const message = wipMessages[index];
-		return [message, index] as const;
+		const index = wipMessages.findLastIndex((m) => m.role === "user");
+		return [wipMessages[index], index] as const;
 	};
+
+	let [lastUserMessage, lastUserMessageIndex] = getLastUserMessage();
 
 	/**
 	 * 如果消息中包含安全词，则在用户提问前添加永久人设锚点
 	 */
-
-	let [lastUserMessage, lastUserMessageIndex] = getLastUserMessage();
-
 	if (
 		lastUserMessage !== undefined &&
 		typeof lastUserMessage.content === "string" &&
 		lastUserMessage.content.includes(SAFE_WORD)
 	) {
-		const identityAnchorMessage = contentToMessage(IDENTITY_ANCHOR, {
+		wipMessages.splice(lastUserMessageIndex, 0, {
 			role: "system",
+			content: IDENTITY_ANCHOR,
 		});
-		wipMessages.splice(lastUserMessageIndex, 0, identityAnchorMessage);
 		lastUserMessage.content = lastUserMessage.content.replace(SAFE_WORD, "");
 		lastUserMessageIndex++;
 	}
@@ -63,88 +47,60 @@ export const chatCompletions = async (
 	/**
 	 * 如果消息超过 X 条，则在用户提问前添加临时人设锚点
 	 */
-
 	const needTempIdentityAnchor =
-		disableMessagesOptimization !== false &&
+		!disableMessagesOptimization &&
 		wipMessages.length > ANCHOR_THRESHOLD &&
 		lastUserMessageIndex !== -1;
 
 	if (needTempIdentityAnchor) {
-		const anchorMessage = contentToMessage(IDENTITY_ANCHOR, {
+		wipMessages.splice(lastUserMessageIndex, 0, {
 			role: "system",
+			content: IDENTITY_ANCHOR,
 		});
-		wipMessages.splice(lastUserMessageIndex, 0, anchorMessage);
 	}
 
 	/**
-	 * 正式发出请求
+	 * 使用 Vercel AI SDK 生成回复
 	 */
+	try {
+		const result = await generateText({
+			model: createModel(),
+			messages: wipMessages,
+			tools,
+			stopWhen: stepCountIs(5), // 最多 5 轮工具调用
+		});
 
-	const body = {
-		model: model.model,
-		messages: wipMessages,
-		...model.extraBody,
-		...bodyFromParams,
-	};
+		// 如果启用了临时人设锚点，则在消费后移除
+		if (needTempIdentityAnchor) {
+			wipMessages.splice(lastUserMessageIndex, 1);
+		}
 
-	const requestInit = mergeObjects(
-		{
-			headers: {
-				Authorization: `Bearer ${model.apiKey}`,
-			},
-		},
-		model.extraOptions ?? {},
-	);
+		// 将生成的消息添加到历史
+		if (result.response.messages && result.response.messages.length > 0) {
+			wipMessages.push(...result.response.messages);
+		}
 
-	const [error, response] = await to<ChatCompletion>(
-		fetcher(model.baseUrl).post("/chat/completions", body, requestInit),
-	);
+		// 同步 wipMessages 回原数组
+		messages.length = 0;
+		messages.push(...wipMessages);
 
-	if (error) {
+		return {
+			role: "assistant" as const,
+			content: result.text || "",
+			tool_calls: result.toolCalls?.map((call) => ({
+				id: call.toolCallId,
+				type: "function" as const,
+				function: {
+					name: call.toolName,
+					arguments: JSON.stringify((call as any).args || (call as any).input),
+				},
+			})),
+		};
+	} catch (error) {
 		const errMessage = compactStr(JSON.stringify(error, null, 2), {
 			disableNewLineReplace: true,
 		});
-		log(`请求失败：${errMessage}`);
+		log(["请求失败", error]);
 		throw new Error(errMessage);
 	}
-
-	const result = response.choices[0]?.message;
-	if (!result) {
-		log(`模型回复了空消息：${JSON.stringify(response, null, 2)}`);
-		throw new Error("模型回复了空消息，快找群主排查！");
-	}
-
-	// 如果启用了临时人设锚点，则在消费后移除
-	if (needTempIdentityAnchor) {
-		wipMessages.splice(lastUserMessageIndex, 1);
-	}
-
-	// 阅后即焚图片，防止图片过期导致模型请求报错
-	// wipMessages = wipMessages.filter((message) => {
-	// 	if (!Array.isArray(message.content)) {
-	// 		return true;
-	// 	}
-	// 	return message.content.every((part) => part.type !== "image_url");
-	// });
-
-	/**
-	 * 如果即将到达上下文窗口，则清理前半（保留系统消息）（理论上永不触发）
-	 */
-
-	// const totalTokens = response.usage?.total_tokens ?? 0;
-
-	// if (totalTokens > model.contextWindow * 0.8) {
-	// 	const deleteCount = Math.floor(wipMessages.length / 2);
-	// 	const systemPrompts = wipMessages.filter(
-	// 		(message, i) => i < deleteCount && message.role === "system",
-	// 	);
-	// 	wipMessages.splice(0, deleteCount, ...systemPrompts);
-	// 	log("(上下文过长，已清理前半段非必要消息)");
-	// }
-
-	// 同步 wipMessages 回原数组
-	messages.length = 0;
-	messages.push(...wipMessages);
-
-	return result;
 };

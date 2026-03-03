@@ -1,9 +1,11 @@
 import { log } from "@nickyzj2023/utils";
-import type { ChatCompletionMessageParam } from "openai/resources";
 import { MAX_ACTIVE_GROUPS } from "@/constants.js";
 import { loadJSON, saveJSON } from "@/utils/common.js";
 
-const groupMessagesMap = new Map<number, ChatCompletionMessageParam[]>();
+// 使用 any 类型避免与 Vercel AI SDK 的类型冲突
+type Message = any;
+
+const groupMessagesMap = new Map<number, Message[]>();
 export const pendingGroupIdsSet = new Set<number>();
 
 /**
@@ -13,7 +15,7 @@ export const pendingGroupIdsSet = new Set<number>();
  */
 export const readGroupMessages = async (
 	groupId: number,
-	initialMessages: ChatCompletionMessageParam[] = [],
+	initialMessages: Message[] = [],
 ) => {
 	// 如果内存中有该群的消息，则直接返回
 	if (groupMessagesMap.has(groupId)) {
@@ -21,7 +23,7 @@ export const readGroupMessages = async (
 	}
 
 	// 否则从文件读取群消息，并加入活跃群聊 Map
-	const messages = await loadJSON(`/data/${groupId}.json`, {
+	const messages = await loadJSON<Message[]>(`/data/${groupId}.json`, {
 		createWithDataIfNotExist: initialMessages,
 	});
 	groupMessagesMap.set(groupId, messages);
@@ -51,7 +53,7 @@ export const readGroupMessages = async (
 /** 根据群号保存消息数组 */
 export const saveGroupMessages = async (
 	groupId: number,
-	messages: ChatCompletionMessageParam[],
+	messages: Message[],
 	options?: {
 		/** 是否在保存消息后释放内存 */
 		disableGC?: boolean;

@@ -2,7 +2,7 @@ import { log, sleep, to } from "@nickyzj2023/utils";
 import type { Context } from "hono";
 import { safeParse } from "valibot";
 import { BrecWebhookSchema } from "@/schemas/bili.js";
-import { reply, sendGroupMessage, textToSegment } from "@/utils/onebot.js";
+import { sendGroupMessage, textToSegment } from "@/utils/onebot.js";
 
 /** 直播推送 Webhook */
 export const brecRoute = async (c: Context) => {

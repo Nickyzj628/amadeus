@@ -179,28 +179,24 @@ export const normalizeText = (text: string) => {
 // 快速操作
 // ================================
 
-/** 回复当前发送人，不传参则返回空响应（必须响应请求，否则 OneBot 将一直等待直到超时） */
-export const reply = (...segments: (string | Segment)[]) => {
-	const isEmpty = !segments?.length;
-	if (isEmpty) {
-		return new Response(null, { status: 204 });
-	}
-
+/** 构造回复消息体 */
+export const reply = (
+	...segments: (string | Segment)[]
+): { reply: Segment[]; at_sender: boolean } | undefined => {
 	const normalizedSegments = segments.map((segment) => {
 		if (typeof segment === "string") {
 			return textToSegment(segment);
-		} else if (isTextSegment(segment)) {
+		}
+		if (isTextSegment(segment)) {
 			segment.data.text = normalizeText(segment.data.text);
 		}
 		return segment;
 	});
 
-	return new Response(
-		JSON.stringify({
-			reply: normalizedSegments,
-			at_sender: true,
-		}),
-	);
+	return {
+		reply: normalizedSegments,
+		at_sender: true,
+	};
 };
 
 // ================================

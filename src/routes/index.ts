@@ -1,13 +1,8 @@
-import { loopUntil, to } from "@nickyzj2023/utils";
+import { to } from "@nickyzj2023/utils";
 import type { Context } from "hono";
 import { safeParse } from "valibot";
-import {
-	MAX_REQUEST_COUNT,
-	REPLY_PROBABILITY_NOT_BE_AT,
-	SYSTEM_PROMPT,
-} from "@/constants.js";
+import { REPLY_PROBABILITY_NOT_BE_AT, SYSTEM_PROMPT } from "@/constants.js";
 import { GroupMessageEventSchema } from "@/schemas/onebot.js";
-import { handleTool, tools } from "@/tools/index.js";
 import { resolveBiliLink } from "@/utils/bili.js";
 import {
 	isAtSelfSegment,
@@ -41,14 +36,14 @@ export const rootRoute = async (c: Context) => {
 	}
 
 	const { group_id: groupId } = e;
-	const isAtSelf = e.message.findIndex(isAtSelfSegment) !== -1;
+	const isAtSelf = e.message.some(isAtSelfSegment);
 
 	// 限制每个群只能同时处理一条消息
 	if (pendingGroupIdsSet.has(groupId)) {
 		if (!isAtSelf) {
 			return c.newResponse(null, 204);
 		}
-		return c.json(reply(isAtSelf ? "正在处理其他消息，请稍后再试..." : ""));
+		return c.json(reply("正在处理其他消息，请稍后再试..."));
 	}
 	pendingGroupIdsSet.add(groupId);
 
@@ -92,38 +87,11 @@ export const rootRoute = async (c: Context) => {
 		return c.newResponse(null, 204);
 	}
 
-	// 不断请求模型，直到给出回复
+	// 使用 Vercel AI SDK 生成回复（自动处理工具调用）
 	const [error2, response] = await to(
-		loopUntil(
-			async () => {
-				// 发出请求
-				const completion = await chatCompletions(messages, {
-					body: { tools },
-					disableMessagesOptimization: messages.at(-1)?.role === "tool", // 调用工具的途中不优化上下文
-				});
-				messages.push(completion);
-
-				// 处理工具调用请求
-				const functionCalls = (completion.tool_calls ?? []).filter(
-					(call) => call.type === "function",
-				);
-				for (const tool of functionCalls) {
-					const content = await handleTool(tool, e);
-					messages.push(
-						contentToMessage(content, {
-							role: "tool",
-							tool_call_id: tool.id,
-						}),
-					);
-				}
-
-				return completion;
-			},
-			{
-				maxRetries: MAX_REQUEST_COUNT,
-				shouldStop: (completion) => !completion.tool_calls,
-			},
-		),
+		chatCompletions(messages, {
+			disableMessagesOptimization: messages.at(-1)?.role === "tool",
+		}),
 	);
 	pendingGroupIdsSet.delete(groupId);
 

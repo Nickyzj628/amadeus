@@ -1,37 +1,60 @@
+import { jsonSchema } from "ai";
 import { MODELS } from "@/constants.js";
-import { defineTool } from "./utils.js";
+import { switchModel } from "@/utils/openai/provider.js";
 
-export const modelRef = {
-	value: MODELS[0],
+/**
+ * 根据用户输入模糊匹配模型
+ */
+const findModel = (input: string) => {
+	const normalizedInput = input.toLowerCase().trim();
+
+	// 1. 精确匹配 provider
+	const byProvider = MODELS.find(
+		(m) => m.provider.toLowerCase() === normalizedInput,
+	);
+	if (byProvider) return byProvider;
+
+	// 2. 精确匹配 model
+	const byModel = MODELS.find((m) => m.model.toLowerCase() === normalizedInput);
+	if (byModel) return byModel;
+
+	// 3. 模糊匹配
+	const fuzzyMatch = MODELS.find(
+		(m) =>
+			m.model.toLowerCase().includes(normalizedInput) ||
+			m.provider.toLowerCase().includes(normalizedInput),
+	);
+
+	return fuzzyMatch;
 };
 
-export default defineTool(
-	{
-		type: "function",
-		function: {
-			name: "changeModel",
-			description: "切换作为通讯频道的大语言模型",
-			parameters: {
-				type: "object",
-				properties: {
-					provider: {
-						type: "string",
-						enum: MODELS.map((model) => model.provider),
-						description: "模型名称，需要把用户的描述映射到对应枚举值",
-					},
-				},
-				required: ["provider"],
+/**
+ * 切换模型工具定义
+ * 使用 as any 绕过类型检查，因为 jsonSchema 和 tool() 的类型不兼容
+ */
+export const changeModelTool: any = {
+	description: `切换远程通话频道（大语言模型）
+
+可用模型列表：
+${MODELS.map((m, i) => `${i + 1}. ${m.provider} - ${m.model}`).join("\n")}
+
+用户可能会用简称或别名来指代模型，请从上述列表中选择最匹配的 model。`,
+	inputSchema: jsonSchema({
+		type: "object",
+		properties: {
+			model: {
+				type: "string",
+				description:
+					"用户想要切换到的模型名称（可以是简称、别名或完整model ID）",
 			},
 		},
-	},
-	(params: Record<string, any>) => {
-		const { provider } = params;
-		const targetModel = MODELS.find((model) => model.provider === provider);
+		required: ["model"],
+	}),
+	execute: async ({ model }: { model: string }) => {
+		const targetModel = findModel(model);
 		if (!targetModel) {
-			return "切换失败，模型不存在";
+			return `切换失败，找不到匹配的模型。\n\n可用模型：\n${MODELS.map((m) => `- ${m.provider}（${m.model}）`).join("\n")}`;
 		}
-
-		modelRef.value = targetModel;
-		return `模型已切换至${targetModel.provider}（${targetModel.model}）`;
+		return switchModel(targetModel.provider);
 	},
-);
+};

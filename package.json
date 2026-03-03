@@ -19,10 +19,13 @@
 		"typescript": "^5.9.3"
 	},
 	"dependencies": {
+		"@ai-sdk/openai": "^3.0.37",
 		"@hono/node-server": "^1.13.0",
 		"@nickyzj2023/utils": "^1.0.57",
+		"ai": "^6.0.105",
 		"hono": "^4.6.0",
 		"sharp": "^0.34.5",
-		"valibot": "^1.2.0"
+		"valibot": "^1.2.0",
+		"zod": "^4.3.6"
 	}
 }

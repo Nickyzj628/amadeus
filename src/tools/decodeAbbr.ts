@@ -1,6 +1,6 @@
 import { fetcher, to } from "@nickyzj2023/utils";
+import { jsonSchema } from "ai";
 import { array, object, optional, safeParse, string } from "valibot";
-import { defineTool } from "./utils.js";
 
 const Schema = array(
 	object({
@@ -11,27 +11,22 @@ const Schema = array(
 
 const api = fetcher("https://lab.magiconch.com/api/nbnhhsh");
 
-export default defineTool(
-	{
-		type: "function",
-		function: {
-			name: "decodeAbbr",
-			description: "把用户输入的未知拼音缩写转换成可能的释义",
-			parameters: {
-				type: "object",
-				properties: {
-					abbr: {
-						type: "string",
-						description: "待转换的拼音缩写",
-					},
-				},
-				required: ["abbr"],
+export const decodeAbbrTool: any = {
+	description: "把用户输入的未知拼音缩写转换成可能的释义",
+	inputSchema: jsonSchema({
+		type: "object",
+		properties: {
+			abbr: {
+				type: "string",
+				description: "待转换的拼音缩写",
 			},
 		},
-	},
-	async (params: Record<string, any>) => {
-		const { abbr } = params;
-		const [error, response] = await to(api.post("/guess", { text: abbr }));
+		required: ["abbr"],
+	}),
+	execute: async ({ abbr }: { abbr: string }) => {
+		const [error, response] = await to<unknown>(
+			api.post("/guess", { text: abbr }),
+		);
 		if (error) {
 			return `缩写解密失败：${error.message}`;
 		}
@@ -51,4 +46,4 @@ export default defineTool(
 		}
 		return `用户想说的可能是：${items.join("、")}`;
 	},
-);
+};
