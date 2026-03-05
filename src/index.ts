@@ -3,6 +3,7 @@ import { log } from "@nickyzj2023/utils";
 import { Hono } from "hono";
 import { brecRoute } from "./routes/brec.js";
 import { rootRoute } from "./routes/index.js";
+import { closeMcpClients } from "./utils/openai/mcp-client.js";
 
 if (!process.env.SELF_ID) {
 	throw new Error("请在.env文件中填写机器人QQ号（SELF_ID）");
@@ -35,3 +36,16 @@ const server = serve({
 server.on("listening", () => {
 	log(["服务器已启动", server.address()]);
 });
+
+// 程序退出时关闭所有 MCP Client 连接
+const gracefulShutdown = async (signal: string) => {
+	log([`收到 ${signal} 信号，正在关闭服务器...`]);
+	await closeMcpClients();
+	server.close(() => {
+		log(["服务器已关闭"]);
+		process.exit(0);
+	});
+};
+
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
