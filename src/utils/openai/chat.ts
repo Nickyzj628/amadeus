@@ -2,12 +2,8 @@ import { compactStr, log } from "@nickyzj2023/utils";
 import { generateText, stepCountIs } from "ai";
 import { ANCHOR_THRESHOLD, IDENTITY_ANCHOR, SAFE_WORD } from "@/constants.js";
 import { tools as localTools } from "@/tools/index.js";
-import {
-	getDecodeAbbrTool,
-	getFetchTool,
-	getWeatherTool,
-	getWebSearchTool,
-} from "./mcp-client.js";
+import { normalizeText } from "../onebot.js";
+import { getFetchTool } from "./mcp-client.js";
 import { createModel, modelRef } from "./provider.js";
 
 /** 聊天补全函数，使用 Vercel AI SDK */
@@ -69,20 +65,11 @@ export const chatCompletions = async (
 	 * 使用 Vercel AI SDK 生成回复
 	 */
 	try {
-		// 获取 MCP 工具并合并到本地工具
-		const [searchWebTool, decodeAbbrTool, fetchTool, weatherTool] =
-			await Promise.all([
-				getWebSearchTool(),
-				getDecodeAbbrTool(),
-				getFetchTool(),
-				getWeatherTool(),
-			]);
+		// 获取外部 MCP 工具并合并到本地工具
+		const fetchTool = await getFetchTool();
 		const allTools = {
 			...localTools,
-			searchWeb: searchWebTool,
-			decodeAbbr: decodeAbbrTool,
 			fetch: fetchTool,
-			getWeather: weatherTool,
 		};
 
 		const result = await generateText({
@@ -108,7 +95,7 @@ export const chatCompletions = async (
 
 		return {
 			role: "assistant" as const,
-			content: result.text || "",
+			content: normalizeText(result.text) || "",
 			tool_calls: result.toolCalls?.map((call) => ({
 				id: call.toolCallId,
 				type: "function" as const,

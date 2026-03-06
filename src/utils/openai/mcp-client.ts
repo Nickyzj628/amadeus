@@ -119,15 +119,6 @@ export const getMcpTool = async (serverName: string, toolName: string) => {
 	};
 };
 
-/** 获取天气工具 */
-export const getWeatherTool = () => getMcpTool("amadeus", "get_weather");
-
-/** 获取 decode_abbr 工具 */
-export const getDecodeAbbrTool = () => getMcpTool("amadeus", "decode_abbr");
-
-/** 获取 web_search 工具 */
-export const getWebSearchTool = () => getMcpTool("amadeus", "web_search");
-
 /** 获取 fetch 工具 */
 export const getFetchTool = () => getMcpTool("fetch", "fetch");
 

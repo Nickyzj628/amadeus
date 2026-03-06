@@ -1,12 +1,4 @@
 {
-	"amadeus": {
-		"command": "npx",
-		"args": ["tsx", "src/mcp/amadeus-server.ts"],
-		"env": {
-			"TAVILY_API_KEY": "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",
-			"SENIVERSE_PRIVATE_KEY": "SbMJHLtLZyZY2x3IH"
-		}
-	},
 	"fetch": {
 		"command": "uvx",
 		"args": ["mcp-server-fetch", "--ignore-robots-txt"],

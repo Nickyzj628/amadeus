@@ -66,9 +66,9 @@ Amadeus是维克托康多利亚大学-脑科学研究所开发的人工智能系
   - 专业问题、并列子问题等复杂情况均不超过300字。`;
 
 /** 聊天模型列表，全部兼容 OpenAI API */
-export const MODELS = (await loadJSON<Model[]>("/llms.config.json"))
-	.filter((model) => !!model.apiKey)
-	.map((model) => ({
+export const MODELS = (await loadJSON<Model[]>("/llms.config.json")).map(
+	(model) => ({
 		...model,
 		contextWindow: model.contextWindow || 128000,
-	})) satisfies Model[];
+	}),
+) satisfies Model[];
