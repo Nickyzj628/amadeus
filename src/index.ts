@@ -22,6 +22,7 @@ import {
 import { pruneMessages } from "@/utils/openai/prune-messages.js";
 import config from "./config.js";
 import { resolveBiliLink } from "./utils/bili.js";
+import { startBrecTimer } from "./utils/brec.js";
 import { closeMcpClients } from "./utils/openai/mcp-client.js";
 
 if (!config.bot.selfId) {
@@ -151,6 +152,9 @@ const server = serve({
 	port: config.bot.onebotHttpPostPort,
 });
 
+// 启动 Brec 定时器
+const stopBrecTimer = startBrecTimer();
+
 server.on("listening", () => {
 	log(["服务器已启动", server.address()]);
 });
@@ -158,7 +162,11 @@ server.on("listening", () => {
 // 程序退出时关闭所有 MCP Client 连接
 const shutdown = async (signal: string) => {
 	log(`收到 ${signal} 信号，正在关闭服务器...`);
+	// 关闭 mcp 客户端连接
 	await closeMcpClients();
+	// 关闭 brec 定时器
+	stopBrecTimer();
+	// 关闭 hono 服务器
 	server.close(() => {
 		log("服务器已关闭");
 		process.exit(0);
