@@ -23,11 +23,14 @@ amadeus/
 ├── src/
 │   ├── index.ts           # 入口文件，启动 HTTP 服务器
 │   ├── constants.ts       # 全局常量、系统提示词、模型配置
+│   ├── config.ts          # 应用配置文件（从 config.example.ts 复制）
+│   ├── config.example.ts  # 配置文件示例
 │   ├── routes/
 │   │   ├── index.ts       # 根路由：处理群聊消息
 │   │   └── brec.ts        # 录播姬 Webhook：B站直播推送
 │   ├── schemas/
 │   │   ├── onebot.ts      # OneBot 11 协议类型定义
+│   │   ├── config.ts      # 配置类型定义
 │   │   ├── openai.ts      # OpenAI API 类型定义
 │   │   └── bili.ts        # B站 API 类型定义
 │   ├── tools/
@@ -35,7 +38,6 @@ amadeus/
 │   │   ├── utils.ts       # 工具定义辅助函数
 │   │   ├── changeModel.ts # 切换 LLM 模型
 │   │   ├── getWeather.ts  # 查询天气（心知天气）
-│   │   ├── searchWeb.ts   # 联网搜索（Tavily）
 │   │   └── decodeAbbr.ts  # 拼音缩写解密
 │   └── utils/
 │       ├── common.ts      # 通用工具（JSON 读写、数字格式化）
@@ -44,8 +46,6 @@ amadeus/
 │       └── bili.ts        # B站链接解析
 ├── data/                  # 群聊消息持久化存储（JSON）
 ├── dist/                  # 构建输出目录
-├── .env                   # 环境变量（必填）
-├── llms.config.json       # LLM 模型配置
 ├── package.json           # 项目配置
 ├── tsconfig.json          # TypeScript 配置
 └── biome.json             # Biome 代码规范配置
@@ -75,47 +75,65 @@ pnpm biome format --write .
 
 ## Configuration
 
-### 1. 环境变量 (.env)
+### 配置文件 (src/config.ts)
 
-复制 `.env.example` 为 `.env`，填写以下必填项：
+复制 `src/config.example.ts` 为 `src/config.ts`，填写你的配置：
 
-| 变量名 | 说明 | 示例 |
-|--------|------|------|
-| `SELF_ID` | 机器人 QQ 号 | `12345678` |
-| `ONEBOT_HTTP_PORT` | OneBot HTTP 服务端口号 | `7280` |
-| `ONEBOT_HTTP_POST_PORT` | 机器人接收消息端口 | `8210` |
-| `SENIVERSE_PRIVATE_KEY` | 心知天气私钥（可选） | - |
-| `TAVILY_API_KEY` | Tavily 搜索 API Key（可选） | - |
-| `BREC_GROUP_IDS` | 直播通知群号，逗号分隔（可选） | `123,456` |
-
-### 2. 模型配置 (llms.config.json)
-
-复制 `llms.config.example.json` 为 `llms.config.json`，配置 LLM 提供商：
-
-```json
-[
-  {
-    "provider": "提供商名称",
-    "model": "模型ID",
-    "baseUrl": "API 基础地址",
-    "apiKey": "API 密钥",
-    "contextWindow": 128000,
-    "extraBody": { "reasoning": { "enabled": false } },
-    "extraOptions": { "proxy": "http://127.0.0.1:7890" }
+```typescript
+export default {
+  /** 机器人核心配置 */
+  bot: {
+    /** 机器人QQ号 */
+    selfId: "12345678",
+    /** OneBot HTTP端口 */
+    onebotHttpPort: 7280,
+    /** 机器人接收消息端口 */
+    onebotHttpPostPort: 8210,
+  },
+  /** API密钥配置 */
+  apiKeys: {
+    /** 心知天气私钥（可选） */
+    seniversePrivateKey: "",
+  },
+  /** 通知配置 */
+  notifications: {
+    /** 直播通知群号列表（可选） */
+    brecGroupIds: [12345678],
+  },
+  /** LLM模型列表 */
+  models: [
+    {
+      provider: "OpenRouter",
+      model: "openai/gpt-4o-mini",
+      baseUrl: "https://openrouter.ai/api/v1",
+      apiKey: "sk-or-v1-xxxxx",
+      contextWindow: 128000,
+    }
+  ],
+  /** MCP服务器配置 */
+  mcpServers: {
+    fetch: {
+      command: "uvx",
+      args: ["mcp-server-fetch"],
+      env: { PYTHONIOENCODING: "utf-8" }
+    }
   }
-]
+};
 ```
 
-**建议**：配置多模态模型以获得最佳体验（支持图片识别 + Function Calling）。
+**配置说明**：
+- 使用 TypeScript 格式，支持 TSDoc 注释
+- `models` 数组可配置多个 LLM 提供商，支持多模态模型
+- `mcpServers` 用于配置 MCP 协议服务器（如 fetch 工具）
 
-### 3. OneBot 配置
+### OneBot 配置
 
 本项目需要配合 [LLBot](https://www.llonebot.com/) 使用：
 
 1. 安装并登录 LLBot
 2. 在 Bot 配置中启用 OneBot 11
 3. 启用 HTTP 和 HTTP POST 服务
-4. 将端口配置与 `.env` 中的环境变量对应
+4. 将端口配置与 `config.ts` 中的配置对应（`bot.onebotHttpPort` 和 `bot.onebotHttpPostPort`）
 
 ## Code Style Guidelines
 
@@ -179,7 +197,6 @@ export default defineTool(
 现有工具：
 - `changeModel`: 切换当前使用的 LLM
 - `getWeather`: 查询城市三日天气
-- `searchWeb`: Tavily 联网搜索
 - `decodeAbbr`: 拼音缩写解密（调用第三方 API）
 
 ### 4. B站链接解析

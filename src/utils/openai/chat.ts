@@ -1,9 +1,7 @@
-import { compactStr, log } from "@nickyzj2023/utils";
 import { generateText, stepCountIs } from "ai";
 import { ANCHOR_THRESHOLD, IDENTITY_ANCHOR, SAFE_WORD } from "@/constants.js";
 import { tools as localTools } from "@/tools/index.js";
-import { normalizeText } from "../onebot.js";
-import { getFetchTool } from "./mcp-client.js";
+import { getAllMcpTools, type McpTool } from "./mcp-client.js";
 import { createModel, modelRef } from "./provider.js";
 
 /** 聊天补全函数，使用 Vercel AI SDK */
@@ -23,12 +21,10 @@ export const chatCompletions = async (
 	const wipMessages = [...messages];
 
 	// 找到最后一条用户消息
-	const getLastUserMessage = () => {
-		const index = wipMessages.findLastIndex((m) => m.role === "user");
-		return [wipMessages[index], index] as const;
-	};
-
-	let [lastUserMessage, lastUserMessageIndex] = getLastUserMessage();
+	let lastUserMessageIndex = wipMessages.findLastIndex(
+		(m) => m.role === "user",
+	);
+	const lastUserMessage = wipMessages[lastUserMessageIndex];
 
 	/**
 	 * 如果消息中包含安全词，则在用户提问前添加永久人设锚点
@@ -64,52 +60,52 @@ export const chatCompletions = async (
 	/**
 	 * 使用 Vercel AI SDK 生成回复
 	 */
-	try {
-		// 获取外部 MCP 工具并合并到本地工具
-		const fetchTool = await getFetchTool();
-		const allTools = {
-			...localTools,
-			fetch: fetchTool,
-		};
+	// 获取 MCP 工具（首次调用时会自动初始化）并合并到本地工具
+	const mcpTools = await getAllMcpTools();
+	const mcpToolsRecord = mcpTools.reduce<Record<string, McpTool>>(
+		(acc, tool) => {
+			acc[tool.name] = tool;
+			return acc;
+		},
+		{},
+	);
 
-		const result = await generateText({
-			model: createModel(),
-			messages: wipMessages,
-			tools: allTools,
-			stopWhen: stepCountIs(5), // 最多 5 轮工具调用
-		});
+	const allTools = {
+		...localTools,
+		...mcpToolsRecord,
+	};
 
-		// 如果启用了临时人设锚点，则在消费后移除
-		if (needTempIdentityAnchor) {
-			wipMessages.splice(lastUserMessageIndex, 1);
-		}
+	const result = await generateText({
+		model: createModel(),
+		messages: wipMessages,
+		tools: allTools,
+		stopWhen: stepCountIs(5), // 最多 5 轮工具调用
+	});
 
-		// 将生成的消息添加到历史
-		if (result.response.messages && result.response.messages.length > 0) {
-			wipMessages.push(...result.response.messages);
-		}
-
-		// 同步 wipMessages 回原数组
-		messages.length = 0;
-		messages.push(...wipMessages);
-
-		return {
-			role: "assistant" as const,
-			content: normalizeText(result.text) || "",
-			tool_calls: result.toolCalls?.map((call) => ({
-				id: call.toolCallId,
-				type: "function" as const,
-				function: {
-					name: call.toolName,
-					arguments: JSON.stringify((call as any).args || (call as any).input),
-				},
-			})),
-		};
-	} catch (error) {
-		const errMessage = compactStr(JSON.stringify(error, null, 2), {
-			disableNewLineReplace: true,
-		});
-		log(["请求失败", error]);
-		throw new Error(errMessage);
+	// 如果启用了临时人设锚点，则在消费后移除
+	if (needTempIdentityAnchor) {
+		wipMessages.splice(lastUserMessageIndex, 1);
 	}
+
+	// 将生成的消息添加到历史
+	if (result.response.messages && result.response.messages.length > 0) {
+		wipMessages.push(...result.response.messages);
+	}
+
+	// 同步 wipMessages 回原数组
+	messages.length = 0;
+	messages.push(...wipMessages);
+
+	return {
+		role: "assistant" as const,
+		content: result.text,
+		tool_calls: result.toolCalls?.map((call) => ({
+			id: call.toolCallId,
+			type: "function" as const,
+			function: {
+				name: call.toolName,
+				arguments: JSON.stringify((call as any).args || (call as any).input),
+			},
+		})),
+	};
 };

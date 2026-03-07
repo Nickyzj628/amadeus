@@ -1,5 +1,5 @@
 import { log, to } from "@nickyzj2023/utils";
-import type { ChatCompletionMessageParam } from "openai/resources";
+import type { ModelMessage } from "ai";
 import { SUMMARIZE_PROMPT, SUMMARIZE_THRESHOLD } from "@/constants.js";
 import { chatCompletions } from "./chat.js";
 import { contentToMessage } from "./message.js";
@@ -9,9 +9,7 @@ import { contentToMessage } from "./message.js";
  * @param messages 原始消息数组，会被本函数修改
  * @remarks 如果总结失败，则不改变原始数组
  */
-export const summarizeMessages = async (
-	messages: ChatCompletionMessageParam[],
-) => {
+export const summarizeMessages = async (messages: ModelMessage[]) => {
 	if (messages.length < SUMMARIZE_THRESHOLD) {
 		return;
 	}
@@ -41,7 +39,7 @@ export const summarizeMessages = async (
 
 	// 开始总结
 	// 使用 for 循环依次请求，而不是用 Promise.all，原因是部分模型对并发请求有严格限制
-	const summarizedMessages: ChatCompletionMessageParam[] = [];
+	const summarizedMessages: ModelMessage[] = [];
 	for (const chunk of summarizingMessagesChunks) {
 		chunk.push(contentToMessage(SUMMARIZE_PROMPT));
 

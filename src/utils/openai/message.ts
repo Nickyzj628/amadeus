@@ -6,7 +6,7 @@ import {
 	mapValues,
 	to,
 } from "@nickyzj2023/utils";
-import type { ChatCompletionMessageParam } from "openai/resources";
+import type { ModelMessage } from "ai";
 import sharp from "sharp";
 import type { MinimalMessageEvent } from "@/schemas/onebot.js";
 import {
@@ -23,22 +23,20 @@ import {
  * 构造 OpenAI API 消息对象
  * @remarks 通过泛型 K 捕获 role 的具体类型，从而精准推导剩余字段
  */
-export const contentToMessage = <K extends ChatCompletionMessageParam["role"]>(
-	content: ChatCompletionMessageParam["content"],
+export const contentToMessage = <K extends ModelMessage["role"]>(
+	content: ModelMessage["content"],
 	options?: {
 		/** 修改消息对应的角色，默认 user */
 		role?: K;
-	} & Partial<
-		Omit<Extract<ChatCompletionMessageParam, { role: K }>, "content" | "role">
-	>,
-): ChatCompletionMessageParam => {
+	} & Partial<Omit<Extract<ModelMessage, { role: K }>, "content" | "role">>,
+): ModelMessage => {
 	const { role = "user" as K, ...restOptions } = options ?? {};
 
 	return {
 		role,
 		content,
 		...restOptions,
-	} as ChatCompletionMessageParam;
+	} as ModelMessage;
 };
 
 /**
@@ -57,13 +55,13 @@ export const onebotToOpenaiMessages = async (
 		/** 是否为被引用的上下文消息 */
 		isQuoted?: boolean;
 	},
-): Promise<ChatCompletionMessageParam[]> => {
+): Promise<ModelMessage[]> => {
 	const { ignoreReply, ignoreForward, forwardCount, isQuoted } = options ?? {};
 
 	const bodyItems: string[] = [];
 	const mediaItems: string[] = [];
 	const mentionedUserIds: string[] = [];
-	const quotedMessages: ChatCompletionMessageParam[] = [];
+	const quotedMessages: ModelMessage[] = [];
 
 	// 解析消息段数组
 	for (const segment of e.message) {

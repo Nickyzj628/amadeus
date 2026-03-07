@@ -1,5 +1,5 @@
 import { log } from "@nickyzj2023/utils";
-import type { ChatCompletionMessageParam } from "openai/resources";
+import type { ModelMessage } from "ai";
 
 type PruneMessagesOptions = {
 	/**
@@ -10,16 +10,14 @@ type PruneMessagesOptions = {
 };
 
 /** 估算消息数组占用的内存大小（字节） */
-const estimateMessagesSize = (
-	messages: ChatCompletionMessageParam[],
-): number => {
+const estimateMessagesSize = (messages: ModelMessage[]): number => {
 	return JSON.stringify(messages).length * 2; // UTF-16 编码，每个字符 2 字节
 };
 
 /** 移除消息中的图片，只保留最后一张 */
-const removeMostImages = (messages: ChatCompletionMessageParam[]) => {
+const removeMostImages = (messages: ModelMessage[]) => {
 	// 收集所有包含图片的消息
-	const imageMessages: ChatCompletionMessageParam[] = [];
+	const imageMessages: ModelMessage[] = [];
 	for (const message of messages) {
 		if (
 			message &&
@@ -55,7 +53,7 @@ const removeMostImages = (messages: ChatCompletionMessageParam[]) => {
  * @param options 配置选项
  */
 export const pruneMessages = async (
-	messages: ChatCompletionMessageParam[],
+	messages: ModelMessage[],
 	options: PruneMessagesOptions = {},
 ) => {
 	const { maxBytes = 10 * 1024 * 1024 } = options;

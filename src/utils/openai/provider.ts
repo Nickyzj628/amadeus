@@ -41,9 +41,15 @@ export function createModel(model?: Model): LanguageModel {
 		baseURL: targetModel.baseUrl,
 	};
 
-	// 如果有额外选项（如代理），合并进去
-	if (targetModel.extraOptions) {
-		Object.assign(config, targetModel.extraOptions);
+	// 如果有 extraBody，则拦截请求并注入
+	if (targetModel.extraBody && Object.keys(targetModel.extraBody).length > 0) {
+		config.fetch = async (url, init) => {
+			const body = JSON.parse((init?.body as string) ?? "{}");
+			return fetch(url, {
+				...init,
+				body: JSON.stringify({ ...body, ...targetModel.extraBody }),
+			});
+		};
 	}
 
 	const provider = createOpenAI(config);

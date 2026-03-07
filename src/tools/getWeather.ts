@@ -1,6 +1,7 @@
 import { fetcher, to } from "@nickyzj2023/utils";
 import { jsonSchema } from "ai";
 import { array, object, safeParse, string } from "valibot";
+import config from "@/config.js";
 
 export interface GetWeatherInput {
 	city: string;
@@ -26,11 +27,13 @@ const WeatherResponseSchema = object({
 	),
 });
 
-const weatherApi = fetcher("https://api.seniverse.com/v3", {
-	params: {
-		key: process.env.SENIVERSE_PRIVATE_KEY ?? "",
-	},
-});
+const getWeatherApi = () => {
+	return fetcher("https://api.seniverse.com/v3", {
+		params: {
+			key: config.apiKeys.seniversePrivateKey ?? "",
+		},
+	});
+};
 
 const getRelativeDate = (date: string): string => {
 	const dates = ["今天", "明天", "后天"];
@@ -51,12 +54,12 @@ export const getWeatherTool = {
 		required: ["city"],
 	}),
 	execute: async ({ city }: GetWeatherInput) => {
-		if (!process.env.SENIVERSE_PRIVATE_KEY) {
-			return "天气预报查询失败：未配置 SENIVERSE_PRIVATE_KEY 环境变量";
+		if (!config.apiKeys.seniversePrivateKey) {
+			return "天气预报查询失败：未配置 apiKeys.seniversePrivateKey";
 		}
 
 		const [error, response] = await to<unknown>(
-			weatherApi.get("/weather/daily.json", {
+			getWeatherApi().get("/weather/daily.json", {
 				params: { location: city },
 			}),
 		);

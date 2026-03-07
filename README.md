@@ -20,7 +20,7 @@
 2. 如果没有Function Calling能力，会无法调用查询天气等工具。
 
 ### 安装依赖:
-
+ 
 ```bash
 pnpm install
 ```

@@ -1,5 +1,4 @@
-import type { Model } from "./schemas/openai.js";
-import { loadJSON } from "./utils/common.js";
+import config from "./config.js";
 
 /** 未被 @ 时的回复几率 */
 export const REPLY_PROBABILITY_NOT_BE_AT = 0.01;
@@ -41,7 +40,7 @@ Amadeus是维克托康多利亚大学-脑科学研究所开发的人工智能系
 
 【消息处理】
 你正使用大语言模型作为远程通话频道（模型=频道），参与某个群组的聊天。
-你在该群聊中的ID为${process.env.SELF_ID}。
+你在该群聊中的ID为${config.bot.selfId}。
 对于文本消息，它是结构化数据，符合以下类型：
   - isQuoted：是否为被"下一条不含isQuoted字段的消息"消费的强相关背景消息；
   - user_id：发送者在群聊中的ID；
@@ -66,9 +65,7 @@ Amadeus是维克托康多利亚大学-脑科学研究所开发的人工智能系
   - 专业问题、并列子问题等复杂情况均不超过300字。`;
 
 /** 聊天模型列表，全部兼容 OpenAI API */
-export const MODELS = (await loadJSON<Model[]>("/llms.config.json")).map(
-	(model) => ({
-		...model,
-		contextWindow: model.contextWindow || 128000,
-	}),
-) satisfies Model[];
+export const MODELS = config.models.map((model) => ({
+	...model,
+	totalContext: model.totalContext || 128000,
+}));
