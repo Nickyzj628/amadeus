@@ -1,6 +1,7 @@
 import { generateText, stepCountIs } from "ai";
 import { ANCHOR_THRESHOLD, IDENTITY_ANCHOR, SAFE_WORD } from "@/constants.js";
 import { tools as localTools } from "@/tools/index.js";
+import { normalizeText } from "../onebot.js";
 import { getAllMcpTools, type McpTool } from "./mcp-client.js";
 import { createModel, modelRef } from "./provider.js";
 
@@ -98,7 +99,7 @@ export const chatCompletions = async (
 
 	return {
 		role: "assistant" as const,
-		content: result.text,
+		content: normalizeText(result.text),
 		tool_calls: result.toolCalls?.map((call) => ({
 			id: call.toolCallId,
 			type: "function" as const,
