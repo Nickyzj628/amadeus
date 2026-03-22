@@ -66,6 +66,6 @@ Amadeus是维克托康多利亚大学-脑科学研究所开发的人工智能系
 
 /** 聊天模型列表，全部兼容 OpenAI API */
 export const MODELS = config.models.map((model) => ({
-	...model,
-	totalContext: model.totalContext || 128000,
+  ...model,
+  totalContext: model.totalContext || 128000,
 }));

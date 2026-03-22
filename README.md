@@ -1,26 +1,19 @@
 # amadeus
 
-男生自用全新QQ机器人
+男生自用全新QQ群聊机器人，基于[LLBot](https://luckylillia.com/)。
 
 ### 安装 LLBot
 
-出门左转[LLBot文档](https://www.llonebot.com/)
+出门左转[LLBot快速安装](https://luckylillia.com/guide/choice_install)
 
 使用LLBot登录机器人QQ后，在Bot配置栏目下启用OneBot 11，及其HTTP和HTTP POST服务，随意填写它们的端口号。
 
-### 配置环境变量
+### 配置环境变量、模型、MCP、...
 
-参考`.env.example`，只有`SELF_ID`（机器人QQ号）、`ONEBOT_HTTP_PORT`（OntBot HTTP服务端口号）、`ONEBOT_HTTP_POST_PORT`（OneBot HTTP POST服务端口号）是必填的。
-
-### 配置模型
-
-参考`llms.config.example.json`，尽量填写多模态大模型：
-
-1. 如果没有视觉理解能力，会无法识别消息中的图片等附件；
-2. 如果没有Function Calling能力，会无法调用查询天气等工具。
+将`src/config.example.ts`改名为`src/config.ts`，参照其中注释完善配置。
 
 ### 安装依赖:
- 
+
 ```bash
 pnpm install
 ```
@@ -32,6 +25,6 @@ pnpm install
 ```bash
 pnpm dev
 
-// 或者
-pnpm build && pnpm start
+# 或者
+pnpm build:prod && pnpm start:prod
 ```

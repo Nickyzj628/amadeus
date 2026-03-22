@@ -4,18 +4,19 @@
 	"private": true,
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
-		"build": "rimraf dist && tsc --outDir dist",
-		"build:prod": "rimraf dist && esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --minify --packages=external",
+		"build": "tsdown",
+		"build:prod": "tsdown --out-dir dist-prod",
 		"start": "node dist/index.js",
+		"start:prod": "node dist-prod/index.js",
 		"lint": "oxlint .",
 		"format": "oxfmt --write ."
 	},
 	"devDependencies": {
 		"@modelcontextprotocol/sdk": "^1.27.1",
 		"@types/node": "^22.0.0",
-		"esbuild": "^0.27.3",
 		"oxfmt": "^0.41.0",
 		"oxlint": "^1.56.0",
+		"tsdown": "^0.10.0",
 		"tsx": "^4.19.0",
 		"typescript": "^5.9.3"
 	},
