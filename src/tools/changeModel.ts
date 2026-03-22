@@ -35,8 +35,7 @@ export const changeModelTool = {
 		properties: {
 			model: {
 				type: "string",
-				description:
-					"用户想要切换到的模型名称（可以是简称、别名或完整model ID）",
+				description: "用户想要切换到的模型名称（可以是简称、别名或完整模型ID）",
 			},
 		},
 		required: ["model"],

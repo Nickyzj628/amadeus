@@ -7,14 +7,15 @@
 		"build": "rimraf dist && tsc --outDir dist",
 		"build:prod": "rimraf dist && esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --minify --packages=external",
 		"start": "node dist/index.js",
-		"lint": "biome check .",
-		"format": "biome format --write ."
+		"lint": "oxlint .",
+		"format": "oxfmt --write ."
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.4.3",
 		"@modelcontextprotocol/sdk": "^1.27.1",
 		"@types/node": "^22.0.0",
 		"esbuild": "^0.27.3",
+		"oxfmt": "^0.41.0",
+		"oxlint": "^1.56.0",
 		"tsx": "^4.19.0",
 		"typescript": "^5.9.3"
 	},

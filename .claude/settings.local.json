@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(npx oxlint:*)",
+      "Bash(npm info:*)",
+      "Bash(npm search:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm remove:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:oxlint.io)",
+      "Bash(gh search:*)",
+      "Bash(curl -s https://oxlint.io/docs/configuration)",
+      "Bash(npm pack:*)",
+      "Bash(tar -tf -)"
+    ]
+  }
+}

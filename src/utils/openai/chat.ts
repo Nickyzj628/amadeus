@@ -82,6 +82,8 @@ export const chatCompletions = async (
 		tools: allTools,
 		stopWhen: stepCountIs(5), // 最多 5 轮工具调用
 	});
+	// console.log(JSON.stringify(result, null, 2));
+	// result.usage.totalTokens
 
 	// 如果启用了临时人设锚点，则在消费后移除
 	if (needTempIdentityAnchor) {
