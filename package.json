@@ -1,33 +1,33 @@
 {
-	"name": "amadeus",
-	"type": "module",
-	"private": true,
-	"scripts": {
-		"dev": "tsx watch src/index.ts",
-		"build": "tsdown",
-		"build:prod": "tsdown --out-dir dist-prod",
-		"start": "node dist/index.js",
-		"start:prod": "node dist-prod/index.js",
-		"lint": "oxlint .",
-		"format": "oxfmt --write ."
-	},
-	"devDependencies": {
-		"@modelcontextprotocol/sdk": "^1.27.1",
-		"@types/node": "^22.0.0",
-		"oxfmt": "^0.41.0",
-		"oxlint": "^1.56.0",
-		"tsdown": "^0.10.0",
-		"tsx": "^4.19.0",
-		"typescript": "^5.9.3"
-	},
-	"dependencies": {
-		"@ai-sdk/openai": "^3.0.37",
-		"@hono/node-server": "^1.13.0",
-		"@nickyzj2023/utils": "^1.0.57",
-		"ai": "^6.0.111",
-		"hono": "^4.6.0",
-		"sharp": "^0.34.5",
-		"valibot": "^1.2.0",
-		"zod": "^4.3.6"
-	}
+  "name": "amadeus",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsdown",
+    "build:prod": "tsdown --out-dir dist-prod",
+    "start": "node dist/index.js",
+    "start:prod": "node dist-prod/index.js",
+    "lint": "oxlint .",
+    "format": "oxfmt --write ."
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.37",
+    "@hono/node-server": "^1.13.0",
+    "@nickyzj2023/utils": "^1.0.57",
+    "ai": "^6.0.111",
+    "hono": "^4.6.0",
+    "sharp": "^0.34.5",
+    "valibot": "^1.2.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@types/node": "^22.0.0",
+    "oxfmt": "^0.41.0",
+    "oxlint": "^1.56.0",
+    "tsdown": "^0.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3"
+  }
 }

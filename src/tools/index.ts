@@ -3,7 +3,7 @@ import { decodeAbbrTool } from "./decodeAbbr.js";
 import { getWeatherTool } from "./getWeather.js";
 
 export const tools = {
-	changeModel: changeModelTool,
-	decodeAbbr: decodeAbbrTool,
-	getWeather: getWeatherTool,
+  changeModel: changeModelTool,
+  decodeAbbr: decodeAbbrTool,
+  getWeather: getWeatherTool,
 };
