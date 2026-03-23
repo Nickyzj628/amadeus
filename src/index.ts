@@ -4,7 +4,12 @@ import { Hono } from "hono";
 import { safeParse } from "valibot";
 import { REPLY_PROBABILITY_NOT_BE_AT, SYSTEM_PROMPT } from "@/constants.js";
 import { GroupMessageEventSchema } from "@/schemas/onebot.js";
-import { isAtSelfSegment, reply, sendGroupMessage, textToSegment } from "@/utils/onebot.js";
+import {
+  isAtSelfSegment,
+  reply,
+  sendGroupMessage,
+  textToSegment,
+} from "@/utils/onebot.js";
 import {
   chatCompletions,
   contentToMessage,
@@ -24,7 +29,9 @@ if (!config.bot.selfId) {
   throw new Error("请在 config.ts 文件中填写机器人 QQ 号（bot.selfId）");
 }
 if (!config.bot.onebotHttpPostPort) {
-  throw new Error("请在 config.ts 文件中填写机器人接收消息的端口号（bot.onebotHttpPostPort）");
+  throw new Error(
+    "请在 config.ts 文件中填写机器人接收消息的端口号（bot.onebotHttpPostPort）",
+  );
 }
 
 const app = new Hono();
@@ -61,14 +68,18 @@ app.post("/", async (c) => {
   const initialMessage = contentToMessage(SYSTEM_PROMPT, {
     role: "system",
   });
-  const [error, messages] = await to(readGroupMessages(groupId, [initialMessage]));
+  const [error, messages] = await to(
+    readGroupMessages(groupId, [initialMessage]),
+  );
   if (error) {
     pendingGroupIdsSet.delete(groupId);
     return c.json(reply(`读取群聊消息失败：${error.message}`));
   }
 
   // 如果从消息中提取到B站链接，则解析并直接回复消息，不经过模型处理
-  const segmentDataStr = JSON.stringify(e.message.map((segment) => segment.data));
+  const segmentDataStr = JSON.stringify(
+    e.message.map((segment) => segment.data),
+  );
   const [, resolvedBiliLink] = await to(
     resolveBiliLink(segmentDataStr, {
       shouldToSegments: true,
@@ -127,7 +138,7 @@ app.post("/", async (c) => {
   }
 
   // 回复主动消息，在 @ 前面插入空格
-  sendGroupMessage(groupId, [textToSegment(` ${response.content}`)]);
+  sendGroupMessage(groupId, [textToSegment(response.content)]);
   return c.newResponse(null, 204);
 });
 
