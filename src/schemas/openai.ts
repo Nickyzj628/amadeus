@@ -1,3 +1,22 @@
+type MessageContent = string | Record<string, any>;
+
+export type SystemMessage = {
+  role: "system";
+  content: MessageContent;
+};
+
+export type UserMessage = {
+  role: "user";
+  content: MessageContent;
+};
+
+export type ToolMessage = {
+  role: "tool";
+  content: MessageContent;
+};
+
+export type Message = SystemMessage | UserMessage | ToolMessage;
+
 export type Model = {
   provider: string;
   model: string;

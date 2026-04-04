@@ -1,35 +1,35 @@
+import type { MinimalMessageEvent } from "@/schemas/onebot/http-post.js";
+import type { Message } from "@/schemas/openai.js";
 import { camelToSnake, imageUrlToBase64, log, mapKeys, mapValues, to } from "@nickyzj2023/utils";
-import type { ModelMessage } from "ai";
 import sharp from "sharp";
-import type { MinimalMessageEvent } from "@/schemas/onebot.js";
+import { getMessage } from "../onebot/http.js";
 import {
   flattenForwardSegment,
-  getMessage,
   isAtSegment,
   isForwardSegment,
   isImageSegment,
   isReplySegment,
   isTextSegment,
-} from "@/utils/onebot.js";
+} from "../onebot/segment.js";
 
-/**
- * 构造 OpenAI API 消息对象
- * @remarks 通过泛型 K 捕获 role 的具体类型，从而精准推导剩余字段
- */
-export const contentToMessage = <K extends ModelMessage["role"]>(
-  content: ModelMessage["content"],
+/** 构造 OpenAI API 消息对象 */
+export const contentToMessage = (
+  content: Message["content"],
   options?: {
-    /** 修改消息对应的角色，默认 user */
-    role?: K;
-  } & Partial<Omit<Extract<ModelMessage, { role: K }>, "content" | "role">>,
-): ModelMessage => {
-  const { role = "user" as K, ...restOptions } = options ?? {};
+    /**
+     * 指定消息对应的角色
+     * @default "user"
+     */
+    role?: Message["role"];
+  },
+) => {
+  const { role = "user", ...restOptions } = options ?? {};
 
   return {
     role,
     content,
     ...restOptions,
-  } as ModelMessage;
+  } as Message;
 };
 
 /**
@@ -48,13 +48,13 @@ export const onebotToOpenaiMessages = async (
     /** 是否为被引用的上下文消息 */
     isQuoted?: boolean;
   },
-): Promise<ModelMessage[]> => {
+): Promise<Message[]> => {
   const { ignoreReply, ignoreForward, forwardCount, isQuoted } = options ?? {};
 
   const bodyItems: string[] = [];
   const mediaItems: string[] = [];
   const mentionedUserIds: string[] = [];
-  const quotedMessages: ModelMessage[] = [];
+  const quotedMessages: Message[] = [];
 
   // 解析消息段数组
   for (const segment of e.message) {
@@ -64,10 +64,9 @@ export const onebotToOpenaiMessages = async (
     }
     // 图片
     else if (isImageSegment(segment)) {
-      log(["识别到一条图片消息", segment]);
       const [error, base64] = await to(
         imageUrlToBase64(segment.data.url, {
-          compressor: async (buffer, mime, quality) => {
+          compressor: async (buffer, mime, _quality) => {
             const input = Buffer.from(buffer);
             const maxDimension = 1600; // 最大边长
             const targetSize = 300 * 1024; // 目标大小（KB）
@@ -101,7 +100,7 @@ export const onebotToOpenaiMessages = async (
               .toBuffer();
 
             log(
-              `图片压缩成果：${width}x${height}(${(input.length / 1024).toFixed(2)}KB) -> ${resizeWidth}x${resizeHeight}(${(compressed.length / 1024).toFixed(2)}KB)`,
+              `压缩了一张图片：${width}x${height}(${(input.length / 1024).toFixed(2)}KB) -> ${resizeWidth}x${resizeHeight}(${(compressed.length / 1024).toFixed(2)}KB)`,
             );
             return `data:image/jpeg;base64,${compressed.toString("base64")}`;
           },
@@ -181,9 +180,9 @@ export const onebotToOpenaiMessages = async (
     ...mediaItems.map((item) =>
       contentToMessage([
         {
-          type: "image" as any,
+          type: "image",
           image: item,
-        } as any,
+        },
       ]),
     ),
   ];

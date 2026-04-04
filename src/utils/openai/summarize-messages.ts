@@ -1,7 +1,7 @@
 import { log, to } from "@nickyzj2023/utils";
 import type { ModelMessage } from "ai";
 import { SUMMARIZE_PROMPT, SUMMARIZE_THRESHOLD } from "@/constants.js";
-import { chatCompletions } from "./chat.js";
+import { chatCompletions } from "./chat-completions.js";
 import { contentToMessage } from "./message.js";
 
 /**
