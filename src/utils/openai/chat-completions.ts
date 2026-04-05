@@ -8,6 +8,10 @@ export const generateContent = async (messages: Message[]) => {
     throw new Error("当前没有可用的模型，请完善配置文件");
   }
 
+  /**
+   * 巩固人设
+   */
+
   // 找到最后一条用户消息
   let lastUserMessageIndex = messages.findLastIndex(
     (message) => message.role === "user",
@@ -50,6 +54,10 @@ export const generateContent = async (messages: Message[]) => {
       content: IDENTITY_ANCHOR,
     });
   }
+
+  /**
+   * 拼接 Function Calling Tools 参数
+   */
 
   // 获取 MCP 工具（首次调用时会自动初始化）并合并到本地工具
   // const mcpTools = await getAllMcpTools();

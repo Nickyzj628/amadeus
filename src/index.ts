@@ -17,9 +17,8 @@ import {
   textToSegment,
 } from "./utils/onebot/index.js";
 import {
-  generateContent,
-  closeMcpClients,
   contentToMessage,
+  generateContent,
   loadGroupMessages,
   onebotToOpenaiMessages,
 } from "./utils/openai/index.js";
@@ -86,7 +85,7 @@ app.post("/", async (c) => {
     const currentMessages = await onebotToOpenaiMessages(e);
 
     // 调用大模型生成回复
-    const { content, isTokenNearLimit } = await generateContent([
+    const { content, ...info } = await generateContent([
       ...messages,
       ...currentMessages,
     ]);
@@ -100,7 +99,7 @@ app.post("/", async (c) => {
 
     // 在后台优化消息数组，保存到本地
     instantRelease = false;
-    afterLLM(e, messages, { isTokenNearLimit }).finally(() => {
+    afterLLM(e, messages, info).finally(() => {
       release();
     });
 
@@ -134,14 +133,14 @@ const server = serve({
 });
 
 // 启动 Brec 定时器
-// const stopBrecTimer = startBrecTimer();
+const stopBrecTimer = startBrecTimer();
 
 const onShutdown = async (signal: string) => {
   log(`收到${signal}信号，正在关闭服务器...`);
   // 关闭 mcp 客户端连接
   // await closeMcpClients();
   // 关闭 brec 定时器
-  // stopBrecTimer();
+  stopBrecTimer();
   // 关闭 hono 服务器
   server.close(() => {
     process.exit(0);
