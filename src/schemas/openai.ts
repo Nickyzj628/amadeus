@@ -1,4 +1,18 @@
-type MessageContent = string | Record<string, any>;
+export type MessageContentText = {
+  type: "text";
+  text: string;
+};
+
+export type MessageContentImage = {
+  type: "image_url";
+  image_url: {
+    url: string;
+  };
+};
+
+export type MessageContent =
+  | string
+  | (MessageContentText | MessageContentImage)[];
 
 export type SystemMessage = {
   role: "system";

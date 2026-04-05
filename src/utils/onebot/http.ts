@@ -1,5 +1,9 @@
 import config from "@/config.js";
-import type { CommonSegment, MinimalMessageEvent } from "@/schemas/onebot/http-post.js";
+import {
+  isForwardSegment,
+  type CommonSegment,
+  type MinimalMessageEvent,
+} from "@/schemas/onebot/http-post.js";
 import {
   GetForwardMessageResponseSchema,
   GetMessageHistoryResponseSchema,
@@ -8,7 +12,6 @@ import {
 import { fetcher, to } from "@nickyzj2023/utils";
 import { log } from "console";
 import { safeParse } from "valibot";
-import { isForwardSegment } from "./segment.js";
 
 const api = fetcher(`http://127.0.0.1:${config.bot.onebotHttpPort}`);
 
@@ -105,7 +108,10 @@ export const getForwardMessages = async (
  * 发送群聊文本消息
  * @see https://api.luckylillia.com/api-226300081
  */
-export const sendGroupMessage = async (groupId: number, message: CommonSegment[]) => {
+export const sendGroupMessage = async (
+  groupId: number,
+  message: CommonSegment[],
+) => {
   return api.post("/send_group_msg", {
     group_id: groupId,
     message,

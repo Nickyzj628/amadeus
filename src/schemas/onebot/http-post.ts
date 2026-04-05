@@ -3,15 +3,9 @@
 // @see https://github.com/botuniverse/onebot-11/blob/master/event/message.md
 // ================================
 
+import config from "@/config.js";
 import { normalizeText } from "@/utils/common.js";
-import {
-  isAtSegment,
-  isForwardSegment,
-  isImageSegment,
-  isMiniProgramSegment,
-  isReplySegment,
-  isTextSegment,
-} from "@/utils/onebot/segment.js";
+import { isNil } from "@nickyzj2023/utils";
 import {
   array,
   literal,
@@ -26,16 +20,29 @@ import {
   type InferOutput,
 } from "valibot";
 
-/** 纯文本消息段 */
+// ================================
+// 纯文本消息段
+// ================================
+
 export const TextSegmentSchema = object({
   type: literal("text"),
   data: object({
     text: string(),
   }),
 });
+
 export type TextSegment = InferOutput<typeof TextSegmentSchema>;
 
-/** @某人消息段 */
+export const isTextSegment = (
+  segment?: CommonSegment,
+): segment is TextSegment => {
+  return !isNil(segment) && segment.type === "text";
+};
+
+// ================================
+// @某人消息段
+// ================================
+
 export const AtSegmentSchema = object({
   type: literal("at"),
   data: object({
@@ -43,9 +50,24 @@ export const AtSegmentSchema = object({
     qq: string(),
   }),
 });
+
 export type AtSegment = InferOutput<typeof AtSegmentSchema>;
 
-/** 合并转发消息段 */
+export const isAtSegment = (segment?: CommonSegment): segment is AtSegment => {
+  return !isNil(segment) && segment.type === "at";
+};
+
+export const isAtSelfSegment = (
+  segment?: CommonSegment,
+): segment is AtSegment => {
+  const selfId = Number(config.bot.selfId);
+  return isAtSegment(segment) && Number(segment.data.qq) === selfId;
+};
+
+// ================================
+// 合并转发消息段
+// ================================
+
 export const ForwardSegmentSchema = object({
   type: literal("forward"),
   data: object({
@@ -53,9 +75,19 @@ export const ForwardSegmentSchema = object({
     id: string(),
   }),
 });
+
 export type ForwardSegment = InferOutput<typeof ForwardSegmentSchema>;
 
-/** 图片消息段 */
+export const isForwardSegment = (
+  segment?: CommonSegment,
+): segment is ForwardSegment => {
+  return !isNil(segment) && segment.type === "forward";
+};
+
+// ================================
+// 图片消息段
+// ================================
+
 export const ImageSegmentSchema = object({
   type: literal("image"),
   data: object({
@@ -65,9 +97,19 @@ export const ImageSegmentSchema = object({
     file_size: optional(string()),
   }),
 });
+
 export type ImageSegment = InferOutput<typeof ImageSegmentSchema>;
 
-/** 回复消息段 */
+export const isImageSegment = (
+  segment?: CommonSegment,
+): segment is ImageSegment => {
+  return !isNil(segment) && segment.type === "image";
+};
+
+// ================================
+// 回复消息段
+// ================================
+
 export const ReplySegmentSchema = object({
   type: literal("reply"),
   data: object({
@@ -75,25 +117,45 @@ export const ReplySegmentSchema = object({
     id: string(),
   }),
 });
+
 export type ReplySegment = InferOutput<typeof ReplySegmentSchema>;
 
-/** 小程序消息段 */
+export const isReplySegment = (
+  segment?: CommonSegment,
+): segment is ReplySegment => {
+  return !isNil(segment) && segment.type === "reply";
+};
+
+// ================================
+// 小程序消息段
+// ================================
+
 export const MiniProgramSegmentSchema = object({
   type: literal("json"),
   data: object({
     data: string(),
   }),
 });
+
 export type MiniProgramSegment = InferOutput<typeof MiniProgramSegmentSchema>;
 
-/** 通用消息段联合 */
+export const isMiniProgramSegment = (
+  segment?: CommonSegment,
+): segment is MiniProgramSegment => {
+  return !isNil(segment) && segment.type === "json";
+};
+
+// ================================
+// 通用消息段
+// ================================
+
 export const CommonSegmentSchema = object({
   type: string(),
   data: unknown(),
 });
+
 export type CommonSegment = InferOutput<typeof CommonSegmentSchema>;
 
-/** 当前代码支持的消息段联合 */
 export const SegmentSchema = union([
   TextSegmentSchema,
   AtSegmentSchema,
@@ -101,6 +163,7 @@ export const SegmentSchema = union([
   ImageSegmentSchema,
   ReplySegmentSchema,
 ]);
+
 export type Segment = InferOutput<typeof SegmentSchema>;
 
 /** 发送人信息 */
@@ -110,6 +173,7 @@ export const SenderSchema = object({
   /** 昵称 */
   nickname: string(),
 });
+
 export type Sender = InferOutput<typeof SenderSchema>;
 
 /** 群消息事件 */
@@ -150,5 +214,7 @@ export const GroupMessageEventSchema = object({
   /** 发送人信息 */
   sender: SenderSchema,
 });
+
 export type GroupMessageEvent = InferOutput<typeof GroupMessageEventSchema>;
+
 export type MinimalMessageEvent = Pick<GroupMessageEvent, "message" | "sender">;

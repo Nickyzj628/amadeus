@@ -1,8 +1,13 @@
+import config from "@/config.js";
 import { fetcher, log, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
-import config from "@/config.js";
-import { type BrecWebhook, GetRoomInfoSchema, type RoomInfo } from "../schemas/brec.js";
-import { sendGroupMessage, textToSegment } from "./onebot.js";
+import {
+  GetRoomInfoSchema,
+  type BrecWebhook,
+  type RoomInfo,
+} from "../schemas/brec.js";
+import { sendGroupMessage } from "./onebot/http.js";
+import { textToSegment } from "./onebot/segment.js";
 
 const GROUP_IDS = config.brec?.groupIds ?? [];
 const ROOM_IDS = config.brec?.roomIds ?? [];
@@ -25,7 +30,9 @@ const runOnce = async () => {
   // 批量获取直播间信息
   // @see https://sessionhu.github.io/bilibili-API-collect/docs/live/info.html#%E8%8E%B7%E5%8F%96%E7%9B%B4%E6%92%AD%E9%97%B4%E5%9F%BA%E6%9C%AC%E4%BF%A1%E6%81%AF
   const queryString = ROOM_IDS.map((id) => `room_ids=${id}`).join("&");
-  const [error, response] = await to(liveApi.get(`/index/getRoomBaseInfo?${queryString}`));
+  const [error, response] = await to(
+    liveApi.get(`/index/getRoomBaseInfo?${queryString}`),
+  );
   if (error) {
     log(`查询直播间信息失败：${error.message}`);
     return;
@@ -81,7 +88,9 @@ const runOnce = async () => {
     }
 
     const segments = [
-      textToSegment(`${roomInfo.uname}${action}：${roomInfo.title}\n${roomInfo.live_url}`),
+      textToSegment(
+        `${roomInfo.uname}${action}：${roomInfo.title}\n${roomInfo.live_url}`,
+      ),
     ];
 
     // 推送到群里

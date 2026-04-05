@@ -3,11 +3,24 @@
 // @see https://api.luckylillia.com/doc-5416163
 // ================================
 
-import { array, number, object, string, type GenericSchema, type InferOutput } from "valibot";
-import { GroupMessageEventSchema, SegmentSchema, SenderSchema } from "./http-post.js";
+import {
+  array,
+  number,
+  object,
+  string,
+  type GenericSchema,
+  type InferOutput,
+} from "valibot";
+import {
+  GroupMessageEventSchema,
+  SegmentSchema,
+  SenderSchema,
+} from "./http-post.js";
 
 /** 创建通用响应 Schema */
-const createResponseSchema = <TSchema extends GenericSchema>(dataSchema: TSchema) => {
+const createResponseSchema = <TSchema extends GenericSchema>(
+  dataSchema: TSchema,
+) => {
   return object({
     status: string(),
     retcode: number(),
@@ -30,8 +43,13 @@ export const GetForwardMessageResponseSchema = createResponseSchema(
     ),
   }),
 );
-export type GetForwardMessageResponse = InferOutput<typeof GetForwardMessageResponseSchema>;
-export type ForwardMessage = GetForwardMessageResponse["data"]["messages"][number];
+
+export type GetForwardMessageResponse = InferOutput<
+  typeof GetForwardMessageResponseSchema
+>;
+
+export type ForwardMessage =
+  GetForwardMessageResponse["data"]["messages"][number];
 
 /** POST /get_group_msg_history 结果 */
 export const GetMessageHistoryResponseSchema = createResponseSchema(
@@ -39,8 +57,14 @@ export const GetMessageHistoryResponseSchema = createResponseSchema(
     messages: array(GroupMessageEventSchema),
   }),
 );
-export type GetMessageHistoryResponse = InferOutput<typeof GetMessageHistoryResponseSchema>;
+
+export type GetMessageHistoryResponse = InferOutput<
+  typeof GetMessageHistoryResponseSchema
+>;
 
 /** POST /get_msg 结果 */
-export const GetMessageResponseSchema = createResponseSchema(GroupMessageEventSchema);
+export const GetMessageResponseSchema = createResponseSchema(
+  GroupMessageEventSchema,
+);
+
 export type GetMessageResponse = InferOutput<typeof GetMessageResponseSchema>;

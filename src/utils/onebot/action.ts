@@ -1,6 +1,6 @@
-import type { Segment } from "@/schemas/onebot/http-post.js";
+import { isTextSegment, type Segment } from "@/schemas/onebot/http-post.js";
 import { normalizeText } from "../common.js";
-import { isTextSegment, textToSegment } from "./segment.js";
+import { textToSegment } from "./segment.js";
 
 /** 构造回复消息体 */
 export const makeReplyBody = (
@@ -22,12 +22,3 @@ export const makeReplyBody = (
     at_sender: true,
   };
 };
-
-export class ReplyError extends Error {
-  data: ReturnType<typeof makeReplyBody>;
-
-  constructor(data: ReturnType<typeof makeReplyBody>) {
-    super("ReplyError");
-    this.data = data;
-  }
-}

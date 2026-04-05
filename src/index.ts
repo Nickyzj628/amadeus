@@ -4,15 +4,20 @@ import { log } from "@nickyzj2023/utils";
 import { Hono } from "hono";
 import { safeParse } from "valibot";
 import config from "./config.js";
-import { GroupMessageEventSchema } from "./schemas/onebot/http-post.js";
+import {
+  GroupMessageEventSchema,
+  isAtSelfSegment,
+} from "./schemas/onebot/http-post.js";
 import { afterLLM } from "./utils/after-llm/index.js";
 import { beforeLLM } from "./utils/before-llm/index.js";
 import { startBrecTimer } from "./utils/brec.js";
-import { makeReplyBody } from "./utils/onebot/action.js";
-import { sendGroupMessage } from "./utils/onebot/http.js";
-import { isAtSelfSegment, textToSegment } from "./utils/onebot/segment.js";
 import {
-  chatCompletions,
+  makeReplyBody,
+  sendGroupMessage,
+  textToSegment,
+} from "./utils/onebot/index.js";
+import {
+  generateText,
   closeMcpClients,
   contentToMessage,
   loadGroupMessages,
@@ -23,7 +28,9 @@ if (!config.bot.selfId) {
   throw new Error("请在 config.ts 文件中填写机器人 QQ 号（bot.selfId）");
 }
 if (!config.bot.onebotHttpPostPort) {
-  throw new Error("请在 config.ts 文件中填写机器人接收消息的端口号（bot.onebotHttpPostPort）");
+  throw new Error(
+    "请在 config.ts 文件中填写机器人接收消息的端口号（bot.onebotHttpPostPort）",
+  );
 }
 
 const app = new Hono();
@@ -51,7 +58,7 @@ app.post("/", async (c) => {
 
   // 等待群聊其他消息释放队列
   const release = await queue.waitInQueue();
-  let canRelease = true;
+  let instantRelease = true;
 
   try {
     // 如果消息无需模型处理，则直接回复
@@ -74,16 +81,19 @@ app.post("/", async (c) => {
     const currentMessages = await onebotToOpenaiMessages(e);
 
     // 调用大模型生成回复
-    const { content } = await chatCompletions([...messages, ...currentMessages]);
+    const content = await generateText([...messages, ...currentMessages]);
     if (!content) {
       throw new Error();
     }
-    messages.push(...currentMessages, contentToMessage(content, { role: "system" }));
+    messages.push(
+      ...currentMessages,
+      contentToMessage(content, { role: "system" }),
+    );
 
     // 在后台优化消息数组，保存到本地
-    canRelease = false;
+    instantRelease = false;
     afterLLM(e, messages).finally(() => {
-      canRelease = true;
+      release();
     });
 
     // 回复消息
@@ -92,11 +102,12 @@ app.post("/", async (c) => {
     }
     sendGroupMessage(groupId, [textToSegment(content)]);
   } catch (error) {
+    log(["抛出了一个异常", error]);
     if (error instanceof Error && error.message && isAtSelf) {
       return c.json(makeReplyBody(error.message));
     }
   } finally {
-    if (canRelease) {
+    if (instantRelease) {
       release();
     }
   }
@@ -115,14 +126,14 @@ const server = serve({
 });
 
 // 启动 Brec 定时器
-const stopBrecTimer = startBrecTimer();
+// const stopBrecTimer = startBrecTimer();
 
 const onShutdown = async (signal: string) => {
   log(`收到${signal}信号，正在关闭服务器...`);
   // 关闭 mcp 客户端连接
-  await closeMcpClients();
+  // await closeMcpClients();
   // 关闭 brec 定时器
-  stopBrecTimer();
+  // stopBrecTimer();
   // 关闭 hono 服务器
   server.close(() => {
     process.exit(0);
@@ -130,7 +141,7 @@ const onShutdown = async (signal: string) => {
 };
 
 server.on("listening", () => {
-  log(`服务器已启动：${server.address()}`);
+  log(["服务器已启动", server.address()]);
 });
 process.on("SIGINT", onShutdown);
 process.on("SIGTERM", onShutdown);

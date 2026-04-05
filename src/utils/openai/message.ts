@@ -1,16 +1,22 @@
-import type { MinimalMessageEvent } from "@/schemas/onebot/http-post.js";
-import type { Message } from "@/schemas/openai.js";
-import { camelToSnake, imageUrlToBase64, log, mapKeys, mapValues, to } from "@nickyzj2023/utils";
-import sharp from "sharp";
-import { getMessage } from "../onebot/http.js";
 import {
-  flattenForwardSegment,
   isAtSegment,
   isForwardSegment,
   isImageSegment,
   isReplySegment,
   isTextSegment,
-} from "../onebot/segment.js";
+  type MinimalMessageEvent,
+} from "@/schemas/onebot/http-post.js";
+import type { Message } from "@/schemas/openai.js";
+import {
+  camelToSnake,
+  imageUrlToBase64,
+  log,
+  mapKeys,
+  mapValues,
+  to,
+} from "@nickyzj2023/utils";
+import sharp from "sharp";
+import { flattenForwardSegment, getMessage } from "../onebot/index.js";
 
 /** 构造 OpenAI API 消息对象 */
 export const contentToMessage = (
@@ -147,41 +153,40 @@ export const onebotToOpenaiMessages = async (
     // 上下文消息
     ...quotedMessages,
     // 当前消息
-    contentToMessage([
-      {
-        type: "text",
-        text: JSON.stringify(
-          mapValues(
-            mapKeys(
-              {
-                isQuoted,
-                userId: String(e.sender.user_id),
-                userName: e.sender.nickname,
-                body: bodyItems.join("\n"),
-                mentionedUserIds,
-                time: new Date().toLocaleString(),
-              },
-              camelToSnake,
-            ),
-            (value) => value,
+    contentToMessage(
+      JSON.stringify(
+        mapValues(
+          mapKeys(
             {
-              filter: (value) => {
-                if (Array.isArray(value)) {
-                  return value.length > 0;
-                }
-                return !!value;
-              },
+              isQuoted,
+              userId: String(e.sender.user_id),
+              userName: e.sender.nickname,
+              body: bodyItems.join("\n"),
+              mentionedUserIds,
+              time: new Date().toLocaleString(),
             },
+            camelToSnake,
           ),
+          (value) => value,
+          {
+            filter: (value) => {
+              if (Array.isArray(value)) {
+                return value.length > 0;
+              }
+              return !!value;
+            },
+          },
         ),
-      },
-    ]),
+      ),
+    ),
     // 当前图片消息
     ...mediaItems.map((item) =>
       contentToMessage([
         {
-          type: "image",
-          image: item,
+          type: "image_url",
+          image_url: {
+            url: item,
+          },
         },
       ]),
     ),
