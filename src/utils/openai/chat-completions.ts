@@ -1,9 +1,9 @@
 import { ANCHOR_THRESHOLD, IDENTITY_ANCHOR, SAFE_WORD } from "@/constants.js";
-import type { Message } from "@/schemas/openai.js";
+import type { ChatCompletions, Message } from "@/schemas/openai/index.js";
 import { modelRef } from "./index.js";
 import { fetcher } from "@nickyzj2023/utils";
 
-export const generateText = async (messages: Message[]) => {
+export const generateContent = async (messages: Message[]) => {
   if (!modelRef.value) {
     throw new Error("当前没有可用的模型，请完善配置文件");
   }
@@ -51,19 +51,6 @@ export const generateText = async (messages: Message[]) => {
     });
   }
 
-  // 发出请求
-  const api = fetcher(modelRef.value.baseUrl, {
-    headers: {
-      Authorization: `Bearer ${modelRef.value.apiKey}`,
-    },
-  });
-
-  const result = await api.post("/chat/completions", {
-    model: modelRef.value.model,
-    messages,
-  });
-  console.log(111, JSON.stringify(result, null, 2));
-  return "111";
   // 获取 MCP 工具（首次调用时会自动初始化）并合并到本地工具
   // const mcpTools = await getAllMcpTools();
   // const mcpToolsRecord = mcpTools.reduce<Record<string, McpTool>>(
@@ -86,19 +73,24 @@ export const generateText = async (messages: Message[]) => {
   //   stopWhen: stepCountIs(5), // 最多 5 轮工具调用
   // });
 
-  // // 如果启用了临时人设锚点，则在消费后移除
-  // if (needIdentityAnchor) {
-  //   messages.splice(lastUserMessageIndex, 1);
-  // }
+  // 发出请求
+  const api = fetcher(modelRef.value.baseUrl, {
+    headers: {
+      Authorization: `Bearer ${modelRef.value.apiKey}`,
+    },
+  });
+  const { choices, usage } = await api.post<ChatCompletions>(
+    "/chat/completions",
+    {
+      model: modelRef.value.model,
+      messages,
+    },
+  );
 
-  // // 将生成的消息添加到历史
-  // if (result.response.messages && result.response.messages.length > 0) {
-  //   messages.push(...result.response.messages);
-  // }
-
-  // 同步 messages 回原数组
-  // messages.length = 0;
-  // messages.push(...messages);
+  return {
+    content: choices[0]?.message.content,
+    isTokenNearLimit: usage?.total_tokens >= modelRef.value.totalContext * 0.8,
+  };
 
   // return {
   //   role: "assistant",

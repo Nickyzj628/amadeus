@@ -3,4 +3,4 @@ export * from "./group-messages.js";
 export * from "./mcp-client.js";
 export * from "./message.js";
 export * from "./model.js";
-export * from "./summarize-messages.js";
+export * from "./optimizations.js";

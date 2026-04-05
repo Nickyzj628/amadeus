@@ -17,7 +17,7 @@ import {
   textToSegment,
 } from "./utils/onebot/index.js";
 import {
-  generateText,
+  generateContent,
   closeMcpClients,
   contentToMessage,
   loadGroupMessages,
@@ -56,6 +56,11 @@ app.post("/", async (c) => {
   const { messages, queue } = await loadGroupMessages(groupId);
   const isAtSelf = e.message.some(isAtSelfSegment);
 
+  // 调试模式
+  if (groupId !== 669751957) {
+    throw new Error("🚧施工中，请稍后再试");
+  }
+
   // 等待群聊其他消息释放队列
   const release = await queue.waitInQueue();
   let instantRelease = true;
@@ -81,7 +86,10 @@ app.post("/", async (c) => {
     const currentMessages = await onebotToOpenaiMessages(e);
 
     // 调用大模型生成回复
-    const content = await generateText([...messages, ...currentMessages]);
+    const { content, isTokenNearLimit } = await generateContent([
+      ...messages,
+      ...currentMessages,
+    ]);
     if (!content) {
       throw new Error();
     }
@@ -92,7 +100,7 @@ app.post("/", async (c) => {
 
     // 在后台优化消息数组，保存到本地
     instantRelease = false;
-    afterLLM(e, messages).finally(() => {
+    afterLLM(e, messages, { isTokenNearLimit }).finally(() => {
       release();
     });
 

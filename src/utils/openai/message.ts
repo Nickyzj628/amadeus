@@ -6,7 +6,7 @@ import {
   isTextSegment,
   type MinimalMessageEvent,
 } from "@/schemas/onebot/http-post.js";
-import type { Message } from "@/schemas/openai.js";
+import type { Message } from "@/schemas/openai/index.js";
 import {
   camelToSnake,
   imageUrlToBase64,

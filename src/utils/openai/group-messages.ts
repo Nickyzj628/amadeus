@@ -1,5 +1,5 @@
 import { MAX_ACTIVE_GROUPS, SYSTEM_PROMPT } from "@/constants.js";
-import type { Message } from "@/schemas/openai.js";
+import type { Message } from "@/schemas/openai/index.js";
 import { loadJSON, saveJSON } from "@/utils/common.js";
 import { log } from "@nickyzj2023/utils";
 import { LockQueue } from "../queue.js";
@@ -71,6 +71,9 @@ export const loadGroupMessages = async (
 };
 
 /** 根据群号保存消息数组 */
-export const saveGroupMessages = async (groupId: number, messages: Message[]) => {
+export const saveGroupMessages = async (
+  groupId: number,
+  messages: Message[],
+) => {
   await saveJSON(`/data/${groupId}.json`, messages);
 };
