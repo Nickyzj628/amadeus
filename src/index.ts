@@ -57,12 +57,12 @@ app.post("/", async (c) => {
 
   // 调试模式
   if (groupId !== 669751957) {
-    throw new Error("🚧施工中，请稍后再试");
+    throw new Error("🚧施工中");
   }
 
   // 等待群聊其他消息释放队列
   const release = await queue.waitInQueue();
-  let instantRelease = true;
+  let finallyRelease = true;
 
   try {
     // 如果消息无需模型处理，则直接回复
@@ -90,7 +90,7 @@ app.post("/", async (c) => {
       ...currentMessages,
     ]);
     if (!content) {
-      throw new Error();
+      throw new Error("模型生成了空消息，可能是故障/无语了");
     }
     messages.push(
       ...currentMessages,
@@ -98,7 +98,7 @@ app.post("/", async (c) => {
     );
 
     // 在后台优化消息数组，保存到本地
-    instantRelease = false;
+    finallyRelease = false;
     afterLLM(e, messages, info).finally(() => {
       release();
     });
@@ -114,7 +114,7 @@ app.post("/", async (c) => {
       return c.json(makeReplyBody(error.message));
     }
   } finally {
-    if (instantRelease) {
+    if (finallyRelease) {
       release();
     }
   }

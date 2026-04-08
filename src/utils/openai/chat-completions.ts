@@ -24,24 +24,11 @@ export const generateContent = async (messages: Message[]) => {
     lastUserMessage !== undefined &&
     lastUserMessage.content.toString().includes(SAFE_WORD)
   ) {
-    // 追加人设提示词
     messages.splice(lastUserMessageIndex, 0, {
       role: "system",
       content: IDENTITY_ANCHOR,
     });
     lastUserMessageIndex++;
-
-    // 移除安全词
-    if (typeof lastUserMessage.content === "string") {
-      lastUserMessage.content = lastUserMessage.content.replace(SAFE_WORD, "");
-    } else {
-      lastUserMessage.content.map((item) => {
-        if (item.type === "text") {
-          item.text = item.text.replace(SAFE_WORD, "");
-        }
-        return item;
-      });
-    }
   }
   // 如果消息超过 X 条，则在用户提问前添加人设锚点
   else if (
