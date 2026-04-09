@@ -90,7 +90,7 @@ app.post("/", async (c) => {
       ...currentMessages,
     ]);
     if (!content) {
-      throw new Error("模型生成了空消息，可能是故障/无语了");
+      throw new Error("模型生成了空消息，可能是故障或无语了");
     }
     messages.push(
       ...currentMessages,

@@ -1,7 +1,7 @@
-import { ANCHOR_THRESHOLD, IDENTITY_ANCHOR, SAFE_WORD } from "@/constants.js";
+import { IDENTITY_ANCHOR, SAFE_WORD } from "@/constants.js";
 import type { ChatCompletions, Message } from "@/schemas/openai/index.js";
-import { modelRef } from "./index.js";
 import { fetcher } from "@nickyzj2023/utils";
+import { modelRef } from "./index.js";
 
 export const generateContent = async (messages: Message[]) => {
   if (!modelRef.value) {
@@ -10,36 +10,20 @@ export const generateContent = async (messages: Message[]) => {
 
   /**
    * 巩固人设
+   * 如果最后一条用户发言包含安全词，则在其之前插入提示词
    */
 
-  // 找到最后一条用户消息
   let lastUserMessageIndex = messages.findLastIndex(
     (message) => message.role === "user",
   );
-  const lastUserMessage = messages[lastUserMessageIndex];
-  const canOptimize = lastUserMessageIndex === messages.length - 1;
 
-  // 如果消息中包含安全词，则在用户提问前巩固人设
-  if (
-    lastUserMessage !== undefined &&
-    lastUserMessage.content.toString().includes(SAFE_WORD)
-  ) {
+  const lastUserMessage = messages[lastUserMessageIndex];
+  if (lastUserMessage?.content.toString().includes(SAFE_WORD)) {
     messages.splice(lastUserMessageIndex, 0, {
       role: "system",
       content: IDENTITY_ANCHOR,
     });
     lastUserMessageIndex++;
-  }
-  // 如果消息超过 X 条，则在用户提问前添加人设锚点
-  else if (
-    canOptimize &&
-    messages.length > ANCHOR_THRESHOLD &&
-    lastUserMessageIndex !== -1
-  ) {
-    messages.splice(lastUserMessageIndex, 0, {
-      role: "system",
-      content: IDENTITY_ANCHOR,
-    });
   }
 
   /**
@@ -69,15 +53,16 @@ export const generateContent = async (messages: Message[]) => {
   // });
 
   // 发出请求
-  const api = fetcher(modelRef.value.baseUrl, {
+  const { baseUrl, apiKey, model } = modelRef.value;
+  const api = fetcher(baseUrl, {
     headers: {
-      Authorization: `Bearer ${modelRef.value.apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     },
   });
   const { choices, usage } = await api.post<ChatCompletions>(
     "/chat/completions",
     {
-      model: modelRef.value.model,
+      model,
       messages,
     },
   );
