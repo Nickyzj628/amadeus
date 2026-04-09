@@ -13,11 +13,11 @@ export const ChatCompletionUsageSchema = object({
   completion_tokens: number(),
   total_tokens: number(),
 });
+export type ChatCompletionUsage = InferOutput<typeof ChatCompletionUsageSchema>;
 
 export const ChatCompletionChoiceSchema = object({
   message: AssistantMessageSchema,
   finish_reason: string(),
-  logprobs: nullable(string()),
 });
 
 export const ChatCompletionSchema = object({

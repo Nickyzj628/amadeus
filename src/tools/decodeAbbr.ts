@@ -1,10 +1,6 @@
+import type { FunctionTool } from "@/schemas/openai/tool.js";
 import { fetcher, to } from "@nickyzj2023/utils";
-import { jsonSchema } from "ai";
 import { array, object, optional, safeParse, string } from "valibot";
-
-export interface DecodeAbbrInput {
-  abbr: string;
-}
 
 const DecodeResponseSchema = array(
   object({
@@ -13,11 +9,10 @@ const DecodeResponseSchema = array(
   }),
 );
 
-const decodeApi = fetcher("https://lab.magiconch.com/api/nbnhhsh");
-
-export const decodeAbbrTool = {
+export default {
+  name: "decodeAbbr",
   description: "把用户输入的未知拼音缩写转换成可能的释义",
-  inputSchema: jsonSchema({
+  parameters: {
     type: "object",
     properties: {
       abbr: {
@@ -26,10 +21,10 @@ export const decodeAbbrTool = {
       },
     },
     required: ["abbr"],
-  }),
-  execute: async ({ abbr }: DecodeAbbrInput) => {
-    const [error, response] = await to<unknown>(decodeApi.post("/guess", { text: abbr }));
-
+  },
+  _execute: async ({ abbr }) => {
+    const api = fetcher("https://lab.magiconch.com/api/nbnhhsh");
+    const [error, response] = await to(api.post("/guess", { text: abbr }));
     if (error) {
       return `缩写解密失败：${error.message}`;
     }
@@ -41,11 +36,10 @@ export const decodeAbbrTool = {
 
     const item = validation.output[0];
     const items = item?.trans;
-
     if (!items || items.length === 0) {
       return "未找到任何缩写释义";
     }
 
     return `用户想说的可能是：${items.join("、")}`;
   },
-};
+} satisfies FunctionTool;

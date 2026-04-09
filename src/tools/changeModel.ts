@@ -1,53 +1,53 @@
-import { jsonSchema } from "ai";
 import { MODELS } from "@/constants.js";
+import type { FunctionTool } from "@/schemas/openai/tool.js";
 import { switchModel } from "@/utils/openai/model.js";
 
-export interface ChangeModelInput {
-  model: string;
-}
-
 const findModel = (input: string) => {
-  const normalized = input.toLowerCase().trim();
+  // 按供应商精准匹配
+  const byProvider = MODELS.find((model) => model.provider === input);
+  if (byProvider) {
+    return byProvider;
+  }
 
-  const byProvider = MODELS.find(
-    (m) => m.provider.toLowerCase() === normalized,
-  );
-  if (byProvider) return byProvider;
+  // 按模型名精准匹配
+  const byModel = MODELS.find((model) => model.model === input);
+  if (byModel) {
+    return byModel;
+  }
 
-  const byModel = MODELS.find((m) => m.model.toLowerCase() === normalized);
-  if (byModel) return byModel;
-
+  // 模糊匹配
+  const normalizedInput = input.toLowerCase().trim();
   return MODELS.find(
-    (m) =>
-      m.model.toLowerCase().includes(normalized) ||
-      m.provider.toLowerCase().includes(normalized),
+    ({ model, provider }) =>
+      model.toLowerCase().includes(normalizedInput) ||
+      provider.toLowerCase().includes(normalizedInput),
   );
 };
 
-const modelList = MODELS.map(
-  (m, i) => `${i + 1}. ${m.provider} - ${m.model}`,
-).join("\n");
-
-export const changeModelTool = {
-  description: `切换远程通话频道（大语言模型）\n\n可用模型列表：\n${modelList}\n\n用户可能会用简称或别名来指代模型，请从上述列表中选择最匹配的 model。`,
-  inputSchema: jsonSchema({
+export default {
+  name: "changeModel",
+  description: `切换大语言模型。可用的供应商-模型列表：
+${MODELS.map(
+  (model, index) => `${index + 1}. ${model.provider} - ${model.model}`,
+).join("\n")}`,
+  parameters: {
     type: "object",
     properties: {
       model: {
         type: "string",
-        description: "用户想要切换到的模型名称（可以是简称、别名或完整模型ID）",
+        description:
+          "用户想要切换的模型。可能用供应商/模型名称甚至简称来指代模型，请从工具描述中选择最匹配的一个",
       },
     },
     required: ["model"],
-  }),
-  execute: async ({ model }: ChangeModelInput) => {
+  },
+  _execute: async ({ model }) => {
     const target = findModel(model);
     if (!target) {
-      const available = MODELS.map((m) => `- ${m.provider}（${m.model}）`).join(
-        "\n",
-      );
-      return `切换失败，找不到匹配的模型。\n\n可用模型：\n${available}`;
+      return `切换失败，找不到匹配的模型。可用模型：
+${MODELS.map((model) => `- ${model.model}（${model.provider}）`).join("\n")}`;
     }
-    return switchModel(target.provider);
+
+    return switchModel(target.model);
   },
-};
+} satisfies FunctionTool;

@@ -1,5 +1,10 @@
-import { IDENTITY_ANCHOR, SAFE_WORD } from "@/constants.js";
-import type { ChatCompletions, Message } from "@/schemas/openai/index.js";
+import { IDENTITY_ANCHOR, MAX_REQUEST_COUNT, SAFE_WORD } from "@/constants.js";
+import type {
+  ChatCompletions,
+  ChatCompletionUsage,
+  Message,
+} from "@/schemas/openai/index.js";
+import { tools } from "@/tools/index.js";
 import { fetcher } from "@nickyzj2023/utils";
 import { modelRef } from "./index.js";
 
@@ -27,49 +32,46 @@ export const generateContent = async (messages: Message[]) => {
   }
 
   /**
-   * 拼接 Function Calling Tools 参数
+   * 发出请求
+   * 单轮对话限制 `MAX_REQUEST_COUNT` 次请求
    */
 
-  // 获取 MCP 工具（首次调用时会自动初始化）并合并到本地工具
-  // const mcpTools = await getAllMcpTools();
-  // const mcpToolsRecord = mcpTools.reduce<Record<string, McpTool>>(
-  //   (acc, tool) => {
-  //     acc[tool.name] = tool;
-  //     return acc;
-  //   },
-  //   {},
-  // );
-
-  // const allTools = {
-  //   ...localTools,
-  //   ...mcpToolsRecord,
-  // };
-
-  // const result = await generateText({
-  //   model: createModel(),
-  //   messages: messages,
-  //   tools: allTools,
-  //   stopWhen: stepCountIs(5), // 最多 5 轮工具调用
-  // });
-
-  // 发出请求
   const { baseUrl, apiKey, model } = modelRef.value;
   const api = fetcher(baseUrl, {
     headers: {
       Authorization: `Bearer ${apiKey}`,
     },
   });
-  const { choices, usage } = await api.post<ChatCompletions>(
-    "/chat/completions",
-    {
+
+  let content = "";
+  let usage: ChatCompletionUsage;
+
+  for (let requestCount = 0; requestCount < MAX_REQUEST_COUNT; requestCount++) {
+    const response = await api.post<ChatCompletions>("/chat/completions", {
       model,
       messages,
-    },
-  );
+      tools,
+    });
+
+    const { message } = response.choices[0] ?? {};
+    if (!message) {
+      throw new Error("模型没有返回任何内容");
+    }
+
+    if (message.tool_calls) {
+      for (const toolCall of message.tool_calls) {
+      }
+    }
+
+    // return {
+    //   content: choices[0]?.message.content,
+    //   isTokenNearLimit: usage?.total_tokens >= modelRef.value.totalContext * 0.8,
+    // };
+  }
 
   return {
-    content: choices[0]?.message.content,
-    isTokenNearLimit: usage?.total_tokens >= modelRef.value.totalContext * 0.8,
+    content,
+    isTokenNearLimit: usage!.total_tokens >= modelRef.value.totalContext * 0.8,
   };
 
   // return {
