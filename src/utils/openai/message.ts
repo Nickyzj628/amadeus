@@ -27,6 +27,8 @@ export const contentToMessage = (
      * @default "user"
      */
     role?: Message["role"];
+    /** 指定消息对应的工具调用 ID */
+    tool_call_id?: string;
   },
 ) => {
   const { role = "user", ...restOptions } = options ?? {};

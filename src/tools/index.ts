@@ -8,3 +8,12 @@ export const tools = [changeModel, getWeather, decodeAbbr].map((tool) => ({
   type: "function",
   function: omitBy(tool, (value, key) => key.startsWith("_")),
 }));
+
+export const executeTool = async (name: string, args: Record<string, any>) => {
+  const tool = tools.find((tool) => tool.function.name === name);
+  if (!tool) {
+    return;
+  }
+
+  return await tool.function._execute?.(args);
+};
