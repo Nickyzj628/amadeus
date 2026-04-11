@@ -22,6 +22,8 @@ import {
   loadGroupMessages,
   onebotToOpenaiMessages,
 } from "./utils/openai/index.js";
+import { extractErrorMessage } from "./utils/common.js";
+import { ProxyAgent, setGlobalDispatcher } from "undici";
 
 if (!config.bot.selfId) {
   throw new Error("请在 config.ts 文件中填写机器人 QQ 号（bot.selfId）");
@@ -31,6 +33,11 @@ if (!config.bot.onebotHttpPostPort) {
     "请在 config.ts 文件中填写机器人接收消息的端口号（bot.onebotHttpPostPort）",
   );
 }
+
+// 显式启用代理
+// TODO: 为 fetcher 添加 proxy 参数
+const proxyAgent = new ProxyAgent("http://127.0.0.1:7890");
+setGlobalDispatcher(proxyAgent);
 
 const app = new Hono();
 
@@ -55,16 +62,16 @@ app.post("/", async (c) => {
   const { messages, queue } = await loadGroupMessages(groupId);
   const isAtSelf = e.message.some(isAtSelfSegment);
 
-  // 调试模式
-  if (groupId !== 669751957) {
-    throw new Error("🚧施工中");
-  }
-
   // 等待群聊其他消息释放队列
   const release = await queue.waitInQueue();
   let finallyRelease = true;
 
   try {
+    // 调试模式
+    // if (groupId !== 669751957) {
+    //   throw new Error("🚧施工中");
+    // }
+
     // 如果消息无需模型处理，则直接回复
     const directlySegments = await beforeLLM(e);
     if (directlySegments.length > 0) {
@@ -105,13 +112,16 @@ app.post("/", async (c) => {
 
     // 回复消息
     if (isAtSelf) {
-      return c.json(makeReplyBody(content));
+      return c.json(makeReplyBody(` ${content}`));
     }
     sendGroupMessage(groupId, [textToSegment(content)]);
   } catch (error) {
-    log(["抛出了一个异常", error]);
-    if (error instanceof Error && error.message && isAtSelf) {
-      return c.json(makeReplyBody(error.message));
+    const errorMsg = extractErrorMessage(error);
+    if (errorMsg) {
+      log(`抛出了一个异常：${errorMsg}`);
+      if (isAtSelf) {
+        return c.json(makeReplyBody(` ${errorMsg}`));
+      }
     }
   } finally {
     if (finallyRelease) {
