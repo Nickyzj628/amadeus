@@ -19,12 +19,13 @@ export const afterLLM = async (
 ) => {
   const { group_id: groupId } = e;
 
-  // 消息超过上下文长度时，修剪掉一部分
+  // 消息超过上下文长度时，先缩减大小
   if (info?.isTokenNearLimit) {
     removeMostImages(messages);
   }
-  // 消息超过一定数量时，调用模型总结前半部分
-  else if (messages.length > SUMMARIZE_THRESHOLD) {
+
+  // 消息超过一定数量时，调用模型总结一部分
+  if (messages.length > SUMMARIZE_THRESHOLD) {
     await summarizeMessages(messages);
   }
 

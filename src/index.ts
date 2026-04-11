@@ -1,4 +1,7 @@
-import { REPLY_PROBABILITY_NOT_BE_AT } from "@/constants.js";
+import {
+  REPLY_PROBABILITY_NOT_BE_AT,
+  SUMMARIZE_THRESHOLD,
+} from "@/constants.js";
 import { serve } from "@hono/node-server";
 import { log } from "@nickyzj2023/utils";
 import { Hono } from "hono";
@@ -21,8 +24,9 @@ import {
   generateContent,
   loadGroupMessages,
   onebotToOpenaiMessages,
+  summarizeMessages,
 } from "./utils/openai/index.js";
-import { extractErrorMessage } from "./utils/common.js";
+import { extractErrorMessage, omitBy } from "./utils/common.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 
 if (!config.bot.selfId) {
@@ -68,9 +72,9 @@ app.post("/", async (c) => {
 
   try {
     // 调试模式
-    // if (groupId !== 669751957) {
-    //   throw new Error("🚧施工中");
-    // }
+    if (groupId !== 669751957) {
+      throw new Error("🚧施工中");
+    }
 
     // 如果消息无需模型处理，则直接回复
     const directlySegments = await beforeLLM(e);
@@ -83,28 +87,21 @@ app.post("/", async (c) => {
       }
     }
 
-    // 拦截不是 @ 当前机器人的消息，但有极小概率放行
+    // 转换消息到 OpenAI API 兼容格式
+    const currentMessages = await onebotToOpenaiMessages(e);
+    messages.push(...currentMessages);
+
+    // 拦截不是 @ 自己的消息，但有极小概率放行
     if (!isAtSelf && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
       throw new Error();
     }
 
-    // 转换消息到 OpenAI API 兼容格式
-    const currentMessages = await onebotToOpenaiMessages(e);
-
-    // 调用大模型生成回复
-    const { content, ...info } = await generateContent([
-      ...messages,
-      ...currentMessages,
-    ]);
+    const { content, ...info } = await generateContent(messages);
     if (!content) {
       throw new Error("模型生成了空消息，可能是故障或无语了");
     }
-    messages.push(
-      ...currentMessages,
-      contentToMessage(content, { role: "system" }),
-    );
 
-    // 在后台优化消息数组，保存到本地
+    // 在后台处理消息数组，例如保存到本地
     finallyRelease = false;
     afterLLM(e, messages, info).finally(() => {
       release();
