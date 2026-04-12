@@ -19,24 +19,24 @@
  * fn();
  */
 export class LockQueue {
-  queue: Promise<any>;
+	queue: Promise<any>;
 
-  constructor() {
-    this.queue = Promise.resolve();
-  }
+	constructor() {
+		this.queue = Promise.resolve();
+	}
 
-  waitInQueue() {
-    let _resolve: (value?: any) => void;
+	waitInQueue() {
+		let _resolve: (value?: any) => void;
 
-    const nextPromise = new Promise((resolve) => {
-      _resolve = resolve;
-    });
+		const nextPromise = new Promise((resolve) => {
+			_resolve = resolve;
+		});
 
-    // 等待上一个 Promise 完成，然后运行当前 Promise
-    const currentWait = this.queue.then(() => _resolve);
-    // 把当前 Promise 推入队列
-    this.queue = nextPromise;
+		// 等待上一个 Promise 完成，然后运行当前 Promise
+		const currentWait = this.queue.then(() => _resolve);
+		// 把当前 Promise 推入队列
+		this.queue = nextPromise;
 
-    return currentWait;
-  }
+		return currentWait;
+	}
 }

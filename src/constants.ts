@@ -80,6 +80,6 @@ export const SYSTEM_PROMPT = `# 角色：Amadeus红莉栖
 
 /** 聊天模型列表，全部兼容 OpenAI API */
 export const MODELS = config.models.map((model) => ({
-  ...model,
-  totalContext: model.totalContext || 128000,
+	...model,
+	totalContext: model.totalContext || 128000,
 }));

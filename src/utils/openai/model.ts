@@ -2,7 +2,7 @@ import { MODELS } from "@/constants.js";
 
 /** 当前使用的模型 */
 export const modelRef = {
-  value: MODELS[0],
+	value: MODELS[0],
 };
 
 /**
@@ -15,14 +15,14 @@ export const modelRef = {
  * switchModel("openai/gpt-5.4-nano");
  */
 export function switchModel(providerOrModel: string) {
-  const targetModel = MODELS.find(
-    (model) =>
-      model.provider === providerOrModel || model.model === providerOrModel,
-  );
-  if (!targetModel) {
-    return "切换失败，模型不存在";
-  }
+	const targetModel = MODELS.find(
+		(model) =>
+			model.provider === providerOrModel || model.model === providerOrModel,
+	);
+	if (!targetModel) {
+		return "切换失败，模型不存在";
+	}
 
-  modelRef.value = targetModel;
-  return `模型已切换至${targetModel.provider}（${targetModel.model}）`;
+	modelRef.value = targetModel;
+	return `模型已切换至${targetModel.provider}（${targetModel.model}）`;
 }

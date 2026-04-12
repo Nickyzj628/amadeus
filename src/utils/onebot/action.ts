@@ -4,21 +4,21 @@ import { textToSegment } from "./segment.js";
 
 /** 构造回复消息体 */
 export const makeReplyBody = (
-  ...segments: (string | Segment)[]
+	...segments: (string | Segment)[]
 ): { reply: Segment[]; at_sender: boolean } | undefined => {
-  // 移除文本消息段里的不自然内容
-  const normalizedSegments = segments.map((segment) => {
-    if (typeof segment === "string") {
-      return textToSegment(normalizeText(segment));
-    }
-    if (isTextSegment(segment)) {
-      segment.data.text = normalizeText(segment.data.text);
-    }
-    return segment;
-  });
+	// 移除文本消息段里的不自然内容
+	const normalizedSegments = segments.map((segment) => {
+		if (typeof segment === "string") {
+			return textToSegment(normalizeText(segment));
+		}
+		if (isTextSegment(segment)) {
+			segment.data.text = normalizeText(segment.data.text);
+		}
+		return segment;
+	});
 
-  return {
-    reply: normalizedSegments,
-    at_sender: true,
-  };
+	return {
+		reply: normalizedSegments,
+		at_sender: true,
+	};
 };
