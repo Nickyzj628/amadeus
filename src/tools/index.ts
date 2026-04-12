@@ -1,6 +1,5 @@
-import { log } from "@nickyzj2023/utils";
+import { log, omitBy } from "@nickyzj2023/utils";
 import config from "@/config.js";
-import { omitBy } from "@/utils/common.js";
 import { MCPRouter } from "@/utils/mcp.js";
 import changeModel from "./changeModel.js";
 import decodeAbbr from "./decodeAbbr.js";
@@ -30,7 +29,7 @@ console.log();
 export const openaiTools = [
 	...functionTools.map((tool) => ({
 		type: "function",
-		function: omitBy(tool, (value, key) => key.startsWith("_")),
+		function: omitBy(tool, (key, value) => key.startsWith("_")),
 	})),
 	...mcpOpenAITools,
 ];

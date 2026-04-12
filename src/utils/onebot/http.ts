@@ -1,5 +1,4 @@
-import { fetcher, to } from "@nickyzj2023/utils";
-import { log } from "console";
+import { fetcher, log, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import config from "@/config.js";
 import {

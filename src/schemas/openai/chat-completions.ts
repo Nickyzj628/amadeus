@@ -1,11 +1,4 @@
-import {
-	array,
-	type InferOutput,
-	nullable,
-	number,
-	object,
-	string,
-} from "valibot";
+import { array, type InferOutput, number, object, string } from "valibot";
 import { AssistantMessageSchema } from "./index.js";
 
 export const ChatCompletionUsageSchema = object({
