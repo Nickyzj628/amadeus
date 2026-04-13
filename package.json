@@ -6,8 +6,8 @@
 		"dev": "tsx watch src/index.ts",
 		"build": "tsdown",
 		"build:prod": "tsdown --out-dir dist-prod",
-		"start": "node dist/index.js",
-		"start:prod": "node dist-prod/index.js",
+		"start": "node dist/index.mjs",
+		"start:prod": "node dist-prod/index.mjs",
 		"check": "biome check --diagnostic-level=error --write src/"
 	},
 	"dependencies": {

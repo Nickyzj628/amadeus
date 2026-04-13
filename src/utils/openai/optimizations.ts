@@ -71,14 +71,14 @@ export const summarizeMessages = async (messages: Message[]) => {
 	for (const chunk of summarizingMessagesChunks) {
 		chunk.push(contentToMessage(SUMMARIZE_PROMPT));
 
-		const [error, summarizedContent] = await to(generateContent(chunk));
+		const [error, summarized] = await to(generateContent(chunk));
 		if (error) {
 			return false;
 		}
 
 		summarizedMessages.push(
 			contentToMessage(
-				`清理了${chunk.length - 1}条消息并总结为：${summarizedContent}`,
+				`清理了${chunk.length - 1}条消息并总结为：${summarized.content}`,
 			),
 		);
 	}
