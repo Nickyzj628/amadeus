@@ -3,7 +3,10 @@ import { log } from "@nickyzj2023/utils";
 import { Hono } from "hono";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { safeParse } from "valibot";
-import { REPLY_PROBABILITY_NOT_BE_AT } from "@/constants.js";
+import {
+	REPLY_PROBABILITY_NOT_BE_AT,
+	SUMMARIZE_THRESHOLD,
+} from "@/constants.js";
 import config from "./config.js";
 import {
 	GroupMessageEventSchema,
@@ -22,6 +25,7 @@ import {
 	generateContent,
 	loadGroupMessages,
 	onebotToOpenaiMessages,
+	summarizeMessages,
 } from "./utils/openai/index.js";
 
 if (!config.bot.selfId) {
@@ -34,7 +38,6 @@ if (!config.bot.onebotHttpPostPort) {
 }
 
 // 显式启用代理
-// TODO: 为 fetcher 添加 proxy 参数
 const proxyAgent = new ProxyAgent("http://127.0.0.1:7890");
 setGlobalDispatcher(proxyAgent);
 
@@ -117,6 +120,10 @@ app.post("/", async (c) => {
 		}
 	} finally {
 		if (finallyRelease) {
+			// 消息超过一定数量时，调用模型总结一部分
+			if (messages.length > SUMMARIZE_THRESHOLD) {
+				await summarizeMessages(messages);
+			}
 			release();
 		}
 	}
