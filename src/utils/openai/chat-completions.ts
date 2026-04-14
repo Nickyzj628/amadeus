@@ -1,5 +1,6 @@
 import { fetcher } from "@nickyzj2023/utils";
-import { IDENTITY_ANCHOR, MAX_REQUEST_COUNT, SAFE_WORD } from "@/constants.js";
+import config from "@/config.js";
+import { IDENTITY_ANCHOR } from "@/constants.js";
 import type {
 	ChatCompletions,
 	ChatCompletionUsage,
@@ -23,7 +24,7 @@ export const generateContent = async (messages: Message[]) => {
 	);
 
 	const lastUserMessage = messages[lastUserMessageIndex];
-	if (lastUserMessage?.content.toString().includes(SAFE_WORD)) {
+	if (lastUserMessage?.content.toString().includes(config.etc.safeWord)) {
 		messages.splice(lastUserMessageIndex, 0, {
 			role: "system",
 			content: IDENTITY_ANCHOR,
@@ -48,11 +49,11 @@ export const generateContent = async (messages: Message[]) => {
 
 	console.log();
 	console.time("本轮对话耗时");
-	for (let i = 0; i <= MAX_REQUEST_COUNT; i++) {
+	for (let i = 0; i <= config.etc.maxRequestCount; i++) {
 		console.log("请求大模型", model, messages.at(-1));
 
 		// 如果超过请求次数限制，则在最后一条消息追加警告
-		if (i === MAX_REQUEST_COUNT) {
+		if (i === config.etc.maxRequestCount) {
 			messages.at(-1)!.content +=
 				"\n**注意：已达到单轮对话请求次数限制，请立即结束工具调用并输出最终结果。**";
 		}

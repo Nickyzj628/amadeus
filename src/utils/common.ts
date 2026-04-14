@@ -54,8 +54,9 @@ export const normalizeText = (text: string) => {
 		text
 			// 移除可能残留的思考标签及其内容
 			.replace(/<think>[\s\S]*?<\/think>/gi, "")
-			// 移除孤立的闭合思考标签
-			.replace(/<\/think>/gi, "")
+			.replace(/<thought>[\s\S]*?<\/thought>/gi, "")
+			// 合并多重换行
+			.replace(/\n\s*\n/g, "\n")
 	);
 };
 

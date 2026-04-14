@@ -3,10 +3,6 @@ import { log } from "@nickyzj2023/utils";
 import { Hono } from "hono";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { safeParse } from "valibot";
-import {
-	REPLY_PROBABILITY_NOT_BE_AT,
-	SUMMARIZE_THRESHOLD,
-} from "@/constants.js";
 import config from "./config.js";
 import {
 	GroupMessageEventSchema,
@@ -90,7 +86,7 @@ app.post("/", async (c) => {
 		messages.push(...currentMessages);
 
 		// 拦截不是 @ 自己的消息，但有极小概率放行
-		if (!isAtSelf && Math.random() > REPLY_PROBABILITY_NOT_BE_AT) {
+		if (!isAtSelf && Math.random() > config.etc.replyProbabilityNotAt) {
 			throw new Error();
 		}
 
@@ -121,7 +117,7 @@ app.post("/", async (c) => {
 	} finally {
 		if (finallyRelease) {
 			// 消息超过一定数量时，调用模型总结一部分
-			if (messages.length > SUMMARIZE_THRESHOLD) {
+			if (messages.length > config.etc.summarizeThreshold) {
 				await summarizeMessages(messages);
 			}
 			release();
@@ -146,8 +142,6 @@ const stopBrecTimer = startBrecTimer();
 
 const onShutdown = async (signal: string) => {
 	log(`收到${signal}信号，正在关闭服务器...`);
-	// 关闭 mcp 客户端连接
-	// await closeMcpClients();
 	// 关闭 brec 定时器
 	stopBrecTimer();
 	// 关闭 hono 服务器

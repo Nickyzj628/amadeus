@@ -4,8 +4,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
-		"build": "tsdown",
-		"build:prod": "tsdown --out-dir dist-prod",
+		"build": "tsdown && copyfiles -u 1 src/prompts/*.md dist-prod/",
+		"build:prod": "tsdown --out-dir dist-prod && copyfiles -u 1 src/prompts/*.md dist-prod/",
 		"start": "node dist/index.mjs",
 		"start:prod": "node dist-prod/index.mjs",
 		"check": "biome check --diagnostic-level=error --write src/"
@@ -22,6 +22,7 @@
 		"@biomejs/biome": "^2.4.11",
 		"@modelcontextprotocol/sdk": "^1.29.0",
 		"@types/node": "^25.6.0",
+		"copyfiles": "^2.4.1",
 		"tsdown": "^0.21.7",
 		"tsx": "^4.21.0",
 		"typescript": "^6.0.2"

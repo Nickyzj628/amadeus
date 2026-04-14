@@ -1,4 +1,4 @@
-import { SUMMARIZE_THRESHOLD } from "@/constants.js";
+import config from "@/config.js";
 import type { GroupMessageEvent } from "@/schemas/onebot/http-post.js";
 import type { Message } from "@/schemas/openai/index.js";
 import {
@@ -25,7 +25,7 @@ export const afterLLM = async (
 	}
 
 	// 消息超过一定数量时，调用模型总结一部分
-	if (messages.length > SUMMARIZE_THRESHOLD) {
+	if (messages.length > config.etc.summarizeThreshold) {
 		await summarizeMessages(messages);
 	}
 

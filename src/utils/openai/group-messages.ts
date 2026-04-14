@@ -1,5 +1,6 @@
 import { LockQueue, log } from "@nickyzj2023/utils";
-import { MAX_ACTIVE_GROUPS, SYSTEM_PROMPT } from "@/constants.js";
+import config from "@/config.js";
+import { SYSTEM_PROMPT } from "@/constants.js";
 import type { Message } from "@/schemas/openai/index.js";
 import { loadJSON, saveJSON } from "@/utils/common.js";
 
@@ -50,7 +51,7 @@ export const loadGroupMessages = async (
 	groupMessagesMap.set(groupId, messages);
 
 	// 释放不活跃的群聊内存
-	if (groupMessagesMap.size > MAX_ACTIVE_GROUPS) {
+	if (groupMessagesMap.size > config.etc.maxActiveGroupCount) {
 		for (const [groupId, messages] of groupMessagesMap) {
 			if (groupQueueMap.has(groupId)) {
 				continue;

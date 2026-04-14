@@ -33,13 +33,6 @@ export default {
 			totalContext: 1048576,
 		},
 		{
-			provider: "Google",
-			model: "gemma-4-31b-it",
-			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-			apiKey: "AIzaSyCgHAHFmkYOhUT8-YYmgjQr_NpShkcOSFc",
-			totalContext: 262144,
-		},
-		{
 			provider: "本地",
 			model: "koboldcpp/gemma-4-E4B-it-Q4_K_M",
 			baseUrl: "http://localhost:5001/v1",
@@ -103,7 +96,7 @@ export default {
 		/** 同时活跃的群聊数，超过时会释放不活跃的群聊消息内存 */
 		maxActiveGroupCount: 2,
 		/** 安全词，在消息中检测到时添加人设锚点，修正人设 */
-		safeWords: ["myword", "myspoon"],
+		safeWord: "myfork",
 		/** 消息数量达到阈值时总结一部分 */
 		summarizeThreshold: 50,
 	},

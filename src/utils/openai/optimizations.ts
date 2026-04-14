@@ -1,5 +1,6 @@
 import { log, to } from "@nickyzj2023/utils";
-import { SUMMARIZE_PROMPT, SUMMARIZE_THRESHOLD } from "@/constants.js";
+import config from "@/config.js";
+import { SUMMARIZE_PROMPT } from "@/constants.js";
 import type { Message } from "@/schemas/openai/index.js";
 import { generateContent } from "./chat-completions.js";
 import { contentToMessage } from "./message.js";
@@ -51,7 +52,7 @@ export const summarizeMessages = async (messages: Message[]) => {
 	const summarizingMessages = messages.slice(startIndex, endIndex);
 
 	// 切片总结，防止一次性喂给模型的消息超过上下文窗口
-	const countPerChunk = Math.min(count, SUMMARIZE_THRESHOLD);
+	const countPerChunk = Math.min(count, config.etc.summarizeThreshold);
 	const summarizingMessagesChunks = Array.from(
 		{
 			length: Math.ceil(summarizingMessages.length / countPerChunk),
