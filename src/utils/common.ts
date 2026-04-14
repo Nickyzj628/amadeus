@@ -89,3 +89,25 @@ export const extractErrorMessage = (error: unknown): string => {
 	// 兜底情况，将异常转换为字符串返回
 	return JSON.stringify(error, null, 2);
 };
+
+/**
+ * lodash.get()
+ *
+ * @example
+ * const obj = { a: { b: [1, 2, 3] } };
+ * get(obj, "a.b[1]"); // 2
+ */
+export const get = (obj: Record<string, any>, path: string) => {
+	// "a.b[0].c" => "a.b.0.c" => ["a", "b", "0", "c"]
+	const segments = path
+		.replace(/\[(\d+)\]/g, ".$1")
+		.split(".")
+		.filter(Boolean);
+
+	return segments.reduce((result, key) => {
+		if (typeof result !== "object" || result === null) {
+			return undefined;
+		}
+		return result[key];
+	}, obj);
+};

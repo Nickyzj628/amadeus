@@ -9,7 +9,7 @@ export class MCPRouter {
 		this.toolClientMap = new Map();
 	}
 
-	// 注册一个新的 MCP 客户端
+	/** 注册一个新的 MCP 客户端 */
 	async addClient(
 		name: string,
 		url: string,
@@ -32,7 +32,7 @@ export class MCPRouter {
 		return client;
 	}
 
-	// 构建 OpenAI API 兼容的 tools 请求体
+	/** 返回 OpenAI API 兼容的 tools 请求体 */
 	async getOpenAITools() {
 		const result = [];
 		for (const client of this.clients) {
@@ -53,7 +53,7 @@ export class MCPRouter {
 		return result;
 	}
 
-	// 调用指定工具
+	/** 调用指定工具 */
 	async callTool(toolName: string, args: Record<string, any>) {
 		const client = this.toolClientMap.get(toolName);
 		if (!client) {
