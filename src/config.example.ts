@@ -33,10 +33,10 @@ export default {
 			totalContext: 1048576,
 		},
 		{
-			provider: "OpenRouter",
-			model: "google/gemma-4-31b-it",
-			baseUrl: "https://openrouter.ai/api/v1",
-			apiKey: "xxxxx",
+			provider: "Google",
+			model: "gemma-4-31b-it",
+			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+			apiKey: "AIzaSyCgHAHFmkYOhUT8-YYmgjQr_NpShkcOSFc",
 			totalContext: 262144,
 		},
 		{
