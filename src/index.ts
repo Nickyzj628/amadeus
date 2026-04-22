@@ -62,7 +62,7 @@ app.post("/", async (c) => {
 
 	// 等待群聊其他消息释放队列
 	const release = await queue.waitInQueue();
-	let finallyRelease = true;
+	let instantRelease = true;
 
 	try {
 		// 调试模式
@@ -96,7 +96,7 @@ app.post("/", async (c) => {
 		}
 
 		// 在后台处理消息数组，例如保存到本地
-		finallyRelease = false;
+		instantRelease = false;
 		afterLLM(e, messages, info).finally(() => {
 			release();
 		});
@@ -115,7 +115,7 @@ app.post("/", async (c) => {
 			}
 		}
 	} finally {
-		if (finallyRelease) {
+		if (instantRelease) {
 			// 消息超过一定数量时，调用模型总结一部分
 			if (messages.length > config.etc.summarizeThreshold) {
 				await summarizeMessages(messages);

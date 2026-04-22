@@ -1,11 +1,10 @@
-import {
-	array,
-	type InferOutput,
-	number,
-	object,
-	record,
-	string,
-} from "valibot";
+// ================================
+// B站直播通知相关接口
+// ================================
+
+import { type InferOutput, number, object, record, string } from "valibot";
+
+// --- 批量查询直播间状态 ---
 
 export const RoomStatusSchema = object({
 	room_id: number(),
@@ -30,25 +29,10 @@ export const RoomStatusSchema = object({
 });
 export type RoomStatus = InferOutput<typeof RoomStatusSchema>;
 
-/**
- * 直播间状态
- * @see https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids?uids[]=70093&uids[]=13046
- */
-export const GetRoomStatusSchema = object({
+export const GetRoomStatusResponseSchema = object({
 	code: number(),
 	message: string(),
 	data: record(string(), RoomStatusSchema),
 });
-export type LiveDetailResponse = InferOutput<typeof GetRoomStatusSchema>;
 
-/**
- * 直播通知推送
- * @see src\utils\brec.ts:21
- */
-export const BrecWebhookSchema = array(
-	object({
-		...RoomStatusSchema.entries,
-		changedField: string(),
-	}),
-);
-export type BrecWebhook = InferOutput<typeof BrecWebhookSchema>;
+// --- 查询直播间信息 ---
