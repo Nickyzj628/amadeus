@@ -38,7 +38,7 @@ export const queryRoomInfoMapByUids = async (uids: number[]) => {
 	return output.data;
 };
 
-const runOnce = async () => {
+const checkAndSend = async () => {
 	if (!GROUP_IDS.length || !UIDS.length) {
 		log("未配置 brec.groupIds / brec.roomIds");
 		return;
@@ -114,9 +114,9 @@ const runOnce = async () => {
 };
 
 export const startBrecTimer = () => {
-	runOnce();
+	checkAndSend();
 	const timer = setInterval(() => {
-		runOnce();
+		checkAndSend();
 	}, INTERVAL_MS);
 
 	log("直播推送定时器已启动");

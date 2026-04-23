@@ -18,7 +18,7 @@ const liveApi = fetcher("https://api.live.bilibili.com/xlive/web-room/v1", {
 
 /**
  * 匹配 bilibili 链接的正则表达式
- * - http://www.bilibili.com/video/BV1abc123456
+ * - http(s)://(www.)bilibili.com/video/BV1abc123456
  * - https://live.bilibili.com/123456
  * - https://b23.tv/abc123XYZ
  */
