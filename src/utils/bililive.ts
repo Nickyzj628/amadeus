@@ -2,9 +2,10 @@ import { fetcher, log, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import config from "@/config.js";
 import {
-	GetRoomStatusResponseSchema,
+	QueryRoomInfoResponseSchema,
+	QueryRoomStatusResponseSchema,
 	type RoomStatus,
-} from "../schemas/brec.js";
+} from "../schemas/bili.js";
 import { sendGroupMessage } from "./onebot/http.js";
 import { srcToImageSegment, textToSegment } from "./onebot/segment.js";
 
@@ -18,7 +19,7 @@ const liveApi = fetcher("https://api.live.bilibili.com/room/v1");
 
 /** 批量查询直播间状态
  * @remarks 如果查询失败，会抛出异常
- * @see https://sessionhu.github.io/bilibili-API-collect/docs/live/info.html#%E6%89%B9%E9%87%8F%E6%9F%A5%E8%AF%A2%E7%9B%B4%E6%92%AD%E9%97%B4%E7%8A%B6%E6%80%81
+ * @see https://sessionhu.github.io/bilibili-API-collect/docs/live/info.html#批量查询直播间状态
  */
 export const queryRoomInfoMapByUids = async (uids: number[]) => {
 	const queryString = uids.map((id) => `uids[]=${id}`).join("&");
@@ -29,11 +30,33 @@ export const queryRoomInfoMapByUids = async (uids: number[]) => {
 		throw new Error(`查询直播间状态失败：${error.message}`);
 	}
 	const { success, issues, output } = safeParse(
-		GetRoomStatusResponseSchema,
+		QueryRoomStatusResponseSchema,
 		response,
 	);
 	if (!success) {
 		throw new Error(`查询直播间状态失败：${issues[0].message}`);
+	}
+	return output.data;
+};
+
+/**
+ * 查询直播间信息
+ * @remarks 如果查询失败，会抛出异常
+ * @see https://sessionhu.github.io/bilibili-API-collect/docs/live/info.html#获取直播间信息
+ */
+export const queryRoomInfo = async (roomId: number | string) => {
+	const [error, response] = await to(
+		liveApi.get(`/Room/get_info?room_id=${roomId}`),
+	);
+	if (error) {
+		throw new Error(`查询直播间信息失败：${error.message}`);
+	}
+	const { success, issues, output } = safeParse(
+		QueryRoomInfoResponseSchema,
+		response,
+	);
+	if (!success) {
+		throw new Error(`查询直播间信息失败：${issues[0].message}`);
 	}
 	return output.data;
 };
@@ -83,10 +106,8 @@ const checkAndSend = async () => {
 		return;
 	}
 
-	// 筛选出已开播的
-	const livedRooms = result.filter((room) => room.live_status === 1);
-
 	// 构造消息段
+	const livedRooms = result.filter((room) => room.live_status === 1);
 	for (const room of livedRooms) {
 		let action = "";
 		if (room.changedField === "live_status") {
@@ -113,7 +134,7 @@ const checkAndSend = async () => {
 	}
 };
 
-export const startBrecTimer = () => {
+export const startBiliLiveTimer = () => {
 	checkAndSend();
 	const timer = setInterval(() => {
 		checkAndSend();

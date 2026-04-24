@@ -10,7 +10,7 @@ import {
 } from "./schemas/onebot/http-post.js";
 import { afterLLM } from "./utils/after-llm/index.js";
 import { beforeLLM } from "./utils/before-llm/index.js";
-import { startBrecTimer } from "./utils/brec.js";
+import { startBiliLiveTimer } from "./utils/bililive.js";
 import { extractErrorMessage } from "./utils/common.js";
 import {
 	makeReplyBody,
@@ -137,13 +137,13 @@ const server = serve({
 	port: config.bot.onebotHttpPostPort,
 });
 
-// 启动 Brec 定时器
-const stopBrecTimer = startBrecTimer();
+// 启动B站直播推送定时器
+const stopBiliLiveTimer = startBiliLiveTimer();
 
 const onShutdown = async (signal: string) => {
 	log(`收到${signal}信号，正在关闭服务器...`);
 	// 关闭 brec 定时器
-	stopBrecTimer();
+	stopBiliLiveTimer();
 	// 关闭 hono 服务器
 	server.close(() => {
 		process.exit(0);

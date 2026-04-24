@@ -1,20 +1,12 @@
 import { fetcher, getRealURL } from "@nickyzj2023/utils";
 import { parse } from "valibot";
-import {
-	GetRoomBaseInfoSchema,
-	type GetVideoDetail,
-	GetVideoDetailSchema,
-	type RoomInfo,
-} from "@/schemas/bili.js";
+import type { RoomInfo } from "@/schemas/bili.js";
+import { type GetVideoDetail, GetVideoDetailSchema } from "@/schemas/bili.js";
+import { queryRoomInfo } from "../bililive.js";
 import { formatNumberCompact } from "../common.js";
 import { srcToImageSegment, textToSegment } from "../onebot/segment.js";
 
 const api = fetcher("https://api.bilibili.com/x/web-interface");
-const liveApi = fetcher("https://api.live.bilibili.com/xlive/web-room/v1", {
-	params: {
-		req_biz: "web_room_componet",
-	},
-});
 
 /**
  * 匹配 bilibili 链接的正则表达式
@@ -27,6 +19,7 @@ const regexp =
 
 /**
  * 解析 bilibili 链接，支持视频（BV号长链接、小程序短链接）、直播
+ * @remarks 解析失败会抛出异常
  * @returns 解析后的干净链接 + 视频详情或直播详情 组成的对象
  */
 export const resolveBiliLink = async (
@@ -69,15 +62,7 @@ export const resolveBiliLink = async (
 	else if (url.hostname === "live.bilibili.com") {
 		// 使用房间号获取详情
 		const roomId = url.pathname.replace("/", "");
-		const { data } = parse(
-			GetRoomBaseInfoSchema,
-			await liveApi.get(`/index/getRoomBaseInfo?room_ids=${roomId}`),
-		);
-
-		const roomInfo = Object.values(data.by_room_ids)[0];
-		if (!roomInfo) {
-			return;
-		}
+		const roomInfo = await queryRoomInfo(roomId);
 
 		return {
 			url: `${url.origin}${url.pathname}`,
@@ -105,19 +90,26 @@ export const videoDetailToSegments = (videoDetail: GetVideoDetail["data"]) => {
 };
 
 export const roomInfoToSegments = (roomInfo: RoomInfo) => {
-	const { cover, title, uname, live_status, area_name, live_time, live_url } =
-		roomInfo;
+	const {
+		keyframe,
+		user_cover,
+		title,
+		live_status,
+		area_name,
+		live_time,
+		short_id,
+		room_id,
+	} = roomInfo;
 
 	return [
-		srcToImageSegment(cover),
+		srcToImageSegment(live_status === 1 ? keyframe || user_cover : user_cover),
 		textToSegment(
 			[
 				title,
-				`@${uname}`,
 				`\n状态：${live_status === 1 ? "直播中" : "未开播"}`,
 				`分区：${area_name}`,
 				`开播时间：${live_time}`,
-				live_url,
+				`https://live.bilibili.com/${short_id || room_id}`,
 			].join("\n"),
 		),
 	];
