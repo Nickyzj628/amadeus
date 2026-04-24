@@ -43,8 +43,8 @@ export const RoomInfoSchema = object({
 	uid: number(),
 	/** 1为直播中，其他都是未开播 */
 	live_status: number(),
-	/** 时间戳，如1776666531，需要*1000 */
-	live_time: number(),
+	/** 时间字符串，如"2026-04-24 18:02:35" */
+	live_time: string(),
 	title: string(),
 	/** 直播大区，如单机游戏 */
 	parent_area_name: string(),
