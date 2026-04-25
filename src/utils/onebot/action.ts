@@ -1,4 +1,4 @@
-import { randomInt, sleep } from "@nickyzj2023/utils";
+import { sleep } from "@nickyzj2023/utils";
 import {
 	type CommonSegment,
 	isTextSegment,
@@ -52,7 +52,7 @@ export const replyLikeHuman = async (
 
 		// 如果不是第一段话，则按字数等待一段时间再发送，模拟打字速度
 		if (i !== 0) {
-			await sleep(paragraph.length * 300 + randomInt(100, 1000));
+			await sleep(paragraph.length * 500);
 		}
 
 		// 发出消息
