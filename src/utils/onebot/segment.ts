@@ -1,4 +1,5 @@
 import type {
+	AtSegment,
 	ForwardSegment,
 	ImageSegment,
 	MinimalMessageEvent,
@@ -22,6 +23,14 @@ export const textSegmentToCommand = (segment: TextSegment) => {
 export const textToSegment = (text: string): TextSegment => ({
 	type: "text",
 	data: { text },
+});
+
+/** 构造 @ 消息段 */
+export const userIdToAtSegment = (
+	userId: string | number | "all",
+): AtSegment => ({
+	type: "at",
+	data: { qq: String(userId) },
 });
 
 /** 从图片 URL 构造图片消息段 */

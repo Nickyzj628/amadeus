@@ -14,8 +14,8 @@ import { startBiliLiveTimer } from "./utils/bililive.js";
 import { extractErrorMessage } from "./utils/common.js";
 import {
 	makeReplyBody,
+	replyLikeHuman,
 	sendGroupMessage,
-	textToSegment,
 } from "./utils/onebot/index.js";
 import {
 	generateContent,
@@ -56,7 +56,7 @@ app.post("/", async (c) => {
 	}
 
 	// 读取群聊消息
-	const { group_id: groupId } = e;
+	const { group_id: groupId, user_id: userId } = e;
 	const { messages, queue } = await loadGroupMessages(groupId);
 	const isAtSelf = e.message.some(isAtSelfSegment);
 
@@ -67,7 +67,7 @@ app.post("/", async (c) => {
 	try {
 		// 调试模式
 		// if (groupId !== 669751957) {
-		//   throw new Error("🚧施工中");
+		// 	throw new Error("🚧施工中");
 		// }
 
 		// 如果消息无需模型处理，则直接回复
@@ -101,11 +101,10 @@ app.post("/", async (c) => {
 			release();
 		});
 
-		// 回复消息
-		if (isAtSelf) {
-			return c.json(makeReplyBody(` ${content}`));
-		}
-		sendGroupMessage(groupId, [textToSegment(content)]);
+		// 分段回复消息
+		await replyLikeHuman(content, groupId, {
+			at: isAtSelf ? userId : undefined,
+		});
 	} catch (error) {
 		const errorMsg = extractErrorMessage(error);
 		if (errorMsg) {

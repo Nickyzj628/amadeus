@@ -20,7 +20,7 @@
 				"noExplicitAny": "off"
 			},
 			"style": {
-				"noNonNullAssertion": "info"
+				"noNonNullAssertion": "off"
 			},
 			"correctness": {
 				"noUnusedFunctionParameters": "off"

@@ -1,6 +1,12 @@
-import { isTextSegment, type Segment } from "@/schemas/onebot/http-post.js";
+import { randomInt, sleep } from "@nickyzj2023/utils";
+import {
+	type CommonSegment,
+	isTextSegment,
+	type Segment,
+} from "@/schemas/onebot/http-post.js";
 import { normalizeText } from "../common.js";
-import { textToSegment } from "./segment.js";
+import { sendGroupMessage } from "./index.js";
+import { textToSegment, userIdToAtSegment } from "./segment.js";
 
 /** 构造回复消息体 */
 export const makeReplyBody = (
@@ -21,4 +27,35 @@ export const makeReplyBody = (
 		reply: normalizedSegments,
 		at_sender: true,
 	};
+};
+
+export const replyLikeHuman = async (
+	content: string,
+	groupId: number,
+	options?: {
+		/** 回复时显式 @ 发送人 */
+		at?: number;
+	},
+) => {
+	const paragraphs = content.split("\n").filter(Boolean);
+	for (let i = 0; i < paragraphs.length; i++) {
+		const paragraph = paragraphs[i]!;
+		const segments: CommonSegment[] = [textToSegment(paragraph)];
+
+		// 如果是第一段话，且传递 at 参数，则 @ 发送人
+		if (i === 0 && options?.at) {
+			segments.unshift(userIdToAtSegment(options.at));
+			if (isTextSegment(segments[1])) {
+				segments[1].data.text = ` ${segments[1].data.text}`;
+			}
+		}
+
+		// 如果不是第一段话，则按字数等待一段时间再发送，模拟打字速度
+		if (i !== 0) {
+			await sleep(paragraph.length * 300 + randomInt(100, 1000));
+		}
+
+		// 发出消息
+		await sendGroupMessage(groupId, segments);
+	}
 };
