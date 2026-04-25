@@ -95,15 +95,16 @@ app.post("/", async (c) => {
 			throw new Error("模型生成了空消息，可能是故障或无语了");
 		}
 
-		// 在后台处理消息数组，例如保存到本地
 		instantRelease = false;
-		afterLLM(e, messages, info).finally(() => {
+		Promise.all([
+			// 分段回复消息
+			replyLikeHuman(content, groupId, {
+				at: isAtSelf ? userId : undefined,
+			}),
+			// 整理消息数组，包括优化、保存到本地
+			afterLLM(e, messages, info),
+		]).finally(() => {
 			release();
-		});
-
-		// 分段回复消息
-		await replyLikeHuman(content, groupId, {
-			at: isAtSelf ? userId : undefined,
 		});
 	} catch (error) {
 		const errorMsg = extractErrorMessage(error);
