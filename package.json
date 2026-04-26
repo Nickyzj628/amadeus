@@ -4,10 +4,10 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
-		"build": "tsdown && copyfiles -u 1 src/prompts/*.md dist-prod/",
-		"build:prod": "tsdown --out-dir dist-prod && copyfiles -u 1 src/prompts/*.md dist-prod/",
-		"start": "node dist/index.mjs",
-		"start:prod": "node dist-prod/index.mjs",
+		"build": "tsdown && copyfiles -u 1 src/prompts/*.md dist-test/",
+		"build:prod": "tsdown --out-dir dist && copyfiles -u 1 src/prompts/*.md dist/",
+		"start": "node dist-test/index.mjs",
+		"start:prod": "node dist/index.mjs",
 		"check": "biome check --diagnostic-level=error --write src/"
 	},
 	"dependencies": {

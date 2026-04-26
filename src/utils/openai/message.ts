@@ -1,11 +1,4 @@
-import {
-	camelToSnake,
-	imageUrlToBase64,
-	log,
-	mapKeys,
-	mapValues,
-	to,
-} from "@nickyzj2023/utils";
+import { imageUrlToBase64, log, to } from "@nickyzj2023/utils";
 import sharp from "sharp";
 import {
 	isAtSegment,
@@ -40,6 +33,11 @@ export const contentToMessage = (
 	} as Message;
 };
 
+/** 构造标签字符串 */
+const createTagText = (tagName: string, text: any) => {
+	return `<${tagName}>${String(text)}</${tagName}>`;
+};
+
 /**
  * 把消息格式从 OneBot 转成 OpenAI API
  * @remarks 保证安全返回消息对象
@@ -57,7 +55,12 @@ export const onebotToOpenaiMessages = async (
 		isQuoted?: boolean;
 	},
 ): Promise<Message[]> => {
-	const { ignoreReply, ignoreForward, forwardCount, isQuoted } = options ?? {};
+	const {
+		ignoreReply,
+		ignoreForward,
+		forwardCount,
+		isQuoted = false,
+	} = options ?? {};
 
 	const bodyItems: string[] = [];
 	const mediaItems: string[] = [];
@@ -156,29 +159,15 @@ export const onebotToOpenaiMessages = async (
 		...quotedMessages,
 		// 当前消息
 		contentToMessage(
-			JSON.stringify(
-				mapValues(
-					mapKeys(
-						{
-							isQuoted,
-							userId: String(e.sender.user_id),
-							userName: e.sender.nickname,
-							body: bodyItems.join("\n"),
-							mentionedUserIds,
-							time: new Date().toLocaleString(),
-						},
-						camelToSnake,
-					),
-					(value) => value,
-					{
-						filter: (value) => {
-							if (Array.isArray(value)) {
-								return value.length > 0;
-							}
-							return !!value;
-						},
-					},
-				),
+			createTagText(
+				"message",
+				`${isQuoted ? createTagText("is_quoted", isQuoted) : ""}
+				${createTagText("user_id", e.sender.user_id)}
+				${createTagText("user_name", e.sender.nickname)}
+				${createTagText("body", bodyItems.join("\n").trim())}
+				${mentionedUserIds.length > 0 ? createTagText("mentioned_user_ids", mentionedUserIds.join(",")) : ""}
+				${createTagText("time", new Date().toLocaleString())}
+				`.replace(/\t+/g, ""),
 			),
 		),
 		// 当前图片消息
