@@ -1,4 +1,4 @@
-import { to } from "@nickyzj2023/utils";
+import { log, to } from "@nickyzj2023/utils";
 import {
 	isAtSegment,
 	isForwardSegment,
@@ -8,6 +8,7 @@ import {
 	type MinimalMessageEvent,
 } from "@/schemas/onebot/http-post.js";
 import type { Message, MessageContentImage } from "@/schemas/openai/index.js";
+import { extractErrorMessage } from "../common.js";
 import { flattenForwardSegment, getMessage } from "../onebot/index.js";
 import { imageUrlToText } from "./chat-completions.js";
 
@@ -44,8 +45,15 @@ export const imageUrlToContentPart = (url: string): MessageContentImage => {
 };
 
 /** 构造标签字符串 */
-const createTagText = (tagName: string, text: any) => {
-	return `<${tagName}>${String(text)}</${tagName}>`;
+const createTagText = (
+	tagName: string,
+	text: any,
+	props: Record<string, any> = {},
+) => {
+	const propStrs = Object.entries(props).map(
+		([key, value]) => `${key}="${value}"`,
+	);
+	return `<${tagName} ${propStrs.join(" ")}>${String(text)}</${tagName}>`;
 };
 
 /**
@@ -65,6 +73,10 @@ export const onebotToOpenaiMessages = async (
 		isQuoted?: boolean;
 	},
 ): Promise<Message[]> => {
+	const {
+		sender: { nickname, user_id },
+	} = e;
+
 	const {
 		ignoreReply,
 		ignoreForward,
@@ -86,9 +98,10 @@ export const onebotToOpenaiMessages = async (
 		// 图片
 		else if (isImageSegment(segment)) {
 			const [error, text] = await to(imageUrlToText(segment.data.url));
-			if (!error) {
-				mediaItems.push(text);
+			if (error) {
+				log(`图片解析失败：${extractErrorMessage(error)}`);
 			}
+			mediaItems.push(text || "[无法识别图片]");
 		}
 		// @ 某人
 		else if (isAtSegment(segment)) {
@@ -131,8 +144,8 @@ export const onebotToOpenaiMessages = async (
 			createTagText(
 				"message",
 				`${isQuoted ? createTagText("is_quoted", isQuoted) : ""}
-				${createTagText("user_id", e.sender.user_id)}
-				${createTagText("user_name", e.sender.nickname)}
+				${createTagText("user_id", user_id)}
+				${createTagText("user_name", nickname)}
 				${createTagText("body", bodyItems.join("\n").trim())}
 				${mentionedUserIds.length > 0 ? createTagText("mentioned_user_ids", mentionedUserIds.join(",")) : ""}
 				${createTagText("time", new Date().toLocaleString())}
@@ -143,7 +156,10 @@ export const onebotToOpenaiMessages = async (
 		...mediaItems.map((item) => {
 			const content = item.includes("base64")
 				? [imageUrlToContentPart(item)]
-				: createTagText("image-description", item);
+				: createTagText("image", item, {
+						sender_id: user_id,
+						sender_name: nickname,
+					});
 			return contentToMessage(content);
 		}),
 	];

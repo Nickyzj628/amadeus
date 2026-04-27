@@ -78,6 +78,7 @@ export const generateContent = async (
 			model: model.model,
 			messages,
 			tools: openaiTools,
+			...model.extraBody,
 		});
 		const { message } = response.choices[0] ?? {};
 		if (!message) {
@@ -186,15 +187,18 @@ export const imageUrlToText = async (imageUrl: string) => {
 
 	// 如果当前是纯文本模型，则使用其他多模态模型把图片翻译成自然语言
 	const multiModel = MODELS.find((model) =>
-		model.inputModalities.includes("image"),
+		model.inputModalities?.includes("image"),
 	);
 	if (!multiModel) {
 		throw new Error("当前模型不支持图片理解，且未配置多模态模型，无法识别图片");
 	}
 
-	const { content } = await generateContent([
-		contentToMessage(IMAGE_UNDERSTANDING_PROMPT, { role: "system" }),
-		contentToMessage([imageUrlToContentPart(imageUrl)]),
-	]);
+	const { content } = await generateContent(
+		[
+			contentToMessage(IMAGE_UNDERSTANDING_PROMPT, { role: "system" }),
+			contentToMessage([imageUrlToContentPart(imageUrl)]),
+		],
+		{ model: multiModel },
+	);
 	return content;
 };

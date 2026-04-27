@@ -66,9 +66,9 @@ app.post("/", async (c) => {
 
 	try {
 		// 调试模式
-		// if (groupId !== 669751957) {
-		// 	throw new Error("🚧施工中");
-		// }
+		if (groupId !== 669751957) {
+			throw new Error("🚧施工中");
+		}
 
 		// 如果消息无需模型处理，则直接回复
 		const directlySegments = await beforeLLM(e);
