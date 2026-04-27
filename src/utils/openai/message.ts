@@ -1,5 +1,4 @@
-import { imageUrlToBase64, log, to } from "@nickyzj2023/utils";
-import sharp from "sharp";
+import { to } from "@nickyzj2023/utils";
 import {
 	isAtSegment,
 	isForwardSegment,
@@ -8,8 +7,9 @@ import {
 	isTextSegment,
 	type MinimalMessageEvent,
 } from "@/schemas/onebot/http-post.js";
-import type { Message } from "@/schemas/openai/index.js";
+import type { Message, MessageContentImage } from "@/schemas/openai/index.js";
 import { flattenForwardSegment, getMessage } from "../onebot/index.js";
+import { imageUrlToText } from "./chat-completions.js";
 
 /** 构造 OpenAI API 消息对象 */
 export const contentToMessage = (
@@ -31,6 +31,16 @@ export const contentToMessage = (
 		content,
 		...restOptions,
 	} as Message;
+};
+
+/** 构造 OpenAI API 图片类型的消息 content[] 字段 */
+export const imageUrlToContentPart = (url: string): MessageContentImage => {
+	return {
+		type: "image_url",
+		image_url: {
+			url,
+		},
+	};
 };
 
 /** 构造标签字符串 */
@@ -75,50 +85,9 @@ export const onebotToOpenaiMessages = async (
 		}
 		// 图片
 		else if (isImageSegment(segment)) {
-			const [error, base64] = await to(
-				imageUrlToBase64(segment.data.url, {
-					compressor: async (buffer, mime, _quality) => {
-						const input = Buffer.from(buffer);
-						const maxDimension = 1600; // 最大边长
-						const targetSize = 300 * 1024; // 目标大小（KB）
-
-						// 获取图片元数据
-						const image = sharp(input);
-						const metadata = await image.metadata();
-						const width = metadata.width || 0;
-						const height = metadata.height || 0;
-						const maxSide = Math.max(width, height);
-
-						// 如果已经小于目标大小，则直接返回
-						if (input.length <= targetSize) {
-							return `data:${mime};base64,${input.toString("base64")}`;
-						}
-
-						// 计算缩放后的尺寸
-						const ratio = maxSide > maxDimension ? maxDimension / maxSide : 1;
-						const resizeWidth = Math.floor(width * ratio);
-						const resizeHeight = Math.floor(height * ratio);
-
-						// 经验公式估算 quality：目标大小 / 原图大小 * 100，限制在 40-80 之间
-						const estimatedQuality = Math.max(
-							40,
-							Math.min(80, Math.floor((targetSize / input.length) * 100)),
-						);
-
-						const compressed = await image
-							.resize(resizeWidth, resizeHeight, { fit: "inside" })
-							.jpeg({ quality: estimatedQuality, progressive: true })
-							.toBuffer();
-
-						log(
-							`压缩了一张图片：${width}x${height}(${(input.length / 1024).toFixed(2)}KB) -> ${resizeWidth}x${resizeHeight}(${(compressed.length / 1024).toFixed(2)}KB)`,
-						);
-						return `data:image/jpeg;base64,${compressed.toString("base64")}`;
-					},
-				}),
-			);
+			const [error, text] = await to(imageUrlToText(segment.data.url));
 			if (!error) {
-				mediaItems.push(base64);
+				mediaItems.push(text);
 			}
 		}
 		// @ 某人
@@ -171,15 +140,11 @@ export const onebotToOpenaiMessages = async (
 			),
 		),
 		// 当前图片消息
-		...mediaItems.map((item) =>
-			contentToMessage([
-				{
-					type: "image_url",
-					image_url: {
-						url: item,
-					},
-				},
-			]),
-		),
+		...mediaItems.map((item) => {
+			const content = item.includes("base64")
+				? [imageUrlToContentPart(item)]
+				: createTagText("image-description", item);
+			return contentToMessage(content);
+		}),
 	];
 };

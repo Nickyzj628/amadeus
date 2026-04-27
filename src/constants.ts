@@ -25,6 +25,9 @@ export const SUMMARIZE_PROMPT = loadPrompt("summarize");
 /** 常规聊天系统提示词 */
 export const SYSTEM_PROMPT = loadPrompt("base");
 
+/** 图片翻译提示词 */
+export const IMAGE_UNDERSTANDING_PROMPT = loadPrompt("image-understanding");
+
 /** 大模型列表，应该兼容 OpenAI API，支持工具调用，多模态 */
 export const MODELS = config.models.map((model) => ({
 	...model,

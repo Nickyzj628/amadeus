@@ -19,6 +19,7 @@ export const MessageContentImageSchema = object({
 		url: string(),
 	}),
 });
+export type MessageContentImage = InferOutput<typeof MessageContentImageSchema>;
 
 export const MessageContentSchema = union([
 	string(),

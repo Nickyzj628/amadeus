@@ -3,6 +3,8 @@
  * 复制此文件为 config.ts 后填入你的实际配置
  */
 
+import type { Model } from "./schemas/openai/index.js";
+
 export default {
 	/** 机器人核心配置 */
 	bot: {
@@ -16,30 +18,50 @@ export default {
 
 	/** 模型列表，需满足以下条件：
 	 * 1. 必须兼容 OpenAI API 请求格式
-	 * 2. 尽量是多模态的，否则无法识别图片
-	 * 3. 尽量支持工具调用
+	 * 2. 至少提供一个能理解图片的模型
+	 * 3. 最好支持工具调用，否则无法调用 Function Calling / MCP 工具
 	 */
 	models: [
 		{
 			/** 提供商名称 */
-			provider: "OpenRouter",
+			provider: "DeepSeek",
 			/** 模型 ID */
-			model: "google/gemini-3.1-flash-lite-preview",
+			model: "deepseek-v4-flash",
 			/** API 前缀地址 */
-			baseUrl: "https://openrouter.ai/api/v1",
+			baseUrl: "https://api.deepseek.com",
 			/** API 密钥 */
 			apiKey: "xxxxx",
 			/** 总上下文大小，128K 约等于 128000，1M 约等于 1048576，不用太精确 */
 			totalContext: 1048576,
+			/**
+			 * 支持的输入格式，text/image/file/audio/video
+			 * 若当前使用的模型不支持图片理解，则会寻找其他多模态模型把图片翻译成自然语言
+			 */
+			inputModalities: ["text"],
 		},
+		/** 使用免费的 Gemma 4 用于翻译图片 */
+		{
+			provider: "Google AI Studio",
+			model: "gemma-4-26b-a4b-it",
+			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+			apiKey: "xxxxx",
+			totalContext: 262144,
+			inputModalities: ["text", "image"],
+			/** 额外携带的请求体，此处为禁用思考 */
+			extraBody: {
+				reasoning_effort: "minimal",
+			},
+		},
+		/** 也支持本地模型 */
 		{
 			provider: "本地",
 			model: "koboldcpp/gemma-4-E4B-it-Q4_K_M",
 			baseUrl: "http://localhost:5001/v1",
 			apiKey: "",
-			totalContext: 8192,
+			totalContext: 16384,
+			inputModalities: ["text", "image"],
 		},
-	],
+	] as Model[],
 
 	/** 各种工具需要的 API 密钥（可选） */
 	apiKeys: {
