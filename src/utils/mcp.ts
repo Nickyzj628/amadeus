@@ -1,5 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { defineFunctionTool } from "./openai/function-tool.js";
 
 export class MCPRouter {
 	clients: Client[];
@@ -40,28 +41,20 @@ export class MCPRouter {
 			result.push(
 				...tools
 					.filter((tool) => this.toolClientMap.has(tool.name))
-					.map((tool) => ({
-						type: "function",
-						function: {
+					.map((tool) =>
+						defineFunctionTool({
 							name: tool.name,
-							description: tool.description,
+							description: tool.description ?? "",
 							parameters: tool.inputSchema,
-						},
-					})),
+							_handler: (args) =>
+								client.callTool({
+									name: tool.name,
+									arguments: args,
+								}),
+						}),
+					),
 			);
 		}
 		return result;
-	}
-
-	/** 调用指定工具 */
-	async callTool(toolName: string, args: Record<string, any>) {
-		const client = this.toolClientMap.get(toolName);
-		if (!client) {
-			throw new Error(`找不到工具${toolName}对应的客户端`);
-		}
-		return client.callTool({
-			name: toolName,
-			arguments: args,
-		});
 	}
 }

@@ -1,5 +1,5 @@
 import { MODELS } from "@/constants.js";
-import type { FunctionTool } from "@/schemas/openai/tool.js";
+import { defineFunctionTool } from "@/utils/openai/function-tool.js";
 import { switchModel } from "@/utils/openai/model.js";
 
 const findModel = (input: string) => {
@@ -24,12 +24,9 @@ const findModel = (input: string) => {
 	);
 };
 
-export default {
+export default defineFunctionTool({
 	name: "changeModel",
-	description: `切换大语言模型。可用的供应商-模型列表：
-${MODELS.map(
-	(model, index) => `${index + 1}. ${model.provider} - ${model.model}`,
-).join("\n")}`,
+	description: `切换大语言模型。可用的供应商-模型列表：\n${MODELS.map((model, index) => `${index + 1}. ${model.provider} - ${model.model}`).join("\n")}`,
 	parameters: {
 		type: "object",
 		properties: {
@@ -41,13 +38,11 @@ ${MODELS.map(
 		},
 		required: ["model"],
 	},
-	_execute: async ({ model }) => {
+	_handler: async ({ model }) => {
 		const target = findModel(model);
 		if (!target) {
-			return `切换失败，找不到匹配的模型。可用模型：
-${MODELS.map((model) => `- ${model.model}（${model.provider}）`).join("\n")}`;
+			return `切换失败，找不到匹配的模型。可用模型：\n${MODELS.map((model) => `- ${model.model}（${model.provider}）`).join("\n")}`;
 		}
-
 		return switchModel(target.model);
 	},
-} satisfies FunctionTool;
+});

@@ -1,4 +1,4 @@
-import { log, to } from "@nickyzj2023/utils";
+import { extractErrorMessage, log, to } from "@nickyzj2023/utils";
 import {
 	isAtSegment,
 	isForwardSegment,
@@ -8,9 +8,8 @@ import {
 	type MinimalMessageEvent,
 } from "@/schemas/onebot/http-post.js";
 import type { Message, MessageContentImage } from "@/schemas/openai/index.js";
-import { extractErrorMessage } from "../common.js";
 import { flattenForwardSegment, getMessage } from "../onebot/index.js";
-import { imageUrlToText } from "./chat-completions.js";
+import { imageUrlToText } from "./generate-content.js";
 
 /** 构造 OpenAI API 消息对象 */
 export const contentToMessage = (

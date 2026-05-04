@@ -1,17 +1,14 @@
-import { log, omitBy } from "@nickyzj2023/utils";
+import { log } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { MCPRouter } from "@/utils/mcp.js";
 import changeModel from "./changeModel.js";
 import decodeAbbr from "./decodeAbbr.js";
 import getWeather from "./getWeather.js";
 
-console.time("加载 Function Calling 工具");
 const functionTools = [changeModel, getWeather, decodeAbbr];
-log(["已启用的 Function Calling 工具", functionTools.map((tool) => tool)]);
-console.timeEnd("加载 Function Calling 工具");
+log(["已启用 Function Calling Tools", functionTools.map((tool) => tool)]);
 console.log();
 
-console.time("加载 MCP Clients");
 const mcpRouter = new MCPRouter();
 await Promise.all(
 	Object.entries(config.mcpServers).map(async ([name, server]) => {
@@ -21,26 +18,32 @@ await Promise.all(
 	}),
 );
 const mcpOpenAITools = await mcpRouter.getOpenAITools();
-log(["已启用的 MCP 工具", ...mcpOpenAITools]);
-console.timeEnd("加载 MCP Clients");
+log(["已启用 MCP Tools", ...mcpOpenAITools]);
 console.log();
 
-/** 可直接传入 OpenAI API /chat-completions 的 tools 请求体 */
-export const openaiTools = [
-	...functionTools.map((tool) => ({
-		type: "function",
-		function: omitBy(tool, (key, value) => key.startsWith("_")),
-	})),
-	...mcpOpenAITools,
-];
+/**
+ * 可直接传入 OpenAI API /chat-completions 的 tools 请求体
+ */
+export const openaiTools = [...functionTools, ...mcpOpenAITools];
 
-/** 执行 function/mcp 工具 */
-export const executeTool = async (name: string, args: Record<string, any>) => {
-	const functionTool = functionTools.find((tool) => tool.name === name);
-	if (functionTool) {
-		return await functionTool._execute?.(args);
-	}
+/**
+ * 可直接传入 @nickyzj2023/utils ai.chatCompletions extraBody 的 tools 处理函数表
+ */
+export const toolHandlers = Object.fromEntries(
+	[...functionTools, ...mcpOpenAITools]
+		.filter((tool) => "_handler" in tool.function)
+		.map((tool) => {
+			const name = tool.function.name;
+			return [
+				name,
+				async (args: any) => {
+					log(`调用工具${name}(${JSON.stringify(args)})`);
 
-	const mcpResult = await mcpRouter.callTool(name, args);
-	return mcpResult.content as string;
-};
+					const result = await tool.function._handler!(args);
+					log(result);
+
+					return result;
+				},
+			];
+		}),
+);

@@ -1,4 +1,4 @@
-import { fetcher, imageUrlToBase64, log } from "@nickyzj2023/utils";
+import { chatCompletions, imageUrlToBase64, log } from "@nickyzj2023/utils";
 import sharp from "sharp";
 import config from "@/config.js";
 import {
@@ -6,13 +6,8 @@ import {
 	IMAGE_UNDERSTANDING_PROMPT,
 	MODELS,
 } from "@/constants.js";
-import type {
-	ChatCompletions,
-	ChatCompletionUsage,
-	Message,
-	Model,
-} from "@/schemas/openai/index.js";
-import { executeTool, openaiTools } from "@/tools/index.js";
+import type { Message, Model } from "@/schemas/openai/index.js";
+import { openaiTools, toolHandlers } from "@/tools/index.js";
 import { contentToMessage, imageUrlToContentPart, modelRef } from "./index.js";
 
 /**
@@ -51,83 +46,29 @@ export const generateContent = async (
 
 	/**
 	 * 发出请求
-	 * 单轮对话限制 `MAX_REQUEST_COUNT` 次请求，防止无限调用工具
 	 */
 
-	const api = fetcher(model.baseUrl, {
-		headers: {
-			Authorization: `Bearer ${model.apiKey}`,
-		},
-	});
-
-	let content = "";
-	let usage: ChatCompletionUsage | null = null;
-
-	console.log();
 	console.time("本轮对话耗时");
-	for (let i = 0; i <= config.etc.maxRequestCount; i++) {
-		console.log("请求大模型", model.model, messages.at(-1));
-
-		// 如果超过请求次数限制，则在最后一条消息追加警告
-		if (i === config.etc.maxRequestCount) {
-			messages.at(-1)!.content +=
-				"\n**注意：已达到单轮对话请求次数限制，请立即结束工具调用并输出最终结果。**";
-		}
-
-		const response = await api.post<ChatCompletions>("/chat/completions", {
+	const { content, usage } = await chatCompletions(
+		{
+			baseURL: model.baseUrl,
+			apiKey: model.apiKey,
 			model: model.model,
-			messages,
+		},
+		messages,
+		{
 			tools: openaiTools,
+			toolHandlers,
 			...model.extraBody,
-		});
-		const { message } = response.choices[0] ?? {};
-		if (!message) {
-			throw new Error("模型没有返回任何内容");
-		}
-		messages.push(message);
-		console.log("大模型回复", message);
-
-		// 如果无需调用工具，则完成本轮对话
-		if (!Array.isArray(message.tool_calls) || message.tool_calls.length === 0) {
-			content = message.content;
-			usage = response.usage;
-			break;
-		}
-
-		// 批量调用本轮对话所需工具
-		const toolCallResults = await Promise.all(
-			message.tool_calls.map(async (toolCall) => {
-				// 暂不支持 function 以外的类型
-				if (toolCall.type !== "function") {
-					return "调用失败：暂不支持 function 以外的工具类型";
-				}
-
-				const { name, arguments: args } = toolCall.function;
-				const result = await executeTool(name, JSON.parse(args));
-				if (!result) {
-					return "调用失败：工具返回了空结果";
-				}
-				// console.log(`调用了工具${name}(${args})`, result);
-				return result;
-			}),
-		);
-
-		// 推入工具调用结果
-		messages.push(
-			...toolCallResults.map((result, i) =>
-				contentToMessage(result, {
-					role: "tool",
-					tool_call_id: message.tool_calls![i]!.id,
-				}),
-			),
-		);
-	}
+		},
+	);
+	log(usage);
 	console.timeEnd("本轮对话耗时");
 	console.log();
 
 	return {
 		content,
-		isTokenNearLimit: usage!.total_tokens >= modelRef.value.totalContext * 0.8,
+		isTokenNearLimit: usage.total_tokens >= modelRef.value.totalContext * 0.8,
 	};
 };
 

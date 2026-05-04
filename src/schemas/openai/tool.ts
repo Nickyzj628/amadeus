@@ -1,16 +1,17 @@
 export type FunctionTool = {
 	name: string;
-	description: string;
-	parameters: {
+	description?: string;
+	parameters?: {
 		type: "object";
-		properties: Record<
+		properties?: Record<
 			string,
-			{
-				type: string;
-				description: string;
-			}
+			| object
+			| {
+					type: string;
+					description: string;
+			  }
 		>;
 		required?: string[];
 	};
-	_execute: (args: Record<string, any>) => Promise<any>;
+	_handler?: (args: Record<string, any>) => Promise<any>;
 };

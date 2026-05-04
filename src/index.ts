@@ -1,5 +1,5 @@
 import { serve } from "@hono/node-server";
-import { log } from "@nickyzj2023/utils";
+import { extractErrorMessage, log } from "@nickyzj2023/utils";
 import { Hono } from "hono";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { safeParse } from "valibot";
@@ -11,7 +11,6 @@ import {
 import { afterLLM } from "./utils/after-llm/index.js";
 import { beforeLLM } from "./utils/before-llm/index.js";
 import { startBiliLiveTimer } from "./utils/bililive.js";
-import { extractErrorMessage } from "./utils/common.js";
 import {
 	makeReplyBody,
 	replyLikeHuman,
@@ -66,9 +65,9 @@ app.post("/", async (c) => {
 
 	try {
 		// 调试模式
-		if (groupId !== 669751957) {
-			throw new Error("🚧施工中");
-		}
+		// if (groupId !== 669751957) {
+		// 	throw new Error("🚧施工中");
+		// }
 
 		// 如果消息无需模型处理，则直接回复
 		const directlySegments = await beforeLLM(e);

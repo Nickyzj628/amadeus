@@ -1,7 +1,7 @@
 import { fetcher, to } from "@nickyzj2023/utils";
 import { array, object, safeParse, string } from "valibot";
 import config from "@/config.js";
-import type { FunctionTool } from "@/schemas/openai/tool.js";
+import { defineFunctionTool } from "@/utils/openai/function-tool.js";
 
 const WeatherResponseSchema = object({
 	results: array(
@@ -29,7 +29,7 @@ const getRelativeDate = (date: string): string => {
 	return dates[index] ?? date;
 };
 
-export default {
+export default defineFunctionTool({
 	name: "getWeather",
 	description: "获取指定城市三日内的天气情况",
 	parameters: {
@@ -42,7 +42,7 @@ export default {
 		},
 		required: ["city"],
 	},
-	_execute: async ({ city }) => {
+	_handler: async ({ city }) => {
 		const key = config.apiKeys.seniversePrivateKey;
 		if (!key) {
 			return "天气预报查询失败：未配置apiKeys.seniversePrivateKey";
@@ -82,4 +82,4 @@ export default {
 			`数据更新时间：${new Date(result.last_update).toLocaleString()}`,
 		].join("\n");
 	},
-} satisfies FunctionTool;
+});

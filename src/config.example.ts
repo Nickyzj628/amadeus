@@ -113,8 +113,6 @@ export default {
 	etc: {
 		/** 未被 @ 时的回复概率 */
 		replyProbabilityNotAt: 0.01,
-		/** 单次回复请求次数限制，防止模型无限调用工具 */
-		maxRequestCount: 3,
 		/** 同时活跃的群聊数，超过时会释放不活跃的群聊消息内存 */
 		maxActiveGroupCount: 2,
 		/** 安全词，在消息中检测到时添加人设锚点，修正人设 */
