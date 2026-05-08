@@ -12,7 +12,7 @@
 	},
 	"dependencies": {
 		"@hono/node-server": "^2.0.1",
-		"@nickyzj2023/utils": "^1.0.69",
+		"@nickyzj2023/utils": "^1.0.70",
 		"hono": "^4.12.17",
 		"sharp": "^0.34.5",
 		"undici": "^8.2.0",
