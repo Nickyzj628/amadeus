@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM"],
     "target": "ESNext",
     "module": "NodeNext",
     "moduleDetection": "force",
@@ -9,6 +9,7 @@
     "verbatimModuleSyntax": true,
     "noEmit": false,
     "declaration": true,
+    "rootDir": "./src",
     "outDir": "./dist",
     "strict": true,
     "skipLibCheck": true,
@@ -18,10 +19,10 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }

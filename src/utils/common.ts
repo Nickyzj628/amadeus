@@ -81,3 +81,48 @@ export const get = (obj: Record<string, any>, path: string) => {
 		return result[key];
 	}, obj);
 };
+
+/**
+ * 下载文件并上传到 WebDAV
+ * @returns 文件上传后的 WebDAV URL
+ * @remarks 可能抛出异常
+ */
+export const uploadToWebdav = async (
+	fileUrl: string,
+	options?: {
+		/**
+		 * WebDAV 基础路径
+		 * @default "https://nickyzj.run:2020/Amadeus"
+		 */
+		baseUrl?: string;
+		/** 指定文件名，默认根据 content-type 自动生成 */
+		filename?: string;
+	},
+): Promise<string | null> => {
+	const { baseUrl = "https://nickyzj.run:2020/Amadeus", filename } =
+		options ?? {};
+
+	const response = await fetch(fileUrl);
+	const buffer = await response.arrayBuffer();
+	const contentType =
+		response.headers.get("content-type") || "application/octet-stream";
+
+	const mimeToExt: Record<string, string> = {
+		"image/png": "png",
+		"image/jpeg": "jpg",
+		"image/gif": "gif",
+		"image/webp": "webp",
+	};
+	const ext = mimeToExt[contentType] || "bin";
+	const finalFilename = filename || `${Date.now()}.${ext}`;
+
+	await fetch(`${baseUrl}/${finalFilename}`, {
+		method: "PUT",
+		body: buffer,
+		headers: {
+			"Content-Type": contentType,
+		},
+	});
+
+	return `${baseUrl}/${finalFilename}`;
+};

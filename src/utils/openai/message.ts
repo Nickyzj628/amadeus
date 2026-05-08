@@ -8,8 +8,10 @@ import {
 	type MinimalMessageEvent,
 } from "@/schemas/onebot/http-post.js";
 import type { Message, MessageContentImage } from "@/schemas/openai/index.js";
+import { uploadToWebdav } from "../common.js";
 import { flattenForwardSegment, getMessage } from "../onebot/index.js";
 import { imageUrlToText } from "./generate-content.js";
+import { modelRef } from "./model.js";
 
 /** 构造 OpenAI API 消息对象 */
 export const contentToMessage = (
@@ -52,7 +54,7 @@ const createTagText = (
 	const propStrs = Object.entries(props).map(
 		([key, value]) => `${key}="${value}"`,
 	);
-	return `<${tagName} ${propStrs.join(" ")}>${String(text)}</${tagName}>`;
+	return `<${tagName}${propStrs.length > 0 ? ` ${propStrs.join(" ")}` : ""}>${String(text)}</${tagName}>`;
 };
 
 /**
@@ -84,9 +86,13 @@ export const onebotToOpenaiMessages = async (
 	} = options ?? {};
 
 	const bodyItems: string[] = [];
-	const mediaItems: string[] = [];
+
+	const imageItems: string[] = [];
+
 	const mentionedUserIds: string[] = [];
 	const quotedMessages: Message[] = [];
+
+	const modelInputModalities = modelRef.value?.inputModalities ?? [];
 
 	// 解析消息段数组
 	for (const segment of e.message) {
@@ -95,12 +101,21 @@ export const onebotToOpenaiMessages = async (
 			bodyItems.push(segment.data.text);
 		}
 		// 图片
+		// - 对于多模态，使用上传到 WebDav 后的图片 URL
+		// - 对于纯语言模型，使用多模态翻译后的自然语言
 		else if (isImageSegment(segment)) {
-			const [error, text] = await to(imageUrlToText(segment.data.url));
-			if (error) {
-				log(`图片解析失败：${extractErrorMessage(error)}`);
+			let result: string | null | undefined = "";
+
+			const tempImageUrl = segment.data.url;
+			if (modelInputModalities.includes("image")) {
+				const [error, url] = await to(uploadToWebdav(tempImageUrl));
+				result = url;
+			} else {
+				const [error, text] = await to(imageUrlToText(tempImageUrl));
+				result = text;
 			}
-			mediaItems.push(text || "[无法识别图片]");
+
+			imageItems.push(result || "[无法识别图片]");
 		}
 		// @ 某人
 		else if (isAtSegment(segment)) {
@@ -138,6 +153,16 @@ export const onebotToOpenaiMessages = async (
 	return [
 		// 上下文消息
 		...quotedMessages,
+		// 当前图片消息
+		...imageItems.map((item) => {
+			const content = item.startsWith("http")
+				? [imageUrlToContentPart(item)]
+				: createTagText("image", item, {
+						sender_id: user_id,
+						sender_name: nickname,
+					});
+			return contentToMessage(content);
+		}),
 		// 当前消息
 		contentToMessage(
 			createTagText(
@@ -151,15 +176,5 @@ export const onebotToOpenaiMessages = async (
 				`.replace(/\t+/g, ""),
 			),
 		),
-		// 当前图片消息
-		...mediaItems.map((item) => {
-			const content = item.includes("base64")
-				? [imageUrlToContentPart(item)]
-				: createTagText("image", item, {
-						sender_id: user_id,
-						sender_name: nickname,
-					});
-			return contentToMessage(content);
-		}),
 	];
 };
