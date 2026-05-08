@@ -1,6 +1,7 @@
 import { fetcher, log, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import config from "@/config.js";
+import type { CommonSegment } from "@/schemas/onebot/http-post.js";
 import {
 	QueryRoomInfoResponseSchema,
 	QueryRoomStatusResponseSchema,
@@ -119,9 +120,9 @@ const checkAndSend = async () => {
 		const imgUrl = room.keyframe || room.cover_from_user || room.face;
 		const roomUrl = `https://live.bilibili.com/${room.short_id || room.room_id}`;
 		const segments = [
-			srcToImageSegment(imgUrl),
+			room.changedField === "live_status" && srcToImageSegment(imgUrl),
 			textToSegment(`${room.uname}${action}：${room.title}\n${roomUrl}`),
-		];
+		].filter(Boolean) as CommonSegment[];
 
 		// 推送到群里
 		for (const groupId of GROUP_IDS) {
