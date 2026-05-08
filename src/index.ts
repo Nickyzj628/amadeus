@@ -43,7 +43,7 @@ app.post("/", async (c) => {
 	// 验证请求体格式
 	// 保留了文字、图片、@、转发、回复、小程序消息段
 	const body = await c.req.json();
-	// console.log(JSON.stringify(body, null, 2))
+
 	const validation = safeParse(GroupMessageEventSchema, body);
 	if (!validation.success) {
 		return c.newResponse(null, 204);
@@ -66,9 +66,9 @@ app.post("/", async (c) => {
 
 	try {
 		// 调试模式
-		if (groupId !== 669751957) {
-			throw new Error("🚧施工中");
-		}
+		// if (groupId !== 669751957) {
+		// 	throw new Error("🚧施工中");
+		// }
 
 		// 如果消息无需模型处理，则直接回复
 		const directlySegments = await beforeLLM(e);

@@ -5,11 +5,16 @@ import {
 	isImageSegment,
 	isReplySegment,
 	isTextSegment,
+	isVideoSegment,
 	type MinimalMessageEvent,
 } from "@/schemas/onebot/http-post.js";
-import type { Message, MessageContentImage } from "@/schemas/openai/index.js";
+import type { Message, MessageContentImage, MessageContentVideo } from "@/schemas/openai/index.js";
 import { uploadToWebdav } from "../common.js";
-import { flattenForwardSegment, getMessage } from "../onebot/index.js";
+import {
+	flattenForwardSegment,
+	getFileUrl,
+	getMessage,
+} from "../onebot/index.js";
 import { imageUrlToText } from "./generate-content.js";
 import { modelRef } from "./model.js";
 
@@ -40,6 +45,16 @@ export const imageUrlToContentPart = (url: string): MessageContentImage => {
 	return {
 		type: "image_url",
 		image_url: {
+			url,
+		},
+	};
+};
+
+/** 构造 OpenAI API 视频类型的消息 content[] 字段 */
+export const videoUrlToContentPart = (url: string): MessageContentVideo => {
+	return {
+		type: "video_url",
+		video_url: {
 			url,
 		},
 	};
@@ -76,6 +91,7 @@ export const onebotToOpenaiMessages = async (
 ): Promise<Message[]> => {
 	const {
 		sender: { nickname, user_id },
+		group_id: groupId,
 	} = e;
 
 	const {
@@ -88,6 +104,7 @@ export const onebotToOpenaiMessages = async (
 	const bodyItems: string[] = [];
 
 	const imageItems: string[] = [];
+	const videoItems: string[] = [];
 
 	const mentionedUserIds: string[] = [];
 	const quotedMessages: Message[] = [];
@@ -116,6 +133,25 @@ export const onebotToOpenaiMessages = async (
 			}
 
 			imageItems.push(result || "[无法识别图片]");
+		}
+		// 视频
+		// - 对于多模态，使用上传到 WebDav 后的视频 URL
+		// - 对于纯语言模型，用“无法识别视频”占位
+		else if (isVideoSegment(segment)) {
+			let result: string | null | undefined = "";
+
+			const tempFile = segment.data;
+			if (modelInputModalities.includes("video")) {
+				const [error, fileUrl] = await to(
+					getFileUrl(groupId, tempFile.file_id),
+				);
+				if (fileUrl) {
+					const [error2, webdavUrl] = await to(uploadToWebdav(fileUrl));
+					result = webdavUrl;
+				}
+			}
+
+			videoItems.push(result || "[无法识别视频]");
 		}
 		// @ 某人
 		else if (isAtSegment(segment)) {
@@ -158,6 +194,16 @@ export const onebotToOpenaiMessages = async (
 			const content = item.startsWith("http")
 				? [imageUrlToContentPart(item)]
 				: createTagText("image", item, {
+						sender_id: user_id,
+						sender_name: nickname,
+					});
+			return contentToMessage(content);
+		}),
+		// 当前视频消息
+		...videoItems.map((item) => {
+			const content = item.startsWith("http")
+				? [videoUrlToContentPart(item)]
+				: createTagText("video", item, {
 						sender_id: user_id,
 						sender_name: nickname,
 					});

@@ -1,10 +1,4 @@
-import {
-	chatCompletions,
-	compactStr,
-	imageUrlToBase64,
-	log,
-} from "@nickyzj2023/utils";
-import sharp from "sharp";
+import { chatCompletions, compactStr, log } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import {
 	IDENTITY_ANCHOR,

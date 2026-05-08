@@ -146,6 +146,38 @@ export const isMiniProgramSegment = (
 };
 
 // ================================
+// 文件（视频）消息段
+// ================================
+
+export const FileSegmentSchema = object({
+	type: literal("file"),
+	data: object({
+		file: string(),
+		file_id: string(),
+		file_size: string(),
+	}),
+});
+
+export type FileSegment = InferOutput<typeof FileSegmentSchema>;
+
+export type VideoSegment = InferOutput<typeof FileSegmentSchema>;
+
+export const isFileSegment = (
+	segment?: CommonSegment,
+): segment is FileSegment => {
+	return !isNil(segment) && segment.type === "file";
+};
+
+export const isVideoSegment = (
+	segment?: CommonSegment,
+): segment is VideoSegment => {
+	if (!isFileSegment(segment)) {
+		return false;
+	}
+	return segment.data.file.endsWith(".mp4");
+};
+
+// ================================
 // 通用消息段
 // ================================
 
@@ -162,6 +194,7 @@ export const SegmentSchema = union([
 	ForwardSegmentSchema,
 	ImageSegmentSchema,
 	ReplySegmentSchema,
+	FileSegmentSchema,
 ]);
 
 export type Segment = InferOutput<typeof SegmentSchema>;
@@ -206,7 +239,8 @@ export const GroupMessageEventSchema = object({
 					isAtSegment(segment) ||
 					isForwardSegment(segment) ||
 					isImageSegment(segment) ||
-					isReplySegment(segment)
+					isReplySegment(segment) ||
+					isVideoSegment(segment)
 				);
 			}),
 		),
@@ -217,4 +251,7 @@ export const GroupMessageEventSchema = object({
 
 export type GroupMessageEvent = InferOutput<typeof GroupMessageEventSchema>;
 
-export type MinimalMessageEvent = Pick<GroupMessageEvent, "message" | "sender">;
+export type MinimalMessageEvent = Pick<
+	GroupMessageEvent,
+	"message" | "sender" | "group_id"
+>;

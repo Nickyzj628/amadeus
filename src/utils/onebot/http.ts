@@ -3,6 +3,7 @@ import { safeParse } from "valibot";
 import config from "@/config.js";
 import {
 	GetForwardMessageResponseSchema,
+	GetGroupFileUrlResponseSchema,
 	GetMessageHistoryResponseSchema,
 	GetMessageResponseSchema,
 } from "@/schemas/onebot/http.js";
@@ -101,6 +102,24 @@ export const getForwardMessages = async (
 	}
 
 	return result;
+};
+
+/**
+ * 获取群文件资源链接
+ * @see https://api.luckylillia.com/api-227239277
+ */
+export const getFileUrl = async (groupId: number, fileId: string) => {
+	const response = await api.post("/get_group_file_url", {
+		group_id: groupId,
+		file_id: fileId,
+	});
+
+	const validation = safeParse(GetGroupFileUrlResponseSchema, response);
+	if (!validation.success) {
+		throw new Error(validation.issues[0].message);
+	}
+
+	return validation.output.data.url;
 };
 
 /**

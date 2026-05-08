@@ -1,5 +1,5 @@
 import { access, constants, readFile, writeFile } from "node:fs/promises";
-import { isObject } from "@nickyzj2023/utils";
+import { fileURLToPath } from "node:url";
 
 /** 从项目目录中读取 JSON 配置 */
 export const loadJSON = async <T>(
@@ -102,16 +102,48 @@ export const uploadToWebdav = async (
 	const { baseUrl = "https://nickyzj.run:2020/Amadeus", filename } =
 		options ?? {};
 
-	const response = await fetch(fileUrl);
-	const buffer = await response.arrayBuffer();
-	const contentType =
-		response.headers.get("content-type") || "application/octet-stream";
+	let buffer: ArrayBuffer;
+	let contentType: string;
+
+	if (fileUrl.startsWith("file://")) {
+		const localPath = fileURLToPath(fileUrl);
+		const fileBuffer = await readFile(localPath);
+		buffer = fileBuffer.buffer.slice(
+			fileBuffer.byteOffset,
+			fileBuffer.byteOffset + fileBuffer.byteLength,
+		);
+
+		const ext = localPath.split(".").pop()?.toLowerCase() || "bin";
+		const extToMime: Record<string, string> = {
+			png: "image/png",
+			jpg: "image/jpeg",
+			jpeg: "image/jpeg",
+			gif: "image/gif",
+			webp: "image/webp",
+			mp4: "video/mp4",
+			webm: "video/webm",
+			mov: "video/quicktime",
+			mkv: "video/x-matroska",
+			avi: "video/x-msvideo",
+		};
+		contentType = extToMime[ext] || "application/octet-stream";
+	} else {
+		const response = await fetch(fileUrl);
+		buffer = await response.arrayBuffer();
+		contentType =
+			response.headers.get("content-type") || "application/octet-stream";
+	}
 
 	const mimeToExt: Record<string, string> = {
 		"image/png": "png",
 		"image/jpeg": "jpg",
 		"image/gif": "gif",
 		"image/webp": "webp",
+		"video/mp4": "mp4",
+		"video/webm": "webm",
+		"video/quicktime": "mov",
+		"video/x-matroska": "mkv",
+		"video/x-msvideo": "avi",
 	};
 	const ext = mimeToExt[contentType] || "bin";
 	const finalFilename = filename || `${Date.now()}.${ext}`;

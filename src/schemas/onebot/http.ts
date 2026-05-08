@@ -68,3 +68,14 @@ export const GetMessageResponseSchema = createResponseSchema(
 );
 
 export type GetMessageResponse = InferOutput<typeof GetMessageResponseSchema>;
+
+/** POST /get_group_file_url 结果 */
+export const GetGroupFileUrlResponseSchema = createResponseSchema(
+	object({
+		url: string(),
+	}),
+);
+
+export type GetGroupFileUrlResponse = InferOutput<
+	typeof GetGroupFileUrlResponseSchema
+>;

@@ -21,9 +21,17 @@ export const MessageContentImageSchema = object({
 });
 export type MessageContentImage = InferOutput<typeof MessageContentImageSchema>;
 
+export const MessageContentVideoSchema = object({
+	type: literal("video_url"),
+	video_url: object({
+		url: string(),
+	}),
+});
+export type MessageContentVideo = InferOutput<typeof MessageContentVideoSchema>;
+
 export const MessageContentSchema = union([
 	string(),
-	array(union([MessageContentTextSchema, MessageContentImageSchema])),
+	array(union([MessageContentTextSchema, MessageContentImageSchema, MessageContentVideoSchema])),
 ]);
 
 export const SystemMessageSchema = object({
