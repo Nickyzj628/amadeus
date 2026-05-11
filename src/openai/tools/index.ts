@@ -1,6 +1,6 @@
 import { log } from "@nickyzj2023/utils";
 import config from "@/config.js";
-import { MCPRouter } from "@/utils/mcp.js";
+import { MCPRouter } from "@/openai/utils/mcp.js";
 import changeModel from "./changeModel.js";
 import decodeAbbr from "./decodeAbbr.js";
 import getWeather from "./getWeather.js";

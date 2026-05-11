@@ -5,7 +5,7 @@ import type {
 	MinimalMessageEvent,
 	Segment,
 	TextSegment,
-} from "@/schemas/onebot/http-post.js";
+} from "@/onebot/schemas/http-post.js";
 import { getForwardMessages } from "./http.js";
 
 /** 从纯文本消息段中提取出"/<fn> <...args>" */

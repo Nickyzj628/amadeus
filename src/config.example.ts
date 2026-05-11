@@ -3,7 +3,7 @@
  * 复制此文件为 config.ts 后填入你的实际配置
  */
 
-import type { Model } from "./schemas/openai/index.js";
+import type { Model } from "./openai/schemas/model.js";
 
 export default {
 	/** 机器人核心配置 */
@@ -100,9 +100,9 @@ export default {
 	brec: {
 		/**
 		 * 要订阅哪些UP主的直播（填写用户主页上的UID）
-		 * 12dora、api、泛式、张哥、星铁、小肉包、胡桃
+		 * 12dora、api、泛式、张哥、星铁、小肉包
 		 */
-		uids: [70093, 13046, 63231, 433351, 1340190821, 67141, 12497617],
+		uids: [70093, 13046, 63231, 433351, 1340190821, 67141],
 		/** 要推送到哪些 QQ 群 */
 		groupIds: [123456789],
 	},

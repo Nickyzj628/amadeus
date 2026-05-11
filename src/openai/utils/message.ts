@@ -1,4 +1,5 @@
 import { to } from "@nickyzj2023/utils";
+import { uploadToWebdav } from "@/common/util.js";
 import {
 	isAtSegment,
 	isForwardSegment,
@@ -7,16 +8,16 @@ import {
 	isTextSegment,
 	isVideoSegment,
 	type MinimalMessageEvent,
-} from "@/schemas/onebot/http-post.js";
-import type { Message, MessageContentImage, MessageContentVideo } from "@/schemas/openai/index.js";
-import { uploadToWebdav } from "../common.js";
-import {
-	flattenForwardSegment,
-	getFileUrl,
-	getMessage,
-} from "../onebot/index.js";
+} from "@/onebot/schemas/http-post.js";
+import { getFileUrl, getMessage } from "@/onebot/utils/http.js";
+import { flattenForwardSegment } from "@/onebot/utils/segment.js";
+import { modelRef } from "@/openai/utils/model.js";
+import type {
+	Message,
+	MessageContentImage,
+	MessageContentVideo,
+} from "../schemas/message.js";
 import { imageUrlToText } from "./generate-content.js";
-import { modelRef } from "./model.js";
 
 /** 构造 OpenAI API 消息对象 */
 export const contentToMessage = (

@@ -1,14 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { get } from "./common/util.js";
 import config from "./config.js";
-import { get } from "./utils/common.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** 加载提示词，替换其中的 {xxx} 变量 */
 const loadPrompt = (filename: string): string => {
-	const promptPath = path.join(__dirname, "prompts", `${filename}.md`);
+	const promptPath = path.join(
+		__dirname,
+		"openai",
+		"prompts",
+		`${filename}.md`,
+	);
 	return fs.readFileSync(promptPath, "utf-8").replace(/\{[^}]+\}/g, (match) => {
 		const path = match.slice(1, -1);
 		const value = get(config, path);

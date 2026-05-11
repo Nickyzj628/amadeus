@@ -17,8 +17,8 @@ import {
 	union,
 	unknown,
 } from "valibot";
+import { normalizeText } from "@/common/util.js";
 import config from "@/config.js";
-import { normalizeText } from "@/utils/common.js";
 
 // ================================
 // 纯文本消息段

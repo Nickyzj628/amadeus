@@ -1,9 +1,8 @@
 import { log, to } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "@/constants.js";
-import type { Message } from "@/schemas/openai/index.js";
+import type { Message } from "../schemas/message.js";
 import { generateContent } from "./generate-content.js";
-
 import { contentToMessage } from "./message.js";
 
 /** 移除消息中的图片，只保留最后一张 */

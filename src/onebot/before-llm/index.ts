@@ -1,5 +1,5 @@
 import { log } from "@nickyzj2023/utils";
-import type { GroupMessageEvent, Segment } from "@/schemas/onebot/http-post.js";
+import type { GroupMessageEvent, Segment } from "@/onebot/schemas/http-post.js";
 import { resolveBiliLink } from "./bililink.js";
 
 /**

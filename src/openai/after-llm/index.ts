@@ -1,11 +1,8 @@
 import config from "@/config.js";
-import type { GroupMessageEvent } from "@/schemas/onebot/http-post.js";
-import type { Message } from "@/schemas/openai/index.js";
-import {
-	removeMostImages,
-	saveGroupMessages,
-	summarizeMessages,
-} from "../openai/index.js";
+import type { GroupMessageEvent } from "@/onebot/schemas/http-post.js";
+import type { Message } from "@/openai/schemas/model.js";
+import { saveGroupMessages } from "../utils/group-messages.js";
+import { removeMostImages, summarizeMessages } from "../utils/optimizations.js";
 
 /**
  * 调用大模型之后的生命周期，用于优化消息数组，保存到本地

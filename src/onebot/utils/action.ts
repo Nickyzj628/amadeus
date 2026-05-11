@@ -1,11 +1,11 @@
 import { sleep } from "@nickyzj2023/utils";
+import { normalizeText } from "@/common/util.js";
 import {
 	type CommonSegment,
 	isTextSegment,
 	type Segment,
-} from "@/schemas/onebot/http-post.js";
-import { normalizeText } from "../common.js";
-import { sendGroupMessage } from "./index.js";
+} from "@/onebot/schemas/http-post.js";
+import { sendGroupMessage } from "./http.js";
 import { textToSegment, userIdToAtSegment } from "./segment.js";
 
 /** 构造回复消息体 */

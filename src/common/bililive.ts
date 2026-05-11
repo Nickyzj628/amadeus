@@ -1,14 +1,14 @@
 import { fetcher, log, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import config from "@/config.js";
-import type { CommonSegment } from "@/schemas/onebot/http-post.js";
+import type { CommonSegment } from "@/onebot/schemas/http-post.js";
+import { sendGroupMessage } from "../onebot/utils/http.js";
+import { srcToImageSegment, textToSegment } from "../onebot/utils/segment.js";
 import {
 	QueryRoomInfoResponseSchema,
 	QueryRoomStatusResponseSchema,
 	type RoomStatus,
-} from "../schemas/bili.js";
-import { sendGroupMessage } from "./onebot/http.js";
-import { srcToImageSegment, textToSegment } from "./onebot/segment.js";
+} from "../openai/schemas/bili.js";
 
 const GROUP_IDS = config.brec?.groupIds ?? [];
 const UIDS = config.brec?.uids ?? [];

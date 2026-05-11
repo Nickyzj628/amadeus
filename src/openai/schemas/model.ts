@@ -1,4 +1,3 @@
-export * from "./chat-completions.js";
 export * from "./message.js";
 
 export type Model = {

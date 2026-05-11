@@ -1,4 +1,4 @@
-import type { FunctionTool } from "@/schemas/openai/tool.js";
+import type { FunctionTool } from "@/openai/schemas/tool.js";
 
 export const defineFunctionTool = (config: FunctionTool) => ({
 	type: "function" as const,

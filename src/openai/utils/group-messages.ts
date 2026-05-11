@@ -1,8 +1,8 @@
 import { LockQueue, log } from "@nickyzj2023/utils";
+import { loadJSON, saveJSON } from "@/common/util.js";
 import config from "@/config.js";
 import { SYSTEM_PROMPT } from "@/constants.js";
-import type { Message } from "@/schemas/openai/index.js";
-import { loadJSON, saveJSON } from "@/utils/common.js";
+import type { Message } from "@/openai/schemas/message.js";
 
 const groupMessagesMap = new Map<number, Message[]>();
 const groupQueueMap = new Map<number, LockQueue>();

@@ -5,9 +5,10 @@ import {
 	IMAGE_UNDERSTANDING_PROMPT,
 	MODELS,
 } from "@/constants.js";
-import type { Message, Model } from "@/schemas/openai/index.js";
-import { openaiTools, toolHandlers } from "@/tools/index.js";
-import { contentToMessage, imageUrlToContentPart, modelRef } from "./index.js";
+import type { Message, Model } from "@/openai/schemas/model.js";
+import { openaiTools, toolHandlers } from "@/openai/tools/index.js";
+import { modelRef } from "@/openai/utils/model.js";
+import { contentToMessage, imageUrlToContentPart } from "./message.js";
 
 /**
  * 传入 OpenAI API 兼容的 messages 数组，返回大模型最终回复内容

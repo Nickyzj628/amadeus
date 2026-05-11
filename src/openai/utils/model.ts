@@ -1,5 +1,5 @@
 import { MODELS } from "@/constants.js";
-import type { Model } from "@/schemas/openai/index.js";
+import type { Model } from "@/openai/schemas/model.js";
 
 /** 当前使用的模型 */
 export const modelRef = {

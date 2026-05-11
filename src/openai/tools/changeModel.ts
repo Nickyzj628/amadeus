@@ -1,6 +1,6 @@
 import { MODELS } from "@/constants.js";
-import { defineFunctionTool } from "@/utils/openai/function-tool.js";
-import { switchModel } from "@/utils/openai/model.js";
+import { defineFunctionTool } from "@/openai/utils/function-tool.js";
+import { switchModel } from "@/openai/utils/model.js";
 
 const findModel = (input: string) => {
 	// 按供应商精准匹配

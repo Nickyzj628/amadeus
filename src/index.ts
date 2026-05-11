@@ -3,25 +3,20 @@ import { extractErrorMessage, log } from "@nickyzj2023/utils";
 import { Hono } from "hono";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { safeParse } from "valibot";
+import { startBiliLiveTimer } from "./common/bililive.js";
 import config from "./config.js";
+import { beforeLLM } from "./onebot/before-llm/index.js";
 import {
 	GroupMessageEventSchema,
 	isAtSelfSegment,
-} from "./schemas/onebot/http-post.js";
-import { afterLLM } from "./utils/after-llm/index.js";
-import { beforeLLM } from "./utils/before-llm/index.js";
-import { startBiliLiveTimer } from "./utils/bililive.js";
-import {
-	makeReplyBody,
-	replyLikeHuman,
-	sendGroupMessage,
-} from "./utils/onebot/index.js";
-import {
-	generateContent,
-	loadGroupMessages,
-	onebotToOpenaiMessages,
-	summarizeMessages,
-} from "./utils/openai/index.js";
+} from "./onebot/schemas/http-post.js";
+import { makeReplyBody, replyLikeHuman } from "./onebot/utils/action.js";
+import { sendGroupMessage } from "./onebot/utils/http.js";
+import { afterLLM } from "./openai/after-llm/index.js";
+import { generateContent } from "./openai/utils/generate-content.js";
+import { loadGroupMessages } from "./openai/utils/group-messages.js";
+import { onebotToOpenaiMessages } from "./openai/utils/message.js";
+import { summarizeMessages } from "./openai/utils/optimizations.js";
 
 if (!config.bot.selfId) {
 	throw new Error("请在 config.ts 文件中填写机器人 QQ 号（bot.selfId）");
@@ -41,9 +36,8 @@ const app = new Hono();
 // 唯一路由
 app.post("/", async (c) => {
 	// 验证请求体格式
-	// 保留了文字、图片、@、转发、回复、小程序消息段
+	// 保留了文字、图片、视频、@、转发、回复、小程序消息段
 	const body = await c.req.json();
-
 	const validation = safeParse(GroupMessageEventSchema, body);
 	if (!validation.success) {
 		return c.newResponse(null, 204);

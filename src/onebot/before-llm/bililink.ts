@@ -1,10 +1,13 @@
 import { fetcher, getRealURL } from "@nickyzj2023/utils";
 import { parse } from "valibot";
-import type { RoomInfo } from "@/schemas/bili.js";
-import { type GetVideoDetail, GetVideoDetailSchema } from "@/schemas/bili.js";
-import { queryRoomInfo } from "../bililive.js";
-import { formatNumberCompact } from "../common.js";
-import { srcToImageSegment, textToSegment } from "../onebot/segment.js";
+import { queryRoomInfo } from "@/common/bililive.js";
+import { formatNumberCompact } from "@/common/util.js";
+import type { RoomInfo } from "@/openai/schemas/bili.js";
+import {
+	type GetVideoDetail,
+	GetVideoDetailSchema,
+} from "@/openai/schemas/bili.js";
+import { srcToImageSegment, textToSegment } from "../utils/segment.js";
 
 const api = fetcher("https://api.bilibili.com/x/web-interface");
 

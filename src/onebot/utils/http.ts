@@ -6,12 +6,12 @@ import {
 	GetGroupFileUrlResponseSchema,
 	GetMessageHistoryResponseSchema,
 	GetMessageResponseSchema,
-} from "@/schemas/onebot/http.js";
+} from "@/onebot/schemas/http.js";
 import {
 	type CommonSegment,
 	isForwardSegment,
 	type MinimalMessageEvent,
-} from "@/schemas/onebot/http-post.js";
+} from "@/onebot/schemas/http-post.js";
 
 const api = fetcher(`http://127.0.0.1:${config.bot.onebotHttpPort}`);
 
