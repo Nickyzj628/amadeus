@@ -4,8 +4,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
-		"build": "tsdown && copyfiles -u 1 src/prompts/*.md dist-test/",
-		"build:prod": "tsdown --out-dir dist && copyfiles -u 1 src/prompts/*.md dist/",
+		"build": "tsdown && copyfiles -u 1 src/openai/prompts/*.md dist-test/openai/",
+		"build:prod": "tsdown --out-dir dist && copyfiles -u 1 src/openai/prompts/*.md dist/openai/",
 		"start": "node dist-test/index.mjs",
 		"start:prod": "node dist/index.mjs",
 		"check": "biome check --diagnostic-level=error --write src/"

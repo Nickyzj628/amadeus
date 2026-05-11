@@ -116,21 +116,23 @@ export const compressImage = async (
 
 	let buffer: Buffer;
 
-	// 如果是网络地址，则下载
-	if (typeof input === "string" && /^https?:\/\//.test(input)) {
-		const [error, response] = await to(fetch(input));
-		if (error) {
-			return null;
+	if (typeof input === "string") {
+		// 如果是网络地址，则下载
+		if (/^https?:\/\//.test(input)) {
+			const [error, response] = await to(fetch(input));
+			if (error) {
+				return null;
+			}
+			buffer = Buffer.from(await response.arrayBuffer());
 		}
-		buffer = Buffer.from(await response.arrayBuffer());
-	}
-	// 如果是本地地址，则读取
-	else if (typeof input === "string" && input.startsWith("file://")) {
-		buffer = await readFile(fileURLToPath(input));
-	}
-	// TODO: 判断更多地址格式
-	else if (typeof input === "string") {
-		buffer = await readFile(input);
+		// 如果是本地文件，则读取
+		else if (input.startsWith("file://")) {
+			buffer = await readFile(fileURLToPath(input));
+		}
+		// TODO: 补充更多字符串格式判断
+		else {
+			buffer = await readFile(input);
+		}
 	}
 	// 如果是 ArrayBuffer，则转成 sharp 支持的 Buffer 类型
 	else if (input instanceof ArrayBuffer) {
