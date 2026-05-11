@@ -1,5 +1,5 @@
 import { to } from "@nickyzj2023/utils";
-import { uploadToWebdav } from "@/common/util.js";
+import { compressImage, uploadToWebdav } from "@/common/util.js";
 import {
 	isAtSegment,
 	isForwardSegment,
@@ -119,18 +119,23 @@ export const onebotToOpenaiMessages = async (
 			bodyItems.push(segment.data.text);
 		}
 		// 图片
-		// - 对于多模态，使用上传到 WebDav 后的图片 URL
-		// - 对于纯语言模型，使用多模态翻译后的自然语言
 		else if (isImageSegment(segment)) {
 			let result: string | null | undefined = "";
 
-			const tempImageUrl = segment.data.url;
-			if (modelInputModalities.includes("image")) {
-				const [error, url] = await to(uploadToWebdav(tempImageUrl));
-				result = url;
-			} else {
-				const [error, text] = await to(imageUrlToText(tempImageUrl));
-				result = text;
+			// 1. 压缩到 720P、10MB 以内
+			const [, optimizedImage] = await to(compressImage(segment.data.url));
+			if (optimizedImage) {
+				// 2. 上传到 WebDav
+				const [, url] = await to(uploadToWebdav(optimizedImage));
+				if (url) {
+					// 3. 对于多模态，使用 WebDav URL；对于纯语言模型，使用多模态处理后的自然语言
+					if (modelInputModalities.includes("image")) {
+						result = url;
+					} else {
+						const [, text] = await to(imageUrlToText(url));
+						result = text;
+					}
+				}
 			}
 
 			imageItems.push(result || "[无法识别图片]");
