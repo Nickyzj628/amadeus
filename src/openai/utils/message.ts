@@ -1,5 +1,6 @@
 import { to } from "@nickyzj2023/utils";
-import { compressImage, uploadToWebdav } from "@/common/util.js";
+import { compressImage } from "@/common/util.js";
+import { checkSameFileName, uploadToWebdav } from "@/common/webdav.js";
 import {
 	isAtSegment,
 	isForwardSegment,
@@ -120,21 +121,31 @@ export const onebotToOpenaiMessages = async (
 		}
 		// 图片
 		else if (isImageSegment(segment)) {
-			let result: string | null | undefined = "";
+			const { file, url: tempUrl } = segment.data;
+			let result: string | undefined = "";
 
-			// 1. 压缩到 720P、10MB 以内
-			const [, optimizedImage] = await to(compressImage(segment.data.url));
-			if (optimizedImage) {
-				// 2. 上传到 WebDav
-				const [, url] = await to(uploadToWebdav(optimizedImage));
-				if (url) {
-					// 3. 对于多模态，使用 WebDav URL；对于纯语言模型，使用多模态处理后的自然语言
-					if (modelInputModalities.includes("image")) {
-						result = url;
-					} else {
-						const [, text] = await to(imageUrlToText(url));
-						result = text;
+			// 0. 检查 WebDav 是否存在相同图片
+			let webdavUrl = file ? await checkSameFileName(file) : "";
+			if (!webdavUrl) {
+				// 1. 压缩到 720P、10MB 以内
+				const [, optimizedImage] = await to(compressImage(tempUrl));
+				if (optimizedImage) {
+					// 2. 上传到 WebDav
+					const [, tempUrl2] = await to(uploadToWebdav(optimizedImage));
+					if (tempUrl2) {
+						webdavUrl = tempUrl2;
 					}
+				}
+			}
+			if (webdavUrl) {
+				// 3. 对于多模态，使用 WebDav URL
+				if (modelInputModalities.includes("image")) {
+					result = webdavUrl;
+				}
+				// 对于纯语言模型，使用多模态处理后的自然语言
+				else {
+					const [, text] = await to(imageUrlToText(webdavUrl));
+					result = text;
 				}
 			}
 
