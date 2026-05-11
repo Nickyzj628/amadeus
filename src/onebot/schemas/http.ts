@@ -17,7 +17,9 @@ import {
 	SenderSchema,
 } from "./http-post.js";
 
-/** 创建通用响应 Schema */
+/**
+ * 创建通用响应 Schema
+ */
 const createResponseSchema = <TSchema extends GenericSchema>(
 	dataSchema: TSchema,
 ) => {
@@ -29,7 +31,9 @@ const createResponseSchema = <TSchema extends GenericSchema>(
 	});
 };
 
-/** POST /get_forawrd_msg 结果 */
+/**
+ * POST /get_forawrd_msg 结果
+ */
 export const GetForwardMessageResponseSchema = createResponseSchema(
 	object({
 		messages: array(
@@ -43,39 +47,40 @@ export const GetForwardMessageResponseSchema = createResponseSchema(
 		),
 	}),
 );
-
 export type GetForwardMessageResponse = InferOutput<
 	typeof GetForwardMessageResponseSchema
 >;
-
 export type ForwardMessage =
 	GetForwardMessageResponse["data"]["messages"][number];
 
-/** POST /get_group_msg_history 结果 */
+/**
+ * POST /get_group_msg_history 结果
+ */
 export const GetMessageHistoryResponseSchema = createResponseSchema(
 	object({
 		messages: array(GroupMessageEventSchema),
 	}),
 );
-
 export type GetMessageHistoryResponse = InferOutput<
 	typeof GetMessageHistoryResponseSchema
 >;
 
-/** POST /get_msg 结果 */
+/**
+ * POST /get_msg 结果
+ */
 export const GetMessageResponseSchema = createResponseSchema(
 	GroupMessageEventSchema,
 );
-
 export type GetMessageResponse = InferOutput<typeof GetMessageResponseSchema>;
 
-/** POST /get_group_file_url 结果 */
+/**
+ * POST /get_group_file_url 结果
+ */
 export const GetGroupFileUrlResponseSchema = createResponseSchema(
 	object({
 		url: string(),
 	}),
 );
-
 export type GetGroupFileUrlResponse = InferOutput<
 	typeof GetGroupFileUrlResponseSchema
 >;

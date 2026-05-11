@@ -1,7 +1,7 @@
 import { fetcher, log, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import config from "@/config.js";
-import type { CommonSegment } from "@/onebot/schemas/http-post.js";
+import type { Segment } from "@/onebot/schemas/http-post.js";
 import { sendGroupMessage } from "../onebot/utils/http.js";
 import { srcToImageSegment, textToSegment } from "../onebot/utils/segment.js";
 import {
@@ -122,7 +122,7 @@ const checkAndSend = async () => {
 		const segments = [
 			room.changedField === "live_status" && srcToImageSegment(imgUrl),
 			textToSegment(`${room.uname}${action}：${room.title}\n${roomUrl}`),
-		].filter(Boolean) as CommonSegment[];
+		].filter(Boolean) as Segment[];
 
 		// 推送到群里
 		for (const groupId of GROUP_IDS) {

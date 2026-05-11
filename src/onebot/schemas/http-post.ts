@@ -3,7 +3,6 @@
 // @see https://github.com/botuniverse/onebot-11/blob/master/event/message.md
 // ================================
 
-import { isNil } from "@nickyzj2023/utils";
 import {
 	array,
 	type InferOutput,
@@ -15,34 +14,71 @@ import {
 	string,
 	transform,
 	union,
-	unknown,
 } from "valibot";
 import { normalizeText } from "@/common/util.js";
 import config from "@/config.js";
 
-// ================================
-// 纯文本消息段
-// ================================
-
+/**
+ * 纯文本消息段
+ */
 export const TextSegmentSchema = object({
 	type: literal("text"),
 	data: object({
 		text: string(),
 	}),
 });
-
 export type TextSegment = InferOutput<typeof TextSegmentSchema>;
-
-export const isTextSegment = (
-	segment?: CommonSegment,
-): segment is TextSegment => {
-	return !isNil(segment) && segment.type === "text";
+export const isTextSegment = (segment?: Segment): segment is TextSegment => {
+	return segment?.type === "text";
 };
 
-// ================================
-// @某人消息段
-// ================================
+/**
+ * 图片消息段
+ */
+export const ImageSegmentSchema = object({
+	type: literal("image"),
+	data: object({
+		file: optional(string()),
+		subType: optional(number()),
+		url: string(),
+		/** 单位字节 */
+		file_size: optional(string()),
+	}),
+});
+export type ImageSegment = InferOutput<typeof ImageSegmentSchema>;
+export const isImageSegment = (segment?: Segment): segment is ImageSegment => {
+	return segment?.type === "image";
+};
 
+/**
+ * 文件消息段
+ */
+export const FileSegmentSchema = object({
+	type: literal("file"),
+	data: object({
+		file: string(),
+		file_id: string(),
+		/** 单位字节 */
+		file_size: string(),
+	}),
+});
+export type FileSegment = InferOutput<typeof FileSegmentSchema>;
+export const isFileSegment = (segment?: Segment): segment is FileSegment => {
+	return segment?.type === "file";
+};
+
+/**
+ * 视频消息段（文件消息段.data.file.endsWith(".mp4")）
+ */
+export type VideoSegment = InferOutput<typeof FileSegmentSchema>;
+export const isVideoSegment = (segment?: Segment): segment is VideoSegment => {
+	if (!isFileSegment(segment)) {
+		return false;
+	}
+	return segment.data.file.endsWith(".mp4");
+};
+
+/** @某人消息段 */
 export const AtSegmentSchema = object({
 	type: literal("at"),
 	data: object({
@@ -50,144 +86,66 @@ export const AtSegmentSchema = object({
 		qq: string(),
 	}),
 });
-
 export type AtSegment = InferOutput<typeof AtSegmentSchema>;
-
-export const isAtSegment = (segment?: CommonSegment): segment is AtSegment => {
-	return !isNil(segment) && segment.type === "at";
+export const isAtSegment = (segment?: Segment): segment is AtSegment => {
+	return segment?.type === "at";
 };
-
-export const isAtSelfSegment = (
-	segment?: CommonSegment,
-): segment is AtSegment => {
+export const isAtSelfSegment = (segment?: Segment): segment is AtSegment => {
 	const selfId = Number(config.bot.selfId);
 	return isAtSegment(segment) && Number(segment.data.qq) === selfId;
 };
 
-// ================================
-// 合并转发消息段
-// ================================
-
+/**
+ * 合并转发消息段
+ */
 export const ForwardSegmentSchema = object({
 	type: literal("forward"),
 	data: object({
-		/** 合并转发 ID，需通过 get_forward_msg API 获取具体内容 */
+		/** 合并转发 ID，可通过 get_forward_msg API 获取具体转发内容 */
 		id: string(),
 	}),
 });
-
 export type ForwardSegment = InferOutput<typeof ForwardSegmentSchema>;
-
 export const isForwardSegment = (
-	segment?: CommonSegment,
+	segment?: Segment,
 ): segment is ForwardSegment => {
-	return !isNil(segment) && segment.type === "forward";
+	return segment?.type === "forward";
 };
 
-// ================================
-// 图片消息段
-// ================================
-
-export const ImageSegmentSchema = object({
-	type: literal("image"),
-	data: object({
-		file: optional(string()),
-		subType: optional(number()),
-		url: string(),
-		file_size: optional(string()),
-	}),
-});
-
-export type ImageSegment = InferOutput<typeof ImageSegmentSchema>;
-
-export const isImageSegment = (
-	segment?: CommonSegment,
-): segment is ImageSegment => {
-	return !isNil(segment) && segment.type === "image";
-};
-
-// ================================
-// 回复消息段
-// ================================
-
+/**
+ * 回复消息段
+ */
 export const ReplySegmentSchema = object({
 	type: literal("reply"),
 	data: object({
-		/** 要回复的消息 ID，需通过 /get_msg API 获取具体内容 */
+		/** 回复的消息 ID，可通过 /get_msg API 获取具体回复内容 */
 		id: string(),
 	}),
 });
-
 export type ReplySegment = InferOutput<typeof ReplySegmentSchema>;
-
-export const isReplySegment = (
-	segment?: CommonSegment,
-): segment is ReplySegment => {
-	return !isNil(segment) && segment.type === "reply";
+export const isReplySegment = (segment?: Segment): segment is ReplySegment => {
+	return segment?.type === "reply";
 };
 
-// ================================
-// 小程序消息段
-// ================================
-
+/**
+ * 小程序消息段
+ */
 export const MiniProgramSegmentSchema = object({
 	type: literal("json"),
 	data: object({
 		data: string(),
 	}),
 });
-
 export type MiniProgramSegment = InferOutput<typeof MiniProgramSegmentSchema>;
-
 export const isMiniProgramSegment = (
-	segment?: CommonSegment,
+	segment?: Segment,
 ): segment is MiniProgramSegment => {
-	return !isNil(segment) && segment.type === "json";
+	return segment?.type === "json";
 };
 
-// ================================
-// 文件（视频）消息段
-// ================================
-
-export const FileSegmentSchema = object({
-	type: literal("file"),
-	data: object({
-		file: string(),
-		file_id: string(),
-		file_size: string(),
-	}),
-});
-
-export type FileSegment = InferOutput<typeof FileSegmentSchema>;
-
-export type VideoSegment = InferOutput<typeof FileSegmentSchema>;
-
-export const isFileSegment = (
-	segment?: CommonSegment,
-): segment is FileSegment => {
-	return !isNil(segment) && segment.type === "file";
-};
-
-export const isVideoSegment = (
-	segment?: CommonSegment,
-): segment is VideoSegment => {
-	if (!isFileSegment(segment)) {
-		return false;
-	}
-	return segment.data.file.endsWith(".mp4");
-};
-
-// ================================
-// 通用消息段
-// ================================
-
-export const CommonSegmentSchema = object({
-	type: string(),
-	data: unknown(),
-});
-
-export type CommonSegment = InferOutput<typeof CommonSegmentSchema>;
-
+/**
+ * 通用消息段
+ */
 export const SegmentSchema = union([
 	TextSegmentSchema,
 	AtSegmentSchema,
@@ -195,21 +153,24 @@ export const SegmentSchema = union([
 	ImageSegmentSchema,
 	ReplySegmentSchema,
 	FileSegmentSchema,
+	MiniProgramSegmentSchema,
 ]);
-
 export type Segment = InferOutput<typeof SegmentSchema>;
 
-/** 发送人信息 */
+/**
+ * 发送人信息
+ */
 export const SenderSchema = object({
 	/** 发送者 QQ 号 */
 	user_id: number(),
 	/** 昵称 */
 	nickname: string(),
 });
-
 export type Sender = InferOutput<typeof SenderSchema>;
 
-/** 群消息事件 */
+/**
+ * 群消息事件
+ */
 export const GroupMessageEventSchema = object({
 	/** 收到事件的机器人 QQ 号 */
 	self_id: number(),
@@ -223,7 +184,7 @@ export const GroupMessageEventSchema = object({
 	message_id: number(),
 	/** 消息段数组 */
 	message: pipe(
-		array(CommonSegmentSchema),
+		array(SegmentSchema),
 		// 过滤不支持的消息段类型和空文本消息
 		transform((segments) =>
 			segments.filter((segment) => {
@@ -248,10 +209,12 @@ export const GroupMessageEventSchema = object({
 	/** 发送人信息 */
 	sender: SenderSchema,
 });
-
 export type GroupMessageEvent = InferOutput<typeof GroupMessageEventSchema>;
 
+/**
+ * 大多数事件所需的最小 event 属性
+ */
 export type MinimalMessageEvent = Pick<
 	GroupMessageEvent,
-	"message" | "sender" | "group_id"
+	"group_id" | "sender" | "message"
 >;

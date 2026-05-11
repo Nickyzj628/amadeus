@@ -1,10 +1,6 @@
 import { sleep } from "@nickyzj2023/utils";
 import { normalizeText } from "@/common/util.js";
-import {
-	type CommonSegment,
-	isTextSegment,
-	type Segment,
-} from "@/onebot/schemas/http-post.js";
+import { isTextSegment, type Segment } from "@/onebot/schemas/http-post.js";
 import { sendGroupMessage } from "./http.js";
 import { textToSegment, userIdToAtSegment } from "./segment.js";
 
@@ -40,7 +36,7 @@ export const replyLikeHuman = async (
 	const paragraphs = content.split("\n").filter(Boolean);
 	for (let i = 0; i < paragraphs.length; i++) {
 		const paragraph = paragraphs[i]!;
-		const segments: CommonSegment[] = [textToSegment(paragraph)];
+		const segments: Segment[] = [textToSegment(paragraph)];
 
 		// 如果是第一段话，且传递 at 参数，则 @ 发送人
 		if (i === 0 && options?.at) {

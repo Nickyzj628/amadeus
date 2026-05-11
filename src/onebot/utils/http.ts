@@ -8,9 +8,9 @@ import {
 	GetMessageResponseSchema,
 } from "@/onebot/schemas/http.js";
 import {
-	type CommonSegment,
 	isForwardSegment,
 	type MinimalMessageEvent,
+	type Segment,
 } from "@/onebot/schemas/http-post.js";
 
 const api = fetcher(`http://127.0.0.1:${config.bot.onebotHttpPort}`);
@@ -126,10 +126,7 @@ export const getFileUrl = async (groupId: number, fileId: string) => {
  * 发送群聊文本消息
  * @see https://api.luckylillia.com/api-226300081
  */
-export const sendGroupMessage = async (
-	groupId: number,
-	message: CommonSegment[],
-) => {
+export const sendGroupMessage = async (groupId: number, message: Segment[]) => {
 	return api.post("/send_group_msg", {
 		group_id: groupId,
 		message,
