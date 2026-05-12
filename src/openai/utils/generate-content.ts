@@ -67,7 +67,11 @@ export const generateContent = async (
 			...model.extraBody,
 		},
 	);
-	log(["思考内容", compactStr(reasoningContent)]);
+
+	// 打印对话数据
+	if (reasoningContent) {
+		log(["思考内容", compactStr(reasoningContent)]);
+	}
 	log(["回复内容", compactStr(content)]);
 	log(["本轮消耗", usage]);
 	console.timeEnd("对话响应时间");
