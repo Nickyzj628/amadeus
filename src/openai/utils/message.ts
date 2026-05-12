@@ -168,32 +168,37 @@ export const onebotToOpenaiMessages = async (
 		// - 对于多模态，使用上传到 WebDav 后的视频 URL
 		// - 对于纯语言模型，用“无法识别视频”占位
 		else if (isVideoSegment(segment)) {
-			const fallbackItem = "[无法识别视频]";
+			const { file: filename, file_id: id } = segment.data;
+			const fallbackItem = "[不具备视频理解能力，无法识别]";
 
 			if (!modelInputModalities.includes("video")) {
 				videoItems.push(fallbackItem);
 				continue;
 			}
 
-			// 1. 读取视频
-			const [error, fileUrl] = await to(
-				getFileUrl(groupId, segment.data.file_id),
-			);
-			if (error) {
-				log(`获取视频失败：${error.message}`);
-				videoItems.push(fallbackItem);
-				continue;
-			}
+			// 1. 检查 WebDav 是否存在相同视频
+			let webdavUrl = filename ? await checkSameFileName(filename) : "";
+			if (!webdavUrl) {
+				// 2. 读取视频
+				const [error, fileUrl] = await to(
+					getFileUrl(groupId, segment.data.file_id),
+				);
+				if (error) {
+					log(`获取视频失败：${error.message}`);
+					videoItems.push(fallbackItem);
+					continue;
+				}
 
-			// 2. 上传到 WebDav
-			const [error2, webdavUrl] = await to(uploadToWebdav(fileUrl));
-			if (error2) {
-				log(`上传视频失败：${error2.message}`);
-				videoItems.push(fallbackItem);
-				continue;
+				// 3. 上传到 WebDav
+				const [error2, url] = await to(uploadToWebdav(fileUrl, { filename }));
+				if (error2) {
+					log(`上传视频失败：${error2.message}`);
+					videoItems.push(fallbackItem);
+					continue;
+				}
+				webdavUrl = url;
 			}
-
-			// 3. 使用 WebDav URL
+			// 4. 使用 WebDav URL
 			videoItems.push(webdavUrl);
 		}
 		// @ 某人
