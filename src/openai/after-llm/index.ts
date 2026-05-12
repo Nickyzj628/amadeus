@@ -1,6 +1,6 @@
+import type { ChatCompletions } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import type { GroupMessageEvent } from "@/onebot/schemas/http-post.js";
-import type { Message } from "@/openai/schemas/model.js";
 import { saveGroupMessages } from "../utils/group-messages.js";
 import { removeMostImages, summarizeMessages } from "../utils/optimizations.js";
 
@@ -9,7 +9,7 @@ import { removeMostImages, summarizeMessages } from "../utils/optimizations.js";
  */
 export const afterLLM = async (
 	e: GroupMessageEvent,
-	messages: Message[],
+	messages: ChatCompletions.Message[],
 	info?: {
 		isTokenNearLimit?: boolean;
 	},

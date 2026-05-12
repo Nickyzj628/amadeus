@@ -1,4 +1,4 @@
-import { log, to } from "@nickyzj2023/utils";
+import { type ChatCompletions, log, to } from "@nickyzj2023/utils";
 import { compressImage } from "@/common/util.js";
 import { checkSameFileName, uploadToWebdav } from "@/common/webdav.js";
 import {
@@ -13,37 +13,34 @@ import {
 import { getFileUrl, getMessage } from "@/onebot/utils/http.js";
 import { flattenForwardSegment } from "@/onebot/utils/segment.js";
 import { modelRef } from "@/openai/utils/model.js";
-import type {
-	Message,
-	MessageContentImage,
-	MessageContentVideo,
-} from "../schemas/message.js";
 import { imageUrlToText } from "./generate-content.js";
 
 /** 构造 OpenAI API 消息对象 */
 export const contentToMessage = (
-	content: Message["content"],
+	content: ChatCompletions.Message["content"],
 	options?: {
 		/**
 		 * 指定消息对应的角色
 		 * @default "user"
 		 */
-		role?: Message["role"];
+		role?: ChatCompletions.Message["role"];
 		/** 指定消息对应的工具调用 ID */
 		tool_call_id?: string;
 	},
-) => {
+): ChatCompletions.Message => {
 	const { role = "user", ...restOptions } = options ?? {};
 
 	return {
 		role,
 		content,
 		...restOptions,
-	} as Message;
+	};
 };
 
 /** 构造 OpenAI API 图片类型的消息 content[] 字段 */
-export const imageUrlToContentPart = (url: string): MessageContentImage => {
+export const imageUrlToContentPart = (
+	url: string,
+): ChatCompletions.ContentPart => {
 	return {
 		type: "image_url",
 		image_url: {
@@ -53,7 +50,9 @@ export const imageUrlToContentPart = (url: string): MessageContentImage => {
 };
 
 /** 构造 OpenAI API 视频类型的消息 content[] 字段 */
-export const videoUrlToContentPart = (url: string): MessageContentVideo => {
+export const videoUrlToContentPart = (
+	url: string,
+): ChatCompletions.ContentPart => {
 	return {
 		type: "video_url",
 		video_url: {
@@ -90,7 +89,7 @@ export const onebotToOpenaiMessages = async (
 		/** 是否为被引用的上下文消息 */
 		isQuoted?: boolean;
 	},
-): Promise<Message[]> => {
+): Promise<ChatCompletions.Message[]> => {
 	const {
 		sender: { nickname, user_id },
 		group_id: groupId,
@@ -109,7 +108,7 @@ export const onebotToOpenaiMessages = async (
 	const videoItems: string[] = [];
 
 	const mentionedUserIds: string[] = [];
-	const quotedMessages: Message[] = [];
+	const quotedMessages: ChatCompletions.Message[] = [];
 
 	const modelInputModalities = modelRef.value?.inputModalities ?? [];
 
@@ -171,7 +170,7 @@ export const onebotToOpenaiMessages = async (
 			const { file: filename, file_id: id } = segment.data;
 			const fallbackItem = "[不具备视频理解能力，无法识别]";
 
-			if (!modelInputModalities.includes("video")) {
+			if (!modelInputModalities.includes("video") || !groupId) {
 				videoItems.push(fallbackItem);
 				continue;
 			}

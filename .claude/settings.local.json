@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm biome *)"
+      "Bash(pnpm biome *)",
+      "Bash(pnpm check *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

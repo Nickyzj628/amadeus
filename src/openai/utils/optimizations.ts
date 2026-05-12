@@ -1,14 +1,13 @@
-import { log, to } from "@nickyzj2023/utils";
+import { type ChatCompletions, log, to } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "@/constants.js";
-import type { Message } from "../schemas/message.js";
 import { generateContent } from "./generate-content.js";
 import { contentToMessage } from "./message.js";
 
 /** 移除消息中的图片，只保留最后一张 */
-export const removeMostImages = (messages: Message[]) => {
+export const removeMostImages = (messages: ChatCompletions.Message[]) => {
 	// 收集所有包含图片的消息
-	const imageMessages: Message[] = [];
+	const imageMessages: ChatCompletions.Message[] = [];
 	for (const message of messages) {
 		if (
 			message &&
@@ -42,7 +41,9 @@ export const removeMostImages = (messages: Message[]) => {
  * @param messages 原始消息数组，会被本函数修改
  * @remarks 如果总结失败，则不改变原始数组
  */
-export const summarizeMessages = async (messages: Message[]) => {
+export const summarizeMessages = async (
+	messages: ChatCompletions.Message[],
+) => {
 	// 从第一条用户消息开始总结
 	const startIndex = messages.findIndex((message) => message.role === "user");
 
@@ -68,7 +69,7 @@ export const summarizeMessages = async (messages: Message[]) => {
 
 	// 开始总结
 	// 使用 for 循环依次请求，而不是用 Promise.all，原因是部分模型对并发请求有严格限制
-	const summarizedMessages: Message[] = [];
+	const summarizedMessages: ChatCompletions.Message[] = [];
 	for (const chunk of summarizingMessagesChunks) {
 		chunk.push(contentToMessage(SUMMARIZE_PROMPT));
 

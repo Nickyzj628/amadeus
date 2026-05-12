@@ -214,7 +214,6 @@ export type GroupMessageEvent = InferOutput<typeof GroupMessageEventSchema>;
 /**
  * 大多数事件所需的最小 event 属性
  */
-export type MinimalMessageEvent = Pick<
-	GroupMessageEvent,
-	"group_id" | "sender" | "message"
->;
+export type MinimalMessageEvent =
+	& Pick<GroupMessageEvent, "sender" | "message">
+	& Partial<Omit<GroupMessageEvent, "sender" | "message">>;

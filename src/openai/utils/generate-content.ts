@@ -1,11 +1,16 @@
-import { chatCompletions, compactStr, log } from "@nickyzj2023/utils";
+import {
+	type ChatCompletions,
+	chatCompletions,
+	compactStr,
+	log,
+} from "@nickyzj2023/utils";
 import config from "@/config.js";
 import {
 	IDENTITY_ANCHOR,
 	IMAGE_UNDERSTANDING_PROMPT,
 	MODELS,
 } from "@/constants.js";
-import type { Message, Model } from "@/openai/schemas/model.js";
+import type { Model } from "@/openai/schemas/model.js";
 import { openaiTools, toolHandlers } from "@/openai/tools/index.js";
 import { modelRef } from "@/openai/utils/model.js";
 import { contentToMessage, imageUrlToContentPart } from "./message.js";
@@ -15,7 +20,7 @@ import { contentToMessage, imageUrlToContentPart } from "./message.js";
  * @remarks 没有可用的模型/请求失败时会抛出异常
  */
 export const generateContent = async (
-	messages: Message[],
+	messages: ChatCompletions.Message[],
 	options?: {
 		/** 默认使用当前模型发请求，可临时更改 */
 		model?: Model;
