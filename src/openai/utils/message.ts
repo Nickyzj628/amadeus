@@ -1,4 +1,4 @@
-import { to } from "@nickyzj2023/utils";
+import { log, to } from "@nickyzj2023/utils";
 import { compressImage } from "@/common/util.js";
 import { checkSameFileName, uploadToWebdav } from "@/common/webdav.js";
 import {
@@ -113,7 +113,9 @@ export const onebotToOpenaiMessages = async (
 
 	const modelInputModalities = modelRef.value?.inputModalities ?? [];
 
-	// 解析消息段数组
+	/**
+	 * 解析消息段数组
+	 */
 	for (const segment of e.message) {
 		// 文字
 		if (isTextSegment(segment)) {
@@ -121,54 +123,78 @@ export const onebotToOpenaiMessages = async (
 		}
 		// 图片
 		else if (isImageSegment(segment)) {
-			const { file, url: tempUrl } = segment.data;
-			let result: string | undefined = "";
+			const { file: filename, url: tempUrl } = segment.data;
+			const fallbackItem = "[无法识别图片]";
 
-			// 0. 检查 WebDav 是否存在相同图片
-			let webdavUrl = file ? await checkSameFileName(file) : "";
+			// 1. 检查 WebDav 是否存在相同图片
+			let webdavUrl = filename ? await checkSameFileName(filename) : "";
 			if (!webdavUrl) {
-				// 1. 压缩到 720P、10MB 以内
-				const [, optimizedImage] = await to(compressImage(tempUrl));
-				if (optimizedImage) {
-					// 2. 上传到 WebDav
-					const [, tempUrl2] = await to(uploadToWebdav(optimizedImage));
-					if (tempUrl2) {
-						webdavUrl = tempUrl2;
-					}
+				// 2. 压缩到 720P、10MB 以内
+				const [error, optimizedImage] = await to(compressImage(tempUrl));
+				if (error) {
+					log(`图片压缩失败：${error.message}`);
+					imageItems.push(fallbackItem);
+					continue;
 				}
-			}
-			if (webdavUrl) {
-				// 3. 对于多模态，使用 WebDav URL
-				if (modelInputModalities.includes("image")) {
-					result = webdavUrl;
+
+				// 3. 上传到 WebDav
+				const [error2, tempUrl2] = await to(
+					uploadToWebdav(optimizedImage, { filename }),
+				);
+				if (error2) {
+					log(`图片上传失败：${error2.message}`);
+					imageItems.push(fallbackItem);
+					continue;
 				}
-				// 对于纯语言模型，使用多模态处理后的自然语言
-				else {
-					const [, text] = await to(imageUrlToText(webdavUrl));
-					result = text;
-				}
+				webdavUrl = tempUrl2;
 			}
 
-			imageItems.push(result || "[无法识别图片]");
+			// 4. 对于多模态，使用 WebDav URL
+			if (modelInputModalities.includes("image")) {
+				imageItems.push(webdavUrl);
+			}
+			// 对于纯语言模型，使用多模态处理后的自然语言
+			else {
+				const [error3, text] = await to(imageUrlToText(webdavUrl));
+				if (error3) {
+					log(`图片翻译失败：${error3.message}`);
+					imageItems.push(fallbackItem);
+					continue;
+				}
+				imageItems.push(text);
+			}
 		}
 		// 视频
 		// - 对于多模态，使用上传到 WebDav 后的视频 URL
 		// - 对于纯语言模型，用“无法识别视频”占位
 		else if (isVideoSegment(segment)) {
-			let result: string | null | undefined = "";
+			const fallbackItem = "[无法识别视频]";
 
-			const tempFile = segment.data;
-			if (modelInputModalities.includes("video")) {
-				const [error, fileUrl] = await to(
-					getFileUrl(groupId, tempFile.file_id),
-				);
-				if (fileUrl) {
-					const [error2, webdavUrl] = await to(uploadToWebdav(fileUrl));
-					result = webdavUrl;
-				}
+			if (!modelInputModalities.includes("video")) {
+				videoItems.push(fallbackItem);
+				continue;
 			}
 
-			videoItems.push(result || "[无法识别视频]");
+			// 1. 读取视频
+			const [error, fileUrl] = await to(
+				getFileUrl(groupId, segment.data.file_id),
+			);
+			if (error) {
+				log(`获取视频失败：${error.message}`);
+				videoItems.push(fallbackItem);
+				continue;
+			}
+
+			// 2. 上传到 WebDav
+			const [error2, webdavUrl] = await to(uploadToWebdav(fileUrl));
+			if (error2) {
+				log(`上传视频失败：${error2.message}`);
+				videoItems.push(fallbackItem);
+				continue;
+			}
+
+			// 3. 使用 WebDav URL
+			videoItems.push(webdavUrl);
 		}
 		// @ 某人
 		else if (isAtSegment(segment)) {
@@ -202,7 +228,9 @@ export const onebotToOpenaiMessages = async (
 		}
 	}
 
-	// 把散落的消息合并为一个复合数组返回
+	/**
+	 * 把散落的消息合并为一个复合数组返回
+	 */
 	return [
 		// 上下文消息
 		...quotedMessages,

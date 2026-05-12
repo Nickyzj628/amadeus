@@ -39,7 +39,7 @@ export const uploadToWebdav = async (
 		/** 指定文件名，默认根据 content-type 自动生成 */
 		filename?: string;
 	},
-): Promise<string | null> => {
+) => {
 	const { baseUrl = WEBDAV_BASE, filename } = options ?? {};
 
 	const EXT_MIME_PAIRS: [string, string][] = [

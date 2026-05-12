@@ -90,7 +90,7 @@ export const get = (obj: Record<string, any>, path: string) => {
  * 使用 sharp 压缩图片
  * @param input 网络地址，或任何 sharp 支持的类型
  * @param options 压缩参数，默认压到 720P、10MB 以内
- * @returns
+ * @remarks 失败时抛出异常
  */
 export const compressImage = async (
 	input: string | Buffer | ArrayBuffer,
@@ -106,7 +106,7 @@ export const compressImage = async (
 		 */
 		maxHeight?: number;
 	},
-): Promise<string | null> => {
+) => {
 	const { maxSize = 10 * 1024 * 1024, maxHeight = 720 } = options ?? {};
 	const qualities = [90, 80, 70, 60, 50];
 
@@ -119,10 +119,7 @@ export const compressImage = async (
 	if (typeof input === "string") {
 		// 如果是网络地址，则下载
 		if (/^https?:\/\//.test(input)) {
-			const [error, response] = await to(fetch(input));
-			if (error) {
-				return null;
-			}
+			const response = await fetch(input);
 			buffer = Buffer.from(await response.arrayBuffer());
 		}
 		// 如果是本地文件，则读取
