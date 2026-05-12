@@ -2,7 +2,7 @@ import { access, constants, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { to } from "@nickyzj2023/utils";
+import { log } from "@nickyzj2023/utils";
 import sharp from "sharp";
 
 /** 从项目目录中读取 JSON 配置 */
@@ -49,6 +49,17 @@ export const formatNumberCompact = (num: number) => {
 	}).format(num);
 };
 
+/** 将字节数转换为人类可读的字符串，例如 1024 => 1 KB */
+export const formatBytes = (bytes: number) => {
+	if (bytes >= 1024 * 1024) {
+		return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+	}
+	if (bytes >= 1024) {
+		return `${(bytes / 1024).toFixed(2)} KB`;
+	}
+	return `${bytes} B`;
+};
+
 /**
  * 移除文本中的不自然内容：
  * - 思考标签
@@ -89,7 +100,7 @@ export const get = (obj: Record<string, any>, path: string) => {
 /**
  * 使用 sharp 压缩图片
  * @param input 网络地址，或任何 sharp 支持的类型
- * @param options 压缩参数，默认压到 720P、10MB 以内
+ * @param options 压缩参数，默认压到 720P、10MB 以内（尽力）
  * @remarks 失败时抛出异常
  */
 export const compressImage = async (
@@ -108,7 +119,6 @@ export const compressImage = async (
 	},
 ) => {
 	const { maxSize = 10 * 1024 * 1024, maxHeight = 720 } = options ?? {};
-	const qualities = [90, 80, 70, 60, 50];
 
 	/**
 	 * 转换 input 为 buffer
@@ -144,10 +154,11 @@ export const compressImage = async (
 	 * 压制 buffer
 	 */
 
-	let image = sharp(buffer);
+	const metadata = await sharp(buffer).metadata();
+	const isAnimated = (metadata.pages ?? 1) > 1;
+	let image = sharp(buffer, { animated: isAnimated });
 
-	const metadata = await image.metadata();
-	if (metadata.height > maxHeight) {
+	if (metadata.height && metadata.height > maxHeight) {
 		image = image.resize({
 			height: maxHeight,
 			fit: "inside",
@@ -155,15 +166,18 @@ export const compressImage = async (
 		});
 	}
 
-	let outputBuffer = await image.jpeg({ quality: qualities[0] }).toBuffer();
-	for (const quality of qualities.slice(1)) {
+	let outputBuffer = await image.webp({ quality: 90 }).toBuffer();
+	for (let quality = 80; quality >= 40; quality -= 10) {
 		if (outputBuffer.length <= maxSize) {
+			log(
+				`压缩了一张图片：${formatBytes(metadata.size ?? 0)} => ${formatBytes(outputBuffer.length)}`,
+			);
 			break;
 		}
-		outputBuffer = await image.jpeg({ quality }).toBuffer();
+		outputBuffer = await image.webp({ quality }).toBuffer();
 	}
 
-	const tempPath = join(tmpdir(), `amadeus-${Date.now()}.jpg`);
+	const tempPath = join(tmpdir(), `amadeus-${Date.now()}.webp`);
 	await writeFile(tempPath, outputBuffer);
 	return `file://${tempPath}`;
 };

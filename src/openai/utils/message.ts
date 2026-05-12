@@ -122,11 +122,12 @@ export const onebotToOpenaiMessages = async (
 		}
 		// 图片
 		else if (isImageSegment(segment)) {
-			const { file: filename, url: tempUrl } = segment.data;
+			const { file = "", url: tempUrl } = segment.data;
+			const [filename, ext] = file.split(".");
 			const fallbackItem = "[无法识别图片]";
 
 			// 1. 检查 WebDav 是否存在相同图片
-			let webdavUrl = filename ? await checkSameFileName(filename) : "";
+			let webdavUrl = filename ? await checkSameFileName(`${filename}.webp`) : "";
 			if (!webdavUrl) {
 				// 2. 压缩到 720P、10MB 以内
 				const [error, optimizedImage] = await to(compressImage(tempUrl));
@@ -137,8 +138,11 @@ export const onebotToOpenaiMessages = async (
 				}
 
 				// 3. 上传到 WebDav
+				const optimizedImageExt = optimizedImage.split(".").pop() ?? "webp";
 				const [error2, tempUrl2] = await to(
-					uploadToWebdav(optimizedImage, { filename }),
+					uploadToWebdav(optimizedImage, {
+						filename: `${filename}.${optimizedImageExt}`,
+					}),
 				);
 				if (error2) {
 					log(`图片上传失败：${error2.message}`);
