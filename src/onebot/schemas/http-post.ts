@@ -78,6 +78,29 @@ export const isVideoSegment = (segment?: Segment): segment is VideoSegment => {
 	return segment.data.file.endsWith(".mp4");
 };
 
+/**
+ * 音频消息段
+ */
+export const AudioSegmentSchema = object({
+	type: literal("record"),
+	data: object({
+		file: string(),
+		/** 临时地址，会过期 */
+		url: string(),
+		/**
+		 * 本地文件路径
+		 * @example "C:\\Users\\Administrator\\Documents\\Tencent Files\\3696448148\\nt_qq\\nt_data\\Ptt\\2026-05\\Ori\\eb103aa19edc119800182322413b3c7c.amr"
+		 */
+		path: string(),
+		/** 单位字节 */
+		file_size: string(),
+	}),
+});
+export type AudioSegment = InferOutput<typeof AudioSegmentSchema>;
+export const isAudioSegment = (segment?: Segment): segment is AudioSegment => {
+	return segment?.type === "record";
+};
+
 /** @某人消息段 */
 export const AtSegmentSchema = object({
 	type: literal("at"),
@@ -148,11 +171,12 @@ export const isMiniProgramSegment = (
  */
 export const SegmentSchema = union([
 	TextSegmentSchema,
+	ImageSegmentSchema,
+	FileSegmentSchema,
+	AudioSegmentSchema,
 	AtSegmentSchema,
 	ForwardSegmentSchema,
-	ImageSegmentSchema,
 	ReplySegmentSchema,
-	FileSegmentSchema,
 	MiniProgramSegmentSchema,
 ]);
 export type Segment = InferOutput<typeof SegmentSchema>;
@@ -214,6 +238,8 @@ export type GroupMessageEvent = InferOutput<typeof GroupMessageEventSchema>;
 /**
  * 大多数事件所需的最小 event 属性
  */
-export type MinimalMessageEvent =
-	& Pick<GroupMessageEvent, "sender" | "message">
-	& Partial<Omit<GroupMessageEvent, "sender" | "message">>;
+export type MinimalMessageEvent = Pick<
+	GroupMessageEvent,
+	"sender" | "message"
+> &
+	Partial<Omit<GroupMessageEvent, "sender" | "message">>;
