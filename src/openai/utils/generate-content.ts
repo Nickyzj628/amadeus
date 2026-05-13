@@ -53,7 +53,6 @@ export const generateContent = async (
 	 * 发出请求
 	 */
 
-	console.time("对话响应时间");
 	const { reasoningContent, content, usage } = await chatCompletions(
 		{
 			baseUrl: model.baseUrl,
@@ -74,7 +73,6 @@ export const generateContent = async (
 	}
 	log(["回复内容", compactStr(content)]);
 	log(["本轮消耗", usage]);
-	console.timeEnd("对话响应时间");
 	console.log();
 
 	return {

@@ -6,6 +6,7 @@ import {
 	GetGroupFileUrlResponseSchema,
 	GetMessageHistoryResponseSchema,
 	GetMessageResponseSchema,
+	GetRecordResponseSchema,
 } from "@/onebot/schemas/http.js";
 import {
 	isForwardSegment,
@@ -120,6 +121,23 @@ export const getFileUrl = async (groupId: number, fileId: string) => {
 	}
 
 	return validation.output.data.url;
+};
+
+/**
+ * 获取消息语音详情
+ * @see https://api.luckylillia.com/api-151571424
+ */
+export const getRecord = async (file: string) => {
+	const response = await api.post("/get_record", {
+		file,
+	});
+
+	const validation = safeParse(GetRecordResponseSchema, response);
+	if (!validation.success) {
+		throw new Error(validation.issues[0].message);
+	}
+
+	return validation.output.data;
 };
 
 /**

@@ -3,6 +3,7 @@ import { compressImage } from "@/common/util.js";
 import { checkSameFileName, uploadToWebdav } from "@/common/webdav.js";
 import {
 	isAtSegment,
+	isAudioSegment,
 	isForwardSegment,
 	isImageSegment,
 	isReplySegment,
@@ -10,7 +11,7 @@ import {
 	isVideoSegment,
 	type MinimalMessageEvent,
 } from "@/onebot/schemas/http-post.js";
-import { getFileUrl, getMessage } from "@/onebot/utils/http.js";
+import { getFileUrl, getMessage, getRecord } from "@/onebot/utils/http.js";
 import { flattenForwardSegment } from "@/onebot/utils/segment.js";
 import { modelRef } from "@/openai/utils/model.js";
 import { imageUrlToText } from "./generate-content.js";
@@ -61,6 +62,20 @@ export const videoUrlToContentPart = (
 	};
 };
 
+/** 构造 OpenAI API 视频类型的消息 content[] 字段 */
+export const audioBase64ToContentPart = (
+	data: string,
+	format: "mp3" | "wav",
+): ChatCompletions.ContentPart => {
+	return {
+		type: "input_audio",
+		input_audio: {
+			data,
+			format,
+		},
+	};
+};
+
 /** 构造标签字符串 */
 const createTagText = (
 	tagName: string,
@@ -106,6 +121,7 @@ export const onebotToOpenaiMessages = async (
 
 	const imageItems: string[] = [];
 	const videoItems: string[] = [];
+	const audioItems: string[] = [];
 
 	const mentionedUserIds: string[] = [];
 	const quotedMessages: ChatCompletions.Message[] = [];
@@ -167,7 +183,7 @@ export const onebotToOpenaiMessages = async (
 		// - 对于多模态，使用上传到 WebDav 后的视频 URL
 		// - 对于纯语言模型，用“无法识别视频”占位
 		else if (isVideoSegment(segment)) {
-			const { file: filename, file_id: id } = segment.data;
+			const { file: filename, file_id: fileId } = segment.data;
 			const fallbackItem = "[不具备视频理解能力，无法识别]";
 
 			if (!modelInputModalities.includes("video") || !groupId) {
@@ -179,9 +195,7 @@ export const onebotToOpenaiMessages = async (
 			let webdavUrl = filename ? await checkSameFileName(filename) : "";
 			if (!webdavUrl) {
 				// 2. 读取视频
-				const [error, fileUrl] = await to(
-					getFileUrl(groupId, segment.data.file_id),
-				);
+				const [error, fileUrl] = await to(getFileUrl(groupId, fileId));
 				if (error) {
 					log(`获取视频失败：${error.message}`);
 					videoItems.push(fallbackItem);
@@ -199,6 +213,42 @@ export const onebotToOpenaiMessages = async (
 			}
 			// 4. 使用 WebDav URL
 			videoItems.push(webdavUrl);
+		}
+		// 音频
+		// - 对于多模态，使用上传到 WebDav 后的视频 URL
+		// - 对于纯语言模型，用“无法识别视频”占位
+		else if (isAudioSegment(segment)) {
+			const { file: filename, path } = segment.data;
+			const fallbackItem = "[不具备音频理解能力，无法识别]";
+
+			if (!modelInputModalities.includes("audio")) {
+				audioItems.push(fallbackItem);
+				continue;
+			}
+
+			// 1. 检查 WebDav 是否存在相同音频
+			let webdavUrl = filename ? await checkSameFileName(filename) : "";
+			if (!webdavUrl) {
+				// 2. 读取音频
+				const [error, record] = await to(getRecord(filename));
+				if (error) {
+					log(`读取音频失败：${error.message}`);
+					audioItems.push(fallbackItem);
+					continue;
+				}
+				// 3. 上传到 WebDav
+				const [error2, url] = await to(
+					uploadToWebdav(record.file, { filename }),
+				);
+				if (error2) {
+					log(`上传音频失败：${error2.message}`);
+					audioItems.push(fallbackItem);
+					continue;
+				}
+				webdavUrl = url;
+			}
+			// 4. 使用 WebDav URL
+			audioItems.push(webdavUrl);
 		}
 		// @ 某人
 		else if (isAtSegment(segment)) {
@@ -250,6 +300,16 @@ export const onebotToOpenaiMessages = async (
 		}),
 		// 当前视频消息
 		...videoItems.map((item) => {
+			const content = item.startsWith("http")
+				? [videoUrlToContentPart(item)]
+				: createTagText("video", item, {
+						sender_id: user_id,
+						sender_name: nickname,
+					});
+			return contentToMessage(content);
+		}),
+		// 当前音频消息
+		...audioItems.map((item) => {
 			const content = item.startsWith("http")
 				? [videoUrlToContentPart(item)]
 				: createTagText("video", item, {

@@ -84,3 +84,16 @@ export const GetGroupFileUrlResponseSchema = createResponseSchema(
 export type GetGroupFileUrlResponse = InferOutput<
 	typeof GetGroupFileUrlResponseSchema
 >;
+
+/**
+ * POST /get_record 结果
+ */
+export const GetRecordResponseSchema = createResponseSchema(
+	object({
+		file: string(),
+		file_size: string(),
+		file_name: string(),
+		base64: string(),
+	}),
+);
+export type GetRecordResponse = InferOutput<typeof GetRecordResponseSchema>;
