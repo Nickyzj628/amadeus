@@ -93,7 +93,6 @@ export const GetRecordResponseSchema = createResponseSchema(
 		file: string(),
 		file_size: string(),
 		file_name: string(),
-		base64: string(),
 	}),
 );
 export type GetRecordResponse = InferOutput<typeof GetRecordResponseSchema>;

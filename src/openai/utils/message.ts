@@ -143,7 +143,9 @@ export const onebotToOpenaiMessages = async (
 			const fallbackItem = "[无法识别图片]";
 
 			// 1. 检查 WebDav 是否存在相同图片
-			let webdavUrl = filename ? await checkSameFileName(`${filename}.webp`) : "";
+			let webdavUrl = filename
+				? await checkSameFileName(`${filename}.webp`)
+				: "";
 			if (!webdavUrl) {
 				// 2. 压缩到 720P、10MB 以内
 				const [error, optimizedImage] = await to(compressImage(tempUrl));
@@ -231,7 +233,9 @@ export const onebotToOpenaiMessages = async (
 			}
 
 			// 1. 检查 WebDav 是否存在相同音频
-			let webdavUrl = filename ? await checkSameFileName(filename) : "";
+			let webdavUrl = filename
+				? await checkSameFileName(`${filename}.wav`)
+				: "";
 			if (!webdavUrl) {
 				// 2. 读取音频
 				const [error, record] = await to(getRecord(filename));
@@ -242,7 +246,7 @@ export const onebotToOpenaiMessages = async (
 				}
 				// 3. 上传到 WebDav
 				const [error2, url] = await to(
-					uploadToWebdav(record.file, { filename }),
+					uploadToWebdav(record.file, { filename: record.file_name }),
 				);
 				if (error2) {
 					log(`上传音频失败：${error2.message}`);

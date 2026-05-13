@@ -221,11 +221,12 @@ export const GroupMessageEventSchema = object({
 					return true;
 				}
 				return (
-					isAtSegment(segment) ||
-					isForwardSegment(segment) ||
 					isImageSegment(segment) ||
+					isVideoSegment(segment) ||
+					isAudioSegment(segment) ||
+					isAtSegment(segment) ||
 					isReplySegment(segment) ||
-					isVideoSegment(segment)
+					isForwardSegment(segment)
 				);
 			}),
 		),
