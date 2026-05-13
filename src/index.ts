@@ -78,6 +78,7 @@ app.post("/", async (c) => {
 		// 转换消息到 OpenAI API 兼容格式
 		const currentMessages = await onebotToOpenaiMessages(e);
 		messages.push(...currentMessages);
+		console.log(JSON.stringify(currentMessages, null, 2));
 
 		// 拦截不是 @ 自己的消息，但有极小概率放行
 		if (!isAtSelf && Math.random() > config.etc.replyProbabilityNotAt) {

@@ -63,14 +63,14 @@ export const videoUrlToContentPart = (
 };
 
 /** 构造 OpenAI API 视频类型的消息 content[] 字段 */
-export const audioBase64ToContentPart = (
-	data: string,
-	format: "mp3" | "wav",
+export const audioUrlToContentPart = (
+	url: string,
+	format = "wav", // 不要用 mp3，POST get_record 时会报错
 ): ChatCompletions.ContentPart => {
 	return {
 		type: "input_audio",
 		input_audio: {
-			data,
+			url,
 			format,
 		},
 	};
@@ -104,7 +104,7 @@ export const onebotToOpenaiMessages = async (
 		/** 是否为被引用的上下文消息 */
 		isQuoted?: boolean;
 	},
-): Promise<ChatCompletions.Message[]> => {
+) => {
 	const {
 		sender: { nickname, user_id },
 		group_id: groupId,
@@ -319,7 +319,7 @@ export const onebotToOpenaiMessages = async (
 		// 当前音频消息
 		...audioItems.map((item) => {
 			const content = item.startsWith("http")
-				? [videoUrlToContentPart(item)]
+				? [audioUrlToContentPart(item)]
 				: createTagText("video", item, {
 						sender_id: user_id,
 						sender_name: nickname,
@@ -327,17 +327,18 @@ export const onebotToOpenaiMessages = async (
 			return contentToMessage(content);
 		}),
 		// 当前消息
-		contentToMessage(
-			createTagText(
-				"message",
-				`${isQuoted ? createTagText("is_quoted", isQuoted) : ""}
+		bodyItems.length > 0 &&
+			contentToMessage(
+				createTagText(
+					"message",
+					`${isQuoted ? createTagText("is_quoted", isQuoted) : ""}
 				${createTagText("user_id", user_id)}
 				${createTagText("user_name", nickname)}
 				${createTagText("body", bodyItems.join("\n").trim())}
 				${mentionedUserIds.length > 0 ? createTagText("mentioned_user_ids", mentionedUserIds.join(",")) : ""}
 				${createTagText("time", new Date().toLocaleString())}
 				`.replace(/\t+/g, ""),
+				),
 			),
-		),
-	];
+	].filter(Boolean) as ChatCompletions.Message[];
 };
