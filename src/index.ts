@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { createServer } from "node:http";
 import { extractErrorMessage, log } from "@nickyzj2023/utils";
 import { createServerAdapter } from "@whatwg-node/server";
@@ -28,13 +29,15 @@ if (!config.bot.onebotHttpPostPort) {
 	);
 }
 
-// 显式启用代理
-const proxyAgent = new ProxyAgent("http://127.0.0.1:7890");
-setGlobalDispatcher(proxyAgent);
+// 启用代理
+const proxy = execSync("npm config get proxy").toString().trim();
+if (proxy) {
+	const proxyAgent = new ProxyAgent(proxy);
+	setGlobalDispatcher(proxyAgent);
+}
 
+// 创建唯一路由
 const router = AutoRouter();
-
-// 唯一路由
 router.post("/", withContent, async (req) => {
 	// 验证请求体格式
 	// 保留了文字、图片、视频、@、转发、回复、小程序消息段
