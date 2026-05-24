@@ -1,6 +1,7 @@
-import { serve } from "@hono/node-server";
+import { createServer } from "node:http";
 import { extractErrorMessage, log } from "@nickyzj2023/utils";
-import { Hono } from "hono";
+import { createServerAdapter } from "@whatwg-node/server";
+import { AutoRouter, json, status, withContent } from "itty-router";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { safeParse } from "valibot";
 import { startBiliLiveTimer } from "./common/bililive.js";
@@ -31,22 +32,21 @@ if (!config.bot.onebotHttpPostPort) {
 const proxyAgent = new ProxyAgent("http://127.0.0.1:7890");
 setGlobalDispatcher(proxyAgent);
 
-const app = new Hono();
+const router = AutoRouter();
 
 // 唯一路由
-app.post("/", async (c) => {
+router.post("/", withContent, async (req) => {
 	// 验证请求体格式
 	// 保留了文字、图片、视频、@、转发、回复、小程序消息段
-	const body = await c.req.json();
-	const validation = safeParse(GroupMessageEventSchema, body);
+	const validation = safeParse(GroupMessageEventSchema, req.content);
 	if (!validation.success) {
-		return c.newResponse(null, 204);
+		return status(204);
 	}
 
 	// 过滤空消息
 	const e = validation.output;
 	if (!e.message.length) {
-		return c.newResponse(null, 204);
+		return status(204);
 	}
 
 	// 读取群聊消息
@@ -68,17 +68,15 @@ app.post("/", async (c) => {
 		const directlySegments = await beforeLLM(e);
 		if (directlySegments.length > 0) {
 			if (isAtSelf) {
-				return c.json(makeReplyBody(...directlySegments));
-			} else {
-				sendGroupMessage(groupId, directlySegments);
-				return c.newResponse(null, 204);
+				return json(makeReplyBody(...directlySegments));
 			}
+			sendGroupMessage(groupId, directlySegments);
+			return status(204);
 		}
 
 		// 转换消息到 OpenAI API 兼容格式
 		const currentMessages = await onebotToOpenaiMessages(e);
 		messages.push(...currentMessages);
-		console.log(JSON.stringify(currentMessages, null, 2));
 
 		// 拦截不是 @ 自己的消息，但有极小概率放行
 		if (!isAtSelf && Math.random() > config.etc.replyProbabilityNotAt) {
@@ -107,7 +105,7 @@ app.post("/", async (c) => {
 		if (errorMsg) {
 			log(`抛出了一个异常：${errorMsg}`);
 			if (isAtSelf) {
-				return c.json(makeReplyBody(` ${errorMsg}`));
+				return json(makeReplyBody(` ${errorMsg}`));
 			}
 		}
 	} finally {
@@ -120,34 +118,34 @@ app.post("/", async (c) => {
 		}
 	}
 
-	return c.newResponse(null, 204);
+	return status(204);
 });
 
 // 其他路由返回 204 空响应
-app.all("*", (c) => {
-	return c.newResponse(null, 204);
-});
+// app.use((req, res) => {
+// 	res.status(204).end();
+// });
 
-const server = serve({
-	fetch: app.fetch,
-	port: config.bot.onebotHttpPostPort,
+// 启动 HTTP 服务器
+const ittyServer = createServerAdapter(router.fetch);
+const server = createServer(ittyServer);
+server.listen(config.bot.onebotHttpPostPort);
+server.on("listening", () => {
+	log(["服务器已启动", server.address()]);
 });
 
 // 启动B站直播推送定时器
 const stopBiliLiveTimer = startBiliLiveTimer();
 
+// 退出程序
 const onShutdown = async (signal: string) => {
 	log(`收到${signal}信号，正在关闭服务器...`);
 	// 关闭 brec 定时器
 	stopBiliLiveTimer();
-	// 关闭 hono 服务器
+	// 关闭 http 服务器
 	server.close(() => {
 		process.exit(0);
 	});
 };
-
-server.on("listening", () => {
-	log(["服务器已启动", server.address()]);
-});
 process.on("SIGINT", onShutdown);
 process.on("SIGTERM", onShutdown);

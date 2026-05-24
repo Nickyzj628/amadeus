@@ -11,19 +11,18 @@
     "check": "biome check --diagnostic-level=error --write src/"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@nickyzj2023/utils": "^1.0.71",
-    "hono": "^4.12.18",
+    "@nickyzj2023/utils": "^1.0.72",
+    "@whatwg-node/server": "^0.10.18",
+    "itty-router": "^5.0.23",
     "sharp": "^0.34.5",
-    "undici": "^8.2.0",
+    "undici": "^8.3.0",
     "valibot": "^1.4.0"
   },
   "devDependencies": {
-    "@types/node": "^25.6.2",
+    "@types/node": "^25.9.1",
     "copyfiles": "^2.4.1",
     "tsdown": "^0.22.0",
-    "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }
 }
