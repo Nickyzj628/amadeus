@@ -1,4 +1,4 @@
-import { log } from "@nickyzj2023/utils";
+import { logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { MCPRouter } from "@/openai/utils/mcp.js";
 import changeModel from "./changeModel.js";
@@ -6,8 +6,7 @@ import decodeAbbr from "./decodeAbbr.js";
 import getWeather from "./getWeather.js";
 
 const functionTools = [changeModel, getWeather, decodeAbbr];
-log(["已启用 Function Calling Tools", functionTools.map((tool) => tool)]);
-console.log();
+logger("已启用 Function Calling Tools", functionTools.map((tool) => tool), "\n");
 
 const mcpRouter = new MCPRouter();
 await Promise.all(
@@ -18,8 +17,7 @@ await Promise.all(
 	}),
 );
 const mcpOpenAITools = await mcpRouter.getOpenAITools();
-log(["已启用 MCP Tools", ...mcpOpenAITools]);
-console.log();
+logger("已启用 MCP Tools", ...mcpOpenAITools, "\n");
 
 /**
  * 可直接传入 OpenAI API /chat-completions 的 tools 请求体
@@ -37,10 +35,10 @@ export const toolHandlers = Object.fromEntries(
 			return [
 				name,
 				async (args: any) => {
-					log(`调用工具${name}(${JSON.stringify(args)})`);
+					logger(`调用工具${name}(${JSON.stringify(args)})`);
 
 					const result = await tool.function._handler!(args);
-					log(result);
+					logger(result);
 
 					return result;
 				},

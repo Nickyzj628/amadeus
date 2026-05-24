@@ -1,4 +1,4 @@
-import { type ChatCompletions, LockQueue, log } from "@nickyzj2023/utils";
+import { type ChatCompletions, LockQueue, logger } from "@nickyzj2023/utils";
 import { loadJSON, saveJSON } from "@/common/util.js";
 import config from "@/config.js";
 import { SYSTEM_PROMPT } from "@/constants.js";
@@ -61,10 +61,10 @@ export const loadGroupMessages = async (
 			saveJSON(`/data/${groupId}.json`, messages)
 				.then(() => {
 					groupMessagesMap.delete(groupId);
-					log(`释放了${groupId}的消息内存`);
+					logger(`释放了${groupId}的消息内存`);
 				})
 				.catch((e) => {
-					log(`释放${groupId}的消息内存失败：${e.message}`);
+					logger(`释放${groupId}的消息内存失败：${e.message}`);
 				});
 		}
 	}

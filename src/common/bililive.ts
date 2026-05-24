@@ -1,4 +1,4 @@
-import { fetcher, log, to } from "@nickyzj2023/utils";
+import { fetcher, logger, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import config from "@/config.js";
 import type { Segment } from "@/onebot/schemas/http-post.js";
@@ -64,14 +64,14 @@ export const queryRoomInfo = async (roomId: number | string) => {
 
 const checkAndSend = async () => {
 	if (!GROUP_IDS.length || !UIDS.length) {
-		log("未配置 brec.groupIds / brec.roomIds");
+		logger("未配置 brec.groupIds / brec.roomIds");
 		return;
 	}
 
 	// 批量查询直播间状态
 	const [error, info] = await to(queryRoomInfoMapByUids(UIDS));
 	if (error) {
-		log(error.message);
+		logger(error.message);
 		return;
 	}
 
@@ -84,7 +84,7 @@ const checkAndSend = async () => {
 
 			// 初始化直播间状态，不推送通知
 			if (!prevRoomStatus) {
-				log(`初始化直播间：${roomId}（${room.uname}）`);
+				logger(`初始化直播间：${roomId}（${room.uname}）`);
 				return result;
 			}
 
@@ -128,7 +128,7 @@ const checkAndSend = async () => {
 		for (const groupId of GROUP_IDS) {
 			const [error] = await to(sendGroupMessage(groupId, segments));
 			if (error) {
-				log(`直播推送失败：${error.message}`);
+				logger(`直播推送失败：${error.message}`);
 				break;
 			}
 		}
@@ -141,7 +141,7 @@ export const startBiliLiveTimer = () => {
 		checkAndSend();
 	}, INTERVAL_MS);
 
-	log("直播推送定时器已启动");
+	logger("直播推送定时器已启动");
 	return () => {
 		clearInterval(timer);
 	};

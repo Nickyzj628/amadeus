@@ -2,7 +2,7 @@ import {
 	type ChatCompletions,
 	chatCompletions,
 	compactStr,
-	log,
+	logger,
 } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import {
@@ -69,11 +69,10 @@ export const generateContent = async (
 
 	// 打印对话数据
 	if (reasoningContent) {
-		log(["思考内容", compactStr(reasoningContent)]);
+		logger("思考内容", compactStr(reasoningContent));
 	}
-	log(["回复内容", compactStr(content)]);
-	log(["本轮消耗", usage]);
-	console.log();
+	logger("回复内容", compactStr(content));
+	logger("本轮消耗", usage, "\n");
 
 	return {
 		content,

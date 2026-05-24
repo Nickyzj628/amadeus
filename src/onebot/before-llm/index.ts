@@ -1,4 +1,4 @@
-import { log } from "@nickyzj2023/utils";
+import { logger } from "@nickyzj2023/utils";
 import type { GroupMessageEvent, Segment } from "@/onebot/schemas/http-post.js";
 import { resolveBiliLink } from "./bililink.js";
 
@@ -22,7 +22,7 @@ export const beforeLLM = async (e: GroupMessageEvent): Promise<Segment[]> => {
 
 		// ...扩展出更多功能
 	} catch (error) {
-		log(`beforeLLM抛出异常：${error}`);
+		logger(`beforeLLM抛出异常：${error}`);
 	}
 
 	return [];

@@ -2,7 +2,7 @@ import { access, constants, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { log } from "@nickyzj2023/utils";
+import { logger } from "@nickyzj2023/utils";
 import sharp from "sharp";
 
 /** 从项目目录中读取 JSON 配置 */
@@ -169,7 +169,7 @@ export const compressImage = async (
 	let outputBuffer = await image.webp({ quality: 90 }).toBuffer();
 	for (let quality = 80; quality >= 40; quality -= 10) {
 		if (outputBuffer.length <= maxSize) {
-			log(
+			logger(
 				`压缩了一张图片：${formatBytes(metadata.size ?? 0)} => ${formatBytes(outputBuffer.length)}`,
 			);
 			break;

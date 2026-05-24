@@ -1,4 +1,4 @@
-import { type ChatCompletions, log, to } from "@nickyzj2023/utils";
+import { type ChatCompletions, logger, to } from "@nickyzj2023/utils";
 import { compressImage } from "@/common/util.js";
 import { checkSameFileName, uploadToWebdav } from "@/common/webdav.js";
 import {
@@ -150,7 +150,7 @@ export const onebotToOpenaiMessages = async (
 				// 2. 压缩到 720P、10MB 以内
 				const [error, optimizedImage] = await to(compressImage(tempUrl));
 				if (error) {
-					log(`图片压缩失败：${error.message}`);
+					logger(`图片压缩失败：${error.message}`);
 					imageItems.push(fallbackItem);
 					continue;
 				}
@@ -163,7 +163,7 @@ export const onebotToOpenaiMessages = async (
 					}),
 				);
 				if (error2) {
-					log(`图片上传失败：${error2.message}`);
+					logger(`图片上传失败：${error2.message}`);
 					imageItems.push(fallbackItem);
 					continue;
 				}
@@ -178,7 +178,7 @@ export const onebotToOpenaiMessages = async (
 			else {
 				const [error3, text] = await to(imageUrlToText(webdavUrl));
 				if (error3) {
-					log(`图片翻译失败：${error3.message}`);
+					logger(`图片翻译失败：${error3.message}`);
 					imageItems.push(fallbackItem);
 					continue;
 				}
@@ -203,7 +203,7 @@ export const onebotToOpenaiMessages = async (
 				// 2. 读取视频
 				const [error, fileUrl] = await to(getFileUrl(groupId, fileId));
 				if (error) {
-					log(`获取视频失败：${error.message}`);
+					logger(`获取视频失败：${error.message}`);
 					videoItems.push(fallbackItem);
 					continue;
 				}
@@ -211,7 +211,7 @@ export const onebotToOpenaiMessages = async (
 				// 3. 上传到 WebDav
 				const [error2, url] = await to(uploadToWebdav(fileUrl, { filename }));
 				if (error2) {
-					log(`上传视频失败：${error2.message}`);
+					logger(`上传视频失败：${error2.message}`);
 					videoItems.push(fallbackItem);
 					continue;
 				}
@@ -240,7 +240,7 @@ export const onebotToOpenaiMessages = async (
 				// 2. 读取音频
 				const [error, record] = await to(getRecord(filename));
 				if (error) {
-					log(`读取音频失败：${error.message}`);
+					logger(`读取音频失败：${error.message}`);
 					audioItems.push(fallbackItem);
 					continue;
 				}
@@ -249,7 +249,7 @@ export const onebotToOpenaiMessages = async (
 					uploadToWebdav(record.file, { filename: record.file_name }),
 				);
 				if (error2) {
-					log(`上传音频失败：${error2.message}`);
+					logger(`上传音频失败：${error2.message}`);
 					audioItems.push(fallbackItem);
 					continue;
 				}

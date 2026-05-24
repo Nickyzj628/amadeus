@@ -1,4 +1,4 @@
-import { fetcher, log, to } from "@nickyzj2023/utils";
+import { fetcher, logger, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import config from "@/config.js";
 import {
@@ -78,7 +78,7 @@ export const getForwardMessages = async (
 ): Promise<MinimalMessageEvent[]> => {
 	const [error, response] = await to(getForwardMessage(messageId));
 	if (error) {
-		log(`查询合并转发消息失败：${error.message}`);
+		logger(`查询合并转发消息失败：${error.message}`);
 		return [];
 	}
 

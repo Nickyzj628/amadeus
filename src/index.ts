@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { createServer } from "node:http";
-import { extractErrorMessage, log } from "@nickyzj2023/utils";
+import { extractErrorMessage, logger } from "@nickyzj2023/utils";
 import { createServerAdapter } from "@whatwg-node/server";
 import { AutoRouter, json, status, withContent } from "itty-router";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -86,7 +86,7 @@ router.post("/", withContent, async (req) => {
 			throw new Error();
 		}
 
-		log(["处理消息", e.message]);
+		logger("处理消息", e.message);
 		const { content, ...info } = await generateContent(messages);
 		if (!content) {
 			throw new Error("模型生成了空消息，可能是故障或无语了");
@@ -106,7 +106,7 @@ router.post("/", withContent, async (req) => {
 	} catch (error) {
 		const errorMsg = extractErrorMessage(error);
 		if (errorMsg) {
-			log(`抛出了一个异常：${errorMsg}`);
+			logger(`抛出了一个异常：${errorMsg}`);
 			if (isAtSelf) {
 				return json(makeReplyBody(` ${errorMsg}`));
 			}
@@ -134,7 +134,7 @@ const ittyServer = createServerAdapter(router.fetch);
 const server = createServer(ittyServer);
 server.listen(config.bot.onebotHttpPostPort);
 server.on("listening", () => {
-	log(["服务器已启动", server.address()]);
+	logger("服务器已启动", server.address());
 });
 
 // 启动B站直播推送定时器
@@ -142,7 +142,7 @@ const stopBiliLiveTimer = startBiliLiveTimer();
 
 // 退出程序
 const onShutdown = async (signal: string) => {
-	log(`收到${signal}信号，正在关闭服务器...`);
+	logger(`收到${signal}信号，正在关闭服务器...`);
 	// 关闭 brec 定时器
 	stopBiliLiveTimer();
 	// 关闭 http 服务器

@@ -12,8 +12,8 @@ importers:
         specifier: ^1.29.0
         version: 1.29.0(zod@4.3.6)
       '@nickyzj2023/utils':
-        specifier: ^1.0.72
-        version: 1.0.72
+        specifier: ^1.0.73
+        version: 1.0.73
       '@whatwg-node/server':
         specifier: ^0.10.18
         version: 0.10.18
@@ -275,8 +275,8 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@nickyzj2023/utils@1.0.72':
-    resolution: {integrity: sha512-BnUgI2UKcn2vuxoL7leuUMQqXVR2SPgENcC6QyuP4CZgIvx1XHReP2yUQemyLOe37h8RQG+B466HO1MOV9ynFA==}
+  '@nickyzj2023/utils@1.0.73':
+    resolution: {integrity: sha512-nE3kP6UVbLBaJG8LnT6s18BXHXZ17gIC21Z5AFUH2aAuqw9kuglXft2keOnx7T0wgiA7uKrUB5LAznjXScS7kg==}
 
   '@oxc-project/types@0.132.0':
     resolution: {integrity: sha512-FESMOxil5Se014ui/Eq8fT5uHJo6nIRwH0PfJrZJXs6Gek3ZVFOrpUv3YIZT20m+extU98Hg1Ym72U58rlsxUQ==}
@@ -1293,7 +1293,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
-  '@nickyzj2023/utils@1.0.72': {}
+  '@nickyzj2023/utils@1.0.73': {}
 
   '@oxc-project/types@0.132.0': {}
 

@@ -1,4 +1,4 @@
-import { type ChatCompletions, log, to } from "@nickyzj2023/utils";
+import { type ChatCompletions, logger, to } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "@/constants.js";
 import { generateContent } from "./generate-content.js";
@@ -33,7 +33,7 @@ export const removeMostImages = (messages: ChatCompletions.Message[]) => {
 		}
 	}
 
-	log(`已移除${imageMessages.length - 1}张图片，保留了最后1张`);
+	logger(`已移除${imageMessages.length - 1}张图片，保留了最后1张`);
 };
 
 /**
@@ -65,7 +65,7 @@ export const summarizeMessages = async (
 			);
 		},
 	);
-	log(`准备总结前${count}条消息，分${summarizingMessagesChunks.length}次进行`);
+	logger(`准备总结前${count}条消息，分${summarizingMessagesChunks.length}次进行`);
 
 	// 开始总结
 	// 使用 for 循环依次请求，而不是用 Promise.all，原因是部分模型对并发请求有严格限制
