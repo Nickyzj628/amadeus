@@ -25,15 +25,10 @@ const regexp =
  * @remarks 解析失败会抛出异常
  * @returns 解析后的干净链接 + 视频详情或直播详情 组成的对象
  */
-export const resolveBiliLink = async (
-	text: string,
-	options?: { shouldToSegments: boolean },
-) => {
-	const { shouldToSegments = false } = options ?? {};
-
+export const resolveBiliLink = async (text: string) => {
 	const link = text.match(regexp)?.[0];
 	if (!link) {
-		return;
+		throw new Error(`链接格式解析失败：${link}`);
 	}
 
 	// 还原短链接
@@ -43,10 +38,8 @@ export const resolveBiliLink = async (
 	if (url.pathname.includes("/video/BV")) {
 		// 使用bv号获取详情
 		const bv = url.pathname.match(/BV[a-zA-Z0-9]+/)?.[0];
-		const { data } = parse(
-			GetVideoDetailSchema,
-			await api.get(`/view?bvid=${bv}`),
-		);
+		const videoDetail = await api.get(`/view?bvid=${bv}`);
+		const { data } = parse(GetVideoDetailSchema, videoDetail);
 
 		// 解析链接中携带的分p、空降参数
 		const params = [];
@@ -58,7 +51,6 @@ export const resolveBiliLink = async (
 		return {
 			url: `${url.origin}${url.pathname}${params.length > 0 ? `?${params.join("&")}` : ""}`,
 			videoDetail: data,
-			segments: shouldToSegments ? videoDetailToSegments(data) : [],
 		};
 	}
 	// 解析直播
@@ -70,9 +62,10 @@ export const resolveBiliLink = async (
 		return {
 			url: `${url.origin}${url.pathname}`,
 			roomInfo,
-			segments: shouldToSegments ? roomInfoToSegments(roomInfo) : [],
 		};
 	}
+
+	throw new Error(`不支持的URL：${url.href}`);
 };
 
 export const videoDetailToSegments = (videoDetail: GetVideoDetail["data"]) => {
@@ -105,7 +98,7 @@ export const roomInfoToSegments = (roomInfo: RoomInfo) => {
 	} = roomInfo;
 
 	return [
-		srcToImageSegment(live_status === 1 ? keyframe || user_cover : user_cover),
+		srcToImageSegment(keyframe /** || user_cover */),
 		textToSegment(
 			[
 				title,
@@ -115,5 +108,5 @@ export const roomInfoToSegments = (roomInfo: RoomInfo) => {
 				`https://live.bilibili.com/${short_id || room_id}`,
 			].join("\n"),
 		),
-	];
+	].filter(Boolean);
 };

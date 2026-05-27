@@ -24,12 +24,14 @@ const liveApi = fetcher("https://api.live.bilibili.com/room/v1");
  */
 export const queryRoomInfoMapByUids = async (uids: number[]) => {
 	const queryString = uids.map((id) => `uids[]=${id}`).join("&");
+
 	const [error, response] = await to(
 		liveApi.get(`/Room/get_status_info_by_uids?${queryString}`),
 	);
 	if (error) {
 		throw new Error(`查询直播间状态失败：${error.message}`);
 	}
+
 	const { success, issues, output } = safeParse(
 		QueryRoomStatusResponseSchema,
 		response,
@@ -37,6 +39,7 @@ export const queryRoomInfoMapByUids = async (uids: number[]) => {
 	if (!success) {
 		throw new Error(`查询直播间状态失败：${issues[0].message}`);
 	}
+
 	return output.data;
 };
 
@@ -52,6 +55,7 @@ export const queryRoomInfo = async (roomId: number | string) => {
 	if (error) {
 		throw new Error(`查询直播间信息失败：${error.message}`);
 	}
+
 	const { success, issues, output } = safeParse(
 		QueryRoomInfoResponseSchema,
 		response,
@@ -59,6 +63,7 @@ export const queryRoomInfo = async (roomId: number | string) => {
 	if (!success) {
 		throw new Error(`查询直播间信息失败：${issues[0].message}`);
 	}
+
 	return output.data;
 };
 
@@ -117,10 +122,10 @@ const checkAndSend = async () => {
 			action = "换标题了";
 		}
 
-		const imgUrl = room.keyframe || room.cover_from_user || room.face;
+		const imgUrl = room.keyframe /** || room.cover_from_user || room.face */;
 		const roomUrl = `https://live.bilibili.com/${room.short_id || room.room_id}`;
 		const segments = [
-			room.changedField === "live_status" && srcToImageSegment(imgUrl),
+			imgUrl && srcToImageSegment(imgUrl),
 			textToSegment(`${room.uname}${action}：${room.title}\n${roomUrl}`),
 		].filter(Boolean) as Segment[];
 
