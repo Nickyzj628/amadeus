@@ -1,6 +1,6 @@
 @echo off
 title amadeus
 
-pnpm start:prod
+pnpm start
 
 pause
