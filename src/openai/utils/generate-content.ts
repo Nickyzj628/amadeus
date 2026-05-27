@@ -7,13 +7,13 @@ import {
 import config from "@/config.js";
 import {
 	IDENTITY_ANCHOR,
-	IMAGE_UNDERSTANDING_PROMPT,
 	MODELS,
+	VISION_UNDERSTANDING_PROMPT,
 } from "@/constants.js";
 import type { Model } from "@/openai/schemas/model.js";
 import { openaiTools, toolHandlers } from "@/openai/tools/index.js";
 import { modelRef } from "@/openai/utils/model.js";
-import { contentToMessage, imageUrlToContentPart } from "./message.js";
+import { contentToMessage, visionUrlToContentPart } from "./message.js";
 
 /**
  * 传入 OpenAI API 兼容的 messages 数组，返回大模型最终回复内容
@@ -81,26 +81,30 @@ export const generateContent = async (
 };
 
 /**
- * 使用多模态模型，把图片翻译成自然语言
- * @remarks 可能抛出异常
+ * 使用多模态模型，把视觉消息翻译成自然语言
+ * @param visionUrl base64 或公网可访问的 URL
+ * @throws 可能抛出异常
  */
-export const imageUrlToText = async (imageUrl: string) => {
+export const visionUrlToText = async (
+	visionUrl: string,
+	type: "image" | "video" | "audio" = "image",
+) => {
 	const currentModel = modelRef.value;
 	if (!currentModel) {
 		throw new Error("当前没有可用的模型，请完善配置文件");
 	}
 
 	const multiModel = MODELS.find((model) =>
-		model.inputModalities?.includes("image"),
+		model.inputModalities?.includes(type),
 	);
 	if (!multiModel) {
-		throw new Error("未配置多模态模型，请完善配置文件");
+		throw new Error(`未配置支持${type}的多模态模型，请完善配置文件`);
 	}
 
 	const { content } = await generateContent(
 		[
-			contentToMessage(IMAGE_UNDERSTANDING_PROMPT, { role: "system" }),
-			contentToMessage([imageUrlToContentPart(imageUrl)]),
+			contentToMessage(VISION_UNDERSTANDING_PROMPT, { role: "system" }),
+			contentToMessage([visionUrlToContentPart(type, visionUrl)]),
 		],
 		{ model: multiModel },
 	);

@@ -8,5 +8,7 @@ export type Model = {
 	/** 请求时额外携带的 body 参数 */
 	extraBody?: Record<string, any>;
 	/** 模型支持的输入类型 */
-	inputModalities?: ("text" | "image" | "file" | "video" | "audio")[];
+	inputModalities?: InputModality[];
 };
+
+export type InputModality = "text" | "image" | "file" | "video" | "audio";

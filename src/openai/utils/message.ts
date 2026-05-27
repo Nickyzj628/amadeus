@@ -14,7 +14,7 @@ import {
 import { getFileUrl, getMessage, getRecord } from "@/onebot/utils/http.js";
 import { flattenForwardSegment } from "@/onebot/utils/segment.js";
 import { modelRef } from "@/openai/utils/model.js";
-import { imageUrlToText } from "./generate-content.js";
+import { visionUrlToText } from "./generate-content.js";
 
 /** 构造 OpenAI API 消息对象 */
 export const contentToMessage = (
@@ -38,42 +38,35 @@ export const contentToMessage = (
 	};
 };
 
-/** 构造 OpenAI API 图片类型的消息 content[] 字段 */
-export const imageUrlToContentPart = (
+/**
+ * 构造 OpenAI API 视觉类型的消息 content[] 字段
+ * @param type 图片、音频、视频
+ * @param url base64 或公网可访问的 URL
+ * @param format 填写音频的格式，如 "wav"
+ */
+export const visionUrlToContentPart = (
+	type: "image" | "video" | "audio",
 	url: string,
-): ChatCompletions.ContentPart => {
-	return {
-		type: "image_url",
-		image_url: {
-			url,
-		},
-	};
-};
+	format?: string,
+) => {
+	const inputType =
+		type === "image"
+			? "image_url"
+			: type === "video"
+				? "video_url"
+				: "input_audio";
 
-/** 构造 OpenAI API 视频类型的消息 content[] 字段 */
-export const videoUrlToContentPart = (
-	url: string,
-): ChatCompletions.ContentPart => {
-	return {
-		type: "video_url",
-		video_url: {
+	const contentPart: any = {
+		type: inputType,
+		[inputType]: {
 			url,
 		},
 	};
-};
+	if (type === "audio") {
+		contentPart[inputType]!.format = format;
+	}
 
-/** 构造 OpenAI API 视频类型的消息 content[] 字段 */
-export const audioUrlToContentPart = (
-	url: string,
-	format = "wav", // 不要用 mp3，POST get_record 时会报错
-): ChatCompletions.ContentPart => {
-	return {
-		type: "input_audio",
-		input_audio: {
-			url,
-			format,
-		},
-	};
+	return contentPart as ChatCompletions.ContentPart;
 };
 
 /** 构造标签字符串 */
@@ -138,45 +131,24 @@ export const onebotToOpenaiMessages = async (
 		}
 		// 图片
 		else if (isImageSegment(segment)) {
-			const { file = "", url: tempUrl } = segment.data;
-			const [filename, ext] = file.split(".");
-			const fallbackItem = "[无法识别图片]";
+			const { url: tempUrl } = segment.data;
+			const fallbackItem = "（无法识别图片）";
 
-			// 1. 检查 WebDav 是否存在相同图片
-			let webdavUrl = filename
-				? await checkSameFileName(`${filename}.webp`)
-				: "";
-			if (!webdavUrl) {
-				// 2. 压缩到 720P、10MB 以内
-				const [error, optimizedImage] = await to(compressImage(tempUrl));
-				if (error) {
-					logger(`图片压缩失败：${error.message}`);
-					imageItems.push(fallbackItem);
-					continue;
-				}
-
-				// 3. 上传到 WebDav
-				const optimizedImageExt = optimizedImage.split(".").pop() ?? "webp";
-				const [error2, tempUrl2] = await to(
-					uploadToWebdav(optimizedImage, {
-						filename: `${filename}.${optimizedImageExt}`,
-					}),
-				);
-				if (error2) {
-					logger(`图片上传失败：${error2.message}`);
-					imageItems.push(fallbackItem);
-					continue;
-				}
-				webdavUrl = tempUrl2;
+			// 1. 压缩到 720P、10MB 以内
+			const [error, base64] = await to(compressImage(tempUrl));
+			if (error) {
+				logger(`图片压缩失败：${error.message}`);
+				imageItems.push(fallbackItem);
+				continue;
 			}
 
-			// 4. 对于多模态，使用 WebDav URL
+			// 2. 对于多模态，使用压缩后的 base64
 			if (modelInputModalities.includes("image")) {
-				imageItems.push(webdavUrl);
+				imageItems.push(base64);
 			}
-			// 对于纯语言模型，使用多模态处理后的自然语言
+			// 对于纯语言模型，使用多模态翻译后的自然语言
 			else {
-				const [error3, text] = await to(imageUrlToText(webdavUrl));
+				const [error3, text] = await to(visionUrlToText(base64));
 				if (error3) {
 					logger(`图片翻译失败：${error3.message}`);
 					imageItems.push(fallbackItem);
@@ -186,13 +158,12 @@ export const onebotToOpenaiMessages = async (
 			}
 		}
 		// 视频
-		// - 对于多模态，使用上传到 WebDav 后的视频 URL
-		// - 对于纯语言模型，用“无法识别视频”占位
 		else if (isVideoSegment(segment)) {
 			const { file: filename, file_id: fileId } = segment.data;
-			const fallbackItem = "[不具备视频理解能力，无法识别]";
+			const fallbackItem = "（无法识别视频）";
 
-			if (!modelInputModalities.includes("video") || !groupId) {
+			// getFileUrl 需要 groupId
+			if (!groupId) {
 				videoItems.push(fallbackItem);
 				continue;
 			}
@@ -217,8 +188,21 @@ export const onebotToOpenaiMessages = async (
 				}
 				webdavUrl = url;
 			}
-			// 4. 使用 WebDav URL
-			videoItems.push(webdavUrl);
+
+			// 4. 对于多模态，WebDav URL
+			if (modelInputModalities.includes("image")) {
+				videoItems.push(webdavUrl);
+			}
+			// 对于纯语言模型，使用多模态翻译后的自然语言
+			else {
+				const [error3, text] = await to(visionUrlToText(webdavUrl));
+				if (error3) {
+					logger(`视频翻译失败：${error3.message}`);
+					videoItems.push(fallbackItem);
+					continue;
+				}
+				videoItems.push(text);
+			}
 		}
 		// 音频
 		// - 对于多模态，使用上传到 WebDav 后的视频 URL
@@ -299,7 +283,7 @@ export const onebotToOpenaiMessages = async (
 		// 当前图片消息
 		...imageItems.map((item) => {
 			const content = item.startsWith("http")
-				? [imageUrlToContentPart(item)]
+				? [visionUrlToContentPart("image", item)]
 				: createTagText("image", item, {
 						sender_id: user_id,
 						sender_name: nickname,
@@ -309,7 +293,7 @@ export const onebotToOpenaiMessages = async (
 		// 当前视频消息
 		...videoItems.map((item) => {
 			const content = item.startsWith("http")
-				? [videoUrlToContentPart(item)]
+				? [visionUrlToContentPart("video", item)]
 				: createTagText("video", item, {
 						sender_id: user_id,
 						sender_name: nickname,
@@ -319,7 +303,7 @@ export const onebotToOpenaiMessages = async (
 		// 当前音频消息
 		...audioItems.map((item) => {
 			const content = item.startsWith("http")
-				? [audioUrlToContentPart(item)]
+				? [visionUrlToContentPart("audio", item, "wav")]
 				: createTagText("video", item, {
 						sender_id: user_id,
 						sender_name: nickname,

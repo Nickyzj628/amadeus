@@ -1,7 +1,4 @@
 import { access, constants, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { logger } from "@nickyzj2023/utils";
 import sharp from "sharp";
 
@@ -99,12 +96,14 @@ export const get = (obj: Record<string, any>, path: string) => {
 
 /**
  * 使用 sharp 压缩图片
- * @param input 网络地址，或任何 sharp 支持的类型
- * @param options 压缩参数，默认压到 720P、10MB 以内（尽力）
- * @remarks 失败时抛出异常
+ * @param input sharp 支持的类型（Buffer、string 文件路径等）
+ * @param options 压缩参数
+ * @returns base64 Data URL
+ * @throws 输入类型不被 sharp 支持时抛出异常
+ * @throws 图片无法压缩到 maxSize 和 maxHeight 以内时抛出异常
  */
 export const compressImage = async (
-	input: string | Buffer | ArrayBuffer,
+	input: NonNullable<Parameters<typeof sharp>[0]>,
 	options?: {
 		/**
 		 * 压到指定大小以内，默认 10MB
@@ -117,47 +116,20 @@ export const compressImage = async (
 		 */
 		maxHeight?: number;
 	},
-) => {
+): Promise<string> => {
 	const { maxSize = 10 * 1024 * 1024, maxHeight = 720 } = options ?? {};
 
-	/**
-	 * 转换 input 为 buffer
-	 */
+	// 网络地址先下载为 Buffer，其余类型直接交给 sharp（sharp 会自行校验）
+	const resolved =
+		typeof input === "string" && /^https?:\/\//.test(input)
+			? Buffer.from(await (await fetch(input)).arrayBuffer())
+			: input;
 
-	let buffer: Buffer;
-
-	if (typeof input === "string") {
-		// 如果是网络地址，则下载
-		if (/^https?:\/\//.test(input)) {
-			const response = await fetch(input);
-			buffer = Buffer.from(await response.arrayBuffer());
-		}
-		// 如果是本地文件，则读取
-		else if (input.startsWith("file://")) {
-			buffer = await readFile(fileURLToPath(input));
-		}
-		// TODO: 补充更多字符串格式判断
-		else {
-			buffer = await readFile(input);
-		}
-	}
-	// 如果是 ArrayBuffer，则转成 sharp 支持的 Buffer 类型
-	else if (input instanceof ArrayBuffer) {
-		buffer = Buffer.from(input);
-	}
-	// 如果是 sharp 支持的类型，则直接赋值
-	else {
-		buffer = input;
-	}
-
-	/**
-	 * 压制 buffer
-	 */
-
-	const metadata = await sharp(buffer).metadata();
+	const metadata = await sharp(resolved).metadata();
 	const isAnimated = (metadata.pages ?? 1) > 1;
-	let image = sharp(buffer, { animated: isAnimated });
+	let image = sharp(resolved, { animated: isAnimated });
 
+	// 压缩到 maxHeight 以内
 	if (metadata.height && metadata.height > maxHeight) {
 		image = image.resize({
 			height: maxHeight,
@@ -166,18 +138,20 @@ export const compressImage = async (
 		});
 	}
 
-	let outputBuffer = await image.webp({ quality: 90 }).toBuffer();
-	for (let quality = 80; quality >= 40; quality -= 10) {
+	// 压缩到 maxSize 以内
+	let outputBuffer: Buffer | null = null;
+	for (let quality = 90; quality >= 40; quality -= 10) {
+		outputBuffer = await image.webp({ quality }).toBuffer();
 		if (outputBuffer.length <= maxSize) {
-			logger(
-				`压缩了一张图片：${formatBytes(metadata.size ?? 0)} => ${formatBytes(outputBuffer.length)}`,
-			);
 			break;
 		}
-		outputBuffer = await image.webp({ quality }).toBuffer();
+	}
+	if (!outputBuffer) {
+		throw new Error(`图片无法压缩到 ${formatBytes(maxSize)} 以内`);
 	}
 
-	const tempPath = join(tmpdir(), `amadeus-${Date.now()}.webp`);
-	await writeFile(tempPath, outputBuffer);
-	return `file://${tempPath}`;
+	logger(
+		`压缩了一张图片：${formatBytes(metadata.size ?? 0)} => ${formatBytes(outputBuffer.length)}`,
+	);
+	return `data:image/webp;base64,${outputBuffer.toString("base64")}`;
 };
