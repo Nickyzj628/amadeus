@@ -3,9 +3,10 @@ import config from "@/config.js";
 import { MCPRouter } from "@/openai/utils/mcp.js";
 import changeModel from "./changeModel.js";
 import decodeAbbr from "./decodeAbbr.js";
+import denyReply from "./denyReply.js";
 import getWeather from "./getWeather.js";
 
-const functionTools = [changeModel, getWeather, decodeAbbr];
+const functionTools = [changeModel, getWeather, decodeAbbr, denyReply];
 logger("已启用 Function Calling Tools", functionTools.map((tool) => tool), "\n");
 
 const mcpRouter = new MCPRouter();

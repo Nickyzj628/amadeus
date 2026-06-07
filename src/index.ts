@@ -107,8 +107,8 @@ router.post("/", withContent, async (req) => {
 		const errorMsg = extractErrorMessage(error);
 		if (errorMsg) {
 			logger(`抛出了一个异常：${errorMsg}`);
-			if (isAtSelf) {
-				return json(makeReplyBody(` ${errorMsg}`));
+			if (isAtSelf && error instanceof Error && error.name !== "CustomError") {
+				return json(makeReplyBody(errorMsg));
 			}
 		}
 	} finally {

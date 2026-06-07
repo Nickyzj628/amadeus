@@ -53,7 +53,7 @@ export const generateContent = async (
 	/**
 	 * 发出请求
 	 */
-	console.log(JSON.stringify(messages, null, 2));
+
 	const { reasoningContent, content, usage } = await chatCompletions(
 		{
 			baseUrl: model.baseUrl,
