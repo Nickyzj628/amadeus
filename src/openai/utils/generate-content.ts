@@ -53,7 +53,7 @@ export const generateContent = async (
 	/**
 	 * 发出请求
 	 */
-		console.log(JSON.stringify(messages, null, 2))
+	console.log(JSON.stringify(messages, null, 2));
 	const { reasoningContent, content, usage } = await chatCompletions(
 		{
 			baseUrl: model.baseUrl,
@@ -104,8 +104,10 @@ export const visionUrlToText = async (
 
 	const { content } = await generateContent(
 		[
-			contentToMessage(VISION_UNDERSTANDING_PROMPT, { role: "system" }),
-			contentToMessage([visionUrlToContentPart(type, visionUrl)]),
+			contentToMessage([
+				visionUrlToContentPart(type, visionUrl),
+				{ type: "text", text: VISION_UNDERSTANDING_PROMPT },
+			]),
 		],
 		{ model: multiModel },
 	);

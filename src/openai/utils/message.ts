@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { type ChatCompletions, logger, to } from "@nickyzj2023/utils";
 import { compressImage } from "@/common/util.js";
 import { checkSameFileName, uploadToWebdav } from "@/common/webdav.js";
@@ -63,7 +64,12 @@ export const visionUrlToContentPart = (
 		},
 	};
 	if (type === "audio") {
-		contentPart[inputType]!.format = format;
+		contentPart[inputType]!.format = format || "wav";
+		// base64 应该放在 data 字段，而不是 url
+		if (!url.startsWith("http")) {
+			delete contentPart[inputType].url;
+			contentPart[inputType].data = url;
+		}
 	}
 
 	return contentPart as ChatCompletions.ContentPart;
@@ -190,7 +196,7 @@ export const onebotToOpenaiMessages = async (
 			}
 
 			// 4. 对于多模态，WebDav URL
-			if (modelInputModalities.includes("image")) {
+			if (modelInputModalities.includes("video")) {
 				videoItems.push(webdavUrl);
 			}
 			// 对于纯语言模型，使用多模态翻译后的自然语言
@@ -205,42 +211,44 @@ export const onebotToOpenaiMessages = async (
 			}
 		}
 		// 音频
-		// - 对于多模态，使用上传到 WebDav 后的视频 URL
-		// - 对于纯语言模型，用“无法识别视频”占位
+		// - 对于多模态，使用 base64
+		// - 对于纯语言模型，使用多模态翻译后的自然语言
 		else if (isAudioSegment(segment)) {
-			const { file: filename, path } = segment.data;
+			const { file: filename } = segment.data;
 			const fallbackItem = "[不具备音频理解能力，无法识别]";
 
-			if (!modelInputModalities.includes("audio")) {
+			// 1. 读取音频
+			const [error, record] = await to(getRecord(filename));
+			if (error) {
+				logger(`读取音频失败：${error.message}`);
 				audioItems.push(fallbackItem);
 				continue;
 			}
 
-			// 1. 检查 WebDav 是否存在相同音频
-			let webdavUrl = filename
-				? await checkSameFileName(`${filename}.wav`)
-				: "";
-			if (!webdavUrl) {
-				// 2. 读取音频
-				const [error, record] = await to(getRecord(filename));
-				if (error) {
-					logger(`读取音频失败：${error.message}`);
-					audioItems.push(fallbackItem);
-					continue;
-				}
-				// 3. 上传到 WebDav
-				const [error2, url] = await to(
-					uploadToWebdav(record.file, { filename: record.file_name }),
-				);
-				if (error2) {
-					logger(`上传音频失败：${error2.message}`);
-					audioItems.push(fallbackItem);
-					continue;
-				}
-				webdavUrl = url;
+			// 2. 将本地音频文件转为 base64
+			const [error2, base64] = await to(
+				readFile(record.file).then((buf) => buf.toString("base64")),
+			);
+			if (error2) {
+				logger(`读取音频文件失败：${error2.message}`);
+				audioItems.push(fallbackItem);
+				continue;
 			}
-			// 4. 使用 WebDav URL
-			audioItems.push(webdavUrl);
+
+			// 3. 对于多模态，使用 base64
+			if (modelInputModalities.includes("audio")) {
+				audioItems.push(base64);
+			}
+			// 对于纯语言模型，使用多模态翻译后的自然语言
+			else {
+				const [error3, text] = await to(visionUrlToText(base64, "audio"));
+				if (error3) {
+					logger(`音频翻译失败：${error3.message}`);
+					audioItems.push(fallbackItem);
+					continue;
+				}
+				audioItems.push(text);
+			}
 		}
 		// @ 某人
 		else if (isAtSegment(segment)) {
@@ -302,9 +310,9 @@ export const onebotToOpenaiMessages = async (
 		}),
 		// 当前音频消息
 		...audioItems.map((item) => {
-			const content = item.startsWith("http")
+			const content = item.startsWith("data:audio")
 				? [visionUrlToContentPart("audio", item, "wav")]
-				: createTagText("video", item, {
+				: createTagText("audio", item, {
 						sender_id: user_id,
 						sender_name: nickname,
 					});
