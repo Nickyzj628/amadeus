@@ -106,18 +106,18 @@ export const compressImage = async (
 	input: NonNullable<Parameters<typeof sharp>[0]>,
 	options?: {
 		/**
-		 * 压到指定大小以内，默认 10MB
-		 * @default 10 * 1024 * 1024
+		 * 压到指定大小以内
+		 * @default 5 * 1024 * 1024
 		 */
 		maxSize?: number;
 		/**
-		 * 压到指定高度以内，默认 720px
-		 * @default 720
+		 * 压到指定高度以内
+		 * @default 600
 		 */
 		maxHeight?: number;
 	},
 ): Promise<string> => {
-	const { maxSize = 10 * 1024 * 1024, maxHeight = 720 } = options ?? {};
+	const { maxSize = 5 * 1024 * 1024, maxHeight = 600 } = options ?? {};
 
 	// 网络地址先下载为 Buffer，其余类型直接交给 sharp（sharp 会自行校验）
 	const resolved =
@@ -140,13 +140,15 @@ export const compressImage = async (
 
 	// 压缩到 maxSize 以内
 	let outputBuffer: Buffer | null = null;
-	for (let quality = 90; quality >= 40; quality -= 10) {
-		outputBuffer = await image.webp({ quality }).toBuffer();
+	for (let quality = 80; quality >= 40; quality -= 10) {
+		outputBuffer = await image
+			.webp({ quality, loop: isAnimated ? 0 : undefined })
+			.toBuffer();
 		if (outputBuffer.length <= maxSize) {
 			break;
 		}
 	}
-	if (!outputBuffer) {
+	if (!outputBuffer || outputBuffer.length > maxSize) {
 		throw new Error(`图片无法压缩到 ${formatBytes(maxSize)} 以内`);
 	}
 

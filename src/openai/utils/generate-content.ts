@@ -4,6 +4,7 @@ import {
 	compactStr,
 	logger,
 } from "@nickyzj2023/utils";
+import { normalizeText } from "@/common/util.js";
 import config from "@/config.js";
 import {
 	IDENTITY_ANCHOR,
@@ -52,7 +53,7 @@ export const generateContent = async (
 	/**
 	 * 发出请求
 	 */
-
+		console.log(JSON.stringify(messages, null, 2))
 	const { reasoningContent, content, usage } = await chatCompletions(
 		{
 			baseUrl: model.baseUrl,
@@ -75,7 +76,7 @@ export const generateContent = async (
 	logger("本轮消耗", usage, "\n");
 
 	return {
-		content,
+		content: normalizeText(content),
 		isTokenNearLimit: usage.total_tokens >= modelRef.value.totalContext * 0.8,
 	};
 };

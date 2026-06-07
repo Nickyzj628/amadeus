@@ -134,7 +134,7 @@ export const onebotToOpenaiMessages = async (
 			const { url: tempUrl } = segment.data;
 			const fallbackItem = "（无法识别图片）";
 
-			// 1. 压缩到 720P、10MB 以内
+			// 1. 压缩并输出 base64
 			const [error, base64] = await to(compressImage(tempUrl));
 			if (error) {
 				logger(`图片压缩失败：${error.message}`);
