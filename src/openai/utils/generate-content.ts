@@ -25,9 +25,11 @@ export const generateContent = async (
 	options?: {
 		/** 默认使用当前模型发请求，可临时更改 */
 		model?: Model;
+		/** 自定义请求体，会覆盖原先存在的同名字段 */
+		extraBody?: Record<string, any>;
 	},
 ) => {
-	const { model = modelRef.value } = options ?? {};
+	const { model = modelRef.value, extraBody } = options ?? {};
 	if (!model) {
 		throw new Error("当前没有可用的模型，请完善配置文件");
 	}
@@ -53,7 +55,6 @@ export const generateContent = async (
 	/**
 	 * 发出请求
 	 */
-
 	const { reasoningContent, content, usage } = await chatCompletions(
 		{
 			baseUrl: model.baseUrl,
@@ -65,6 +66,7 @@ export const generateContent = async (
 			tools: openaiTools,
 			toolHandlers,
 			...model.extraBody,
+			...extraBody,
 		},
 	);
 

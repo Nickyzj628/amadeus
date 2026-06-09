@@ -65,23 +65,34 @@ export const summarizeMessages = async (
 			);
 		},
 	);
-	logger(`准备总结前${count}条消息，分${summarizingMessagesChunks.length}次进行`);
+	logger(
+		`准备总结前${count}条消息，分${summarizingMessagesChunks.length}次进行`,
+	);
 
 	// 开始总结
 	// 使用 for 循环依次请求，而不是用 Promise.all，原因是部分模型对并发请求有严格限制
 	const summarizedMessages: ChatCompletions.Message[] = [];
 	for (const chunk of summarizingMessagesChunks) {
-		chunk.push(contentToMessage(SUMMARIZE_PROMPT));
+		chunk.push(
+			contentToMessage(SUMMARIZE_PROMPT, { role: "system" }),
+			contentToMessage("开始总结聊天摘要", { role: "user" }),
+		);
 
-		const [error, summarized] = await to(generateContent(chunk));
+		const [error, summarized] = await to(
+			generateContent(chunk, {
+				extraBody: {
+					tools: [],
+					toolHandlers: [],
+				},
+			}),
+		);
 		if (error) {
+			logger(`总结失败：${error.message}`);
 			return false;
 		}
 
 		summarizedMessages.push(
-			contentToMessage(
-				`清理了${chunk.length - 1}条消息并总结为：${summarized.content}`,
-			),
+			contentToMessage(`# 消息摘要\n${summarized.content}`),
 		);
 	}
 
