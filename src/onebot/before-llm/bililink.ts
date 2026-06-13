@@ -7,6 +7,7 @@ import {
 	type GetVideoDetail,
 	GetVideoDetailSchema,
 } from "@/openai/schemas/bili.js";
+import type { Segment } from "../schemas/http-post.js";
 import { srcToImageSegment, textToSegment } from "../utils/segment.js";
 
 const api = fetcher("https://api.bilibili.com/x/web-interface");
@@ -88,7 +89,6 @@ export const videoDetailToSegments = (videoDetail: GetVideoDetail["data"]) => {
 export const roomInfoToSegments = (roomInfo: RoomInfo) => {
 	const {
 		keyframe,
-		user_cover,
 		title,
 		live_status,
 		area_name,
@@ -98,7 +98,7 @@ export const roomInfoToSegments = (roomInfo: RoomInfo) => {
 	} = roomInfo;
 
 	return [
-		srcToImageSegment(keyframe /** || user_cover */),
+		keyframe && srcToImageSegment(keyframe /** || user_cover */),
 		textToSegment(
 			[
 				title,
@@ -108,5 +108,5 @@ export const roomInfoToSegments = (roomInfo: RoomInfo) => {
 				`https://live.bilibili.com/${short_id || room_id}`,
 			].join("\n"),
 		),
-	].filter(Boolean);
+	].filter(Boolean) as Segment[];
 };
