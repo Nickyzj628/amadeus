@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { get } from "./common/util.js";
 import config from "./config.js";
+import type { Model } from "./openai/schemas/model.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -34,7 +35,7 @@ export const SYSTEM_PROMPT = loadPrompt("base");
 export const VISION_UNDERSTANDING_PROMPT = loadPrompt("vision-understanding");
 
 /** 大模型列表，应该兼容 OpenAI API，支持工具调用，多模态 */
-export const MODELS = config.models.map((model) => ({
+export const MODELS: Model[] = config.models.map((model) => ({
 	...model,
 	totalContext: model.totalContext || 128000,
 }));

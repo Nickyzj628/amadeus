@@ -4,16 +4,16 @@
 // ================================
 
 import {
-	array,
-	type InferOutput,
-	literal,
-	number,
-	object,
-	optional,
-	pipe,
-	string,
-	transform,
-	union,
+    array,
+    type InferOutput,
+    literal,
+    number,
+    object,
+    optional,
+    pipe,
+    string,
+    transform,
+    union,
 } from "valibot";
 import { normalizeText } from "@/common/util.js";
 import config from "@/config.js";
@@ -68,14 +68,26 @@ export const isFileSegment = (segment?: Segment): segment is FileSegment => {
 };
 
 /**
- * 视频消息段（文件消息段.data.file.endsWith(".mp4")）
+ * 视频消息段
  */
-export type VideoSegment = InferOutput<typeof FileSegmentSchema>;
+export const VideoSegmentSchema = object({
+	type: literal("video"),
+	data: object({
+		file: string(),
+		/** 单位字节 */
+		file_size: string(),
+		/** 临时地址，会过期 */
+		url: string(),
+		/**
+		 * 本地文件路径
+		 * @example "C:\\Users\\Administrator\\Documents\\Tencent Files\\3696448148\\nt_qq\\nt_data\\Ptt\\2026-05\\Ori\\eb103aa19edc119800182322413b3c7c.amr"
+		 */
+		path: string(),
+	}),
+});
+export type VideoSegment = InferOutput<typeof VideoSegmentSchema>;
 export const isVideoSegment = (segment?: Segment): segment is VideoSegment => {
-	if (!isFileSegment(segment)) {
-		return false;
-	}
-	return segment.data.file.endsWith(".mp4");
+	return segment?.type === "video";
 };
 
 /**
@@ -174,6 +186,7 @@ export const SegmentSchema = union([
 	ImageSegmentSchema,
 	FileSegmentSchema,
 	AudioSegmentSchema,
+	VideoSegmentSchema,
 	AtSegmentSchema,
 	ForwardSegmentSchema,
 	ReplySegmentSchema,

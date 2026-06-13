@@ -1,6 +1,7 @@
 import { access, constants, readFile, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { logger } from "@nickyzj2023/utils";
-import sharp from "sharp";
+import sharp, { type SharpInput } from "sharp";
 
 /** 从项目目录中读取 JSON 配置 */
 export const loadJSON = async <T>(
@@ -44,6 +45,27 @@ export const formatNumberCompact = (num: number) => {
 		notation: "compact",
 		compactDisplay: "short",
 	}).format(num);
+};
+
+/**
+ * 判断地址是本地/远程还是base64
+ */
+export const checkUrlType = (str: string) => {
+	// 网络地址
+	if (/^https?:\/\//.test(str)) {
+		return "remote";
+	}
+	// base64 Data URL
+	if (/^data:/.test(str)) {
+		return "base64";
+	}
+	// 本地文件路径：
+	// - 相对路径 ./ ../
+	// - 绝对路径 C:\ D:/
+	if (/^(\.{1,2}[/\\]|[a-zA-Z]:[/\\])/.test(str)) {
+		return "local";
+	}
+	return "";
 };
 
 /** 将字节数转换为人类可读的字符串，例如 1024 => 1 KB */
@@ -96,14 +118,14 @@ export const get = (obj: Record<string, any>, path: string) => {
 
 /**
  * 使用 sharp 压缩图片
- * @param input sharp 支持的类型（Buffer、string 文件路径等）
+ * @param input 支持任意地址、Buffer
  * @param options 压缩参数
  * @returns base64 Data URL
- * @throws 输入类型不被 sharp 支持时抛出异常
+ * @throws 不支持的 input 会抛出异常
  * @throws 图片无法压缩到 maxSize 和 maxHeight 以内时抛出异常
  */
 export const compressImage = async (
-	input: NonNullable<Parameters<typeof sharp>[0]>,
+	input: string,
 	options?: {
 		/**
 		 * 压到指定大小以内
@@ -119,17 +141,39 @@ export const compressImage = async (
 ): Promise<string> => {
 	const { maxSize = 5 * 1024 * 1024, maxHeight = 600 } = options ?? {};
 
-	// 网络地址先下载为 Buffer，其余类型直接交给 sharp（sharp 会自行校验）
-	const resolved =
-		typeof input === "string" && /^https?:\/\//.test(input)
-			? Buffer.from(await (await fetch(input)).arrayBuffer())
-			: input;
+	/**
+	 * 把图片统一处理成 Buffer，便于 sharp 解析
+	 */
+	let sharpInput: SharpInput;
+	const inputType = checkUrlType(input);
+	switch (inputType) {
+		case "": {
+			throw new Error(`不支持的地址：${input}`);
+		}
+		case "remote": {
+			const response = await fetch(input);
+			const arrayBuffer = await response.arrayBuffer();
+			sharpInput = Buffer.from(arrayBuffer);
+			break;
+		}
+		case "local": {
+			sharpInput = await readFile(resolve(input));
+			break;
+		}
+		case "base64": {
+			sharpInput = Buffer.from(input.split(",")[1]!, "base64");
+			break;
+		}
+	}
 
-	const metadata = await sharp(resolved).metadata();
+	const metadata = await sharp(sharpInput).metadata();
 	const isAnimated = (metadata.pages ?? 1) > 1;
-	let image = sharp(resolved, { animated: isAnimated });
+	const isAnimatedGif = metadata.format === "gif" && isAnimated;
+	let image = sharp(sharpInput, { animated: isAnimated });
 
-	// 压缩到 maxHeight 以内
+	/**
+	 * 压缩到 maxHeight 以内
+	 */
 	if (metadata.height && metadata.height > maxHeight) {
 		image = image.resize({
 			height: maxHeight,
@@ -138,22 +182,43 @@ export const compressImage = async (
 		});
 	}
 
-	// 压缩到 maxSize 以内
+	/**
+	 * 压缩到 maxSize 以内
+	 */
 	let outputBuffer: Buffer | null = null;
-	for (let quality = 80; quality >= 40; quality -= 10) {
-		outputBuffer = await image
-			.webp({ quality, loop: isAnimated ? 0 : undefined })
-			.toBuffer();
-		if (outputBuffer.length <= maxSize) {
-			break;
+	// GIF 动图：保持格式，通过 interFrameMaxError + effort 进行有损压缩
+	if (isAnimatedGif) {
+		for (let level = 1; level <= 5; level++) {
+			outputBuffer = await image
+				.gif({
+					interFrameMaxError: Math.min(level * 6, 32),
+					effort: Math.min(6 + level, 10),
+					loop: 0,
+				})
+				.toBuffer();
+			if (outputBuffer.length <= maxSize) {
+				break;
+			}
+		}
+	}
+	// 其他图片：转为 webp
+	else {
+		for (let quality = 80; quality >= 40; quality -= 10) {
+			outputBuffer = await image
+				.webp({ quality, loop: isAnimated ? 0 : undefined })
+				.toBuffer();
+			if (outputBuffer.length <= maxSize) {
+				break;
+			}
 		}
 	}
 	if (!outputBuffer || outputBuffer.length > maxSize) {
 		throw new Error(`图片无法压缩到 ${formatBytes(maxSize)} 以内`);
 	}
 
+	const mime = isAnimatedGif ? "image/gif" : "image/webp";
 	logger(
 		`压缩了一张图片：${formatBytes(metadata.size ?? 0)} => ${formatBytes(outputBuffer.length)}`,
 	);
-	return `data:image/webp;base64,${outputBuffer.toString("base64")}`;
+	return `data:${mime};base64,${outputBuffer.toString("base64")}`;
 };

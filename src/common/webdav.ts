@@ -1,5 +1,5 @@
 import { readFile, unlink } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { checkUrlType } from "./util.js";
 
 const WEBDAV_BASE = "https://nickyzj.run:2020/Amadeus";
 
@@ -37,49 +37,55 @@ export const checkSameFileName = async (filename: string) => {
 
 /**
  * 上传文件到 WebDAV
- * @param fileUrl 可以是file://或E:\\等格式的本地文件，也可以是http开头的线上文件
+ * @param url 本地/网络地址
  * @returns 文件上传后的 WebDAV URL
  * @remarks 可能抛出异常
  */
 export const uploadToWebdav = async (
-	fileUrl: string,
+	url: string,
 	options?: {
 		/** 指定文件名，默认根据 content-type 自动生成 */
 		filename?: string;
-		/** 上传后是否删除本地源文件；对于 file:// URL 默认为 true */
+		/**
+		 * 上传后是否删除本地源文件
+		 * @default false
+		 */
 		deleteAfterUpload?: boolean;
 	},
 ) => {
+	const urlType = checkUrlType(url);
+	if (urlType !== "remote" && urlType !== "local") {
+		throw new Error(`不支持的地址：${url}`);
+	}
+
 	const { filename, deleteAfterUpload } = options ?? {};
 
+	// 下载
 	let buffer: ArrayBuffer;
 	let contentType: string;
-	let localPath: string | undefined;
 	const fallbackContentType = "application/octet-stream";
+	if (urlType === "remote") {
+		const response = await fetch(url);
 
-	const isHttpUrl = /^https?:\/\//i.test(fileUrl);
-	const isFileUrl = fileUrl.startsWith("file://");
-
-	if (isHttpUrl) {
-		const response = await fetch(fileUrl);
 		buffer = await response.arrayBuffer();
+
 		contentType = response.headers.get("content-type") || fallbackContentType;
 	} else {
-		localPath = isFileUrl ? fileURLToPath(fileUrl) : fileUrl;
-		const fileBuffer = await readFile(localPath);
+		const fileBuffer = await readFile(url);
+
 		buffer = fileBuffer.buffer.slice(
 			fileBuffer.byteOffset,
 			fileBuffer.byteOffset + fileBuffer.byteLength,
 		);
 
-		const ext = localPath.split(".").pop()?.toLowerCase() || "bin";
+		const ext = url.split(".").pop()?.toLowerCase() || "bin";
 		contentType = extToMime[ext] || fallbackContentType;
 	}
 
+	// 上传
 	const ext = mimeToExt[contentType] || "bin";
-	const finalFilename = filename || `${Date.now()}.${ext}`;
-
-	await fetch(`${WEBDAV_BASE}/${finalFilename}`, {
+	const _filename = filename || `${Date.now()}.${ext}`;
+	await fetch(`${WEBDAV_BASE}/${_filename}`, {
 		method: "PUT",
 		body: buffer,
 		headers: {
@@ -87,10 +93,10 @@ export const uploadToWebdav = async (
 		},
 	});
 
-	const shouldDelete = deleteAfterUpload ?? isFileUrl;
-	if (localPath && shouldDelete) {
-		await unlink(localPath);
+	// 后处理
+	if (deleteAfterUpload && urlType === "local") {
+		await unlink(url);
 	}
 
-	return `${WEBDAV_BASE}/${finalFilename}`;
+	return `${WEBDAV_BASE}/${_filename}`;
 };

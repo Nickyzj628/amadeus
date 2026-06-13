@@ -105,10 +105,10 @@ router.post("/", withContent, async (req) => {
 	} catch (error) {
 		const errorMsg = extractErrorMessage(error);
 		if (errorMsg) {
-			logger(`抛出了一个异常：${errorMsg}`);
 			if (isAtSelf && error instanceof Error && error.name !== "CustomError") {
 				return json(makeReplyBody(errorMsg));
 			}
+			logger(`抛出了一个异常：${errorMsg}`);
 		}
 	} finally {
 		if (instantRelease) {

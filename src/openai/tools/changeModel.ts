@@ -1,28 +1,6 @@
 import { MODELS } from "@/constants.js";
 import { defineFunctionTool } from "@/openai/utils/function-tool.js";
-import { switchModel } from "@/openai/utils/model.js";
-
-const findModel = (input: string) => {
-	// 按供应商精准匹配
-	const byProvider = MODELS.find((model) => model.provider === input);
-	if (byProvider) {
-		return byProvider;
-	}
-
-	// 按模型名精准匹配
-	const byModel = MODELS.find((model) => model.model === input);
-	if (byModel) {
-		return byModel;
-	}
-
-	// 模糊匹配
-	const normalizedInput = input.toLowerCase().trim();
-	return MODELS.find(
-		({ model, provider }) =>
-			model.toLowerCase().includes(normalizedInput) ||
-			provider.toLowerCase().includes(normalizedInput),
-	);
-};
+import { findModelByName, modelRef } from "@/openai/utils/model.js";
 
 export default defineFunctionTool({
 	name: "changeModel",
@@ -39,10 +17,11 @@ export default defineFunctionTool({
 		required: ["model"],
 	},
 	_handler: async ({ model }) => {
-		const target = findModel(model);
+		const target = findModelByName(model);
 		if (!target) {
 			return `切换失败，找不到匹配的模型。可用模型：\n${MODELS.map((model) => `- ${model.model}（${model.provider}）`).join("\n")}`;
 		}
-		return switchModel(target.model);
+		modelRef.current = target;
+		return `模型已切换至${target.provider}（${target.model}）`;
 	},
 });

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { type ChatCompletions, logger, to } from "@nickyzj2023/utils";
-import { compressImage } from "@/common/util.js";
+import { checkUrlType, compressImage } from "@/common/util.js";
 import { checkSameFileName, uploadToWebdav } from "@/common/webdav.js";
 import {
 	isAtSegment,
@@ -12,10 +12,11 @@ import {
 	isVideoSegment,
 	type MinimalMessageEvent,
 } from "@/onebot/schemas/http-post.js";
-import { getFileUrl, getMessage, getRecord } from "@/onebot/utils/http.js";
+import { getMessage, getRecord } from "@/onebot/utils/http.js";
 import { flattenForwardSegment } from "@/onebot/utils/segment.js";
 import { modelRef } from "@/openai/utils/model.js";
-import { visionUrlToText } from "./generate-content.js";
+import type { InputModality } from "../schemas/model.js";
+import { visionToText } from "./generate-content.js";
 
 /** 构造 OpenAI API 消息对象 */
 export const contentToMessage = (
@@ -43,14 +44,18 @@ export const contentToMessage = (
  * 构造 OpenAI API 视觉类型的消息 content[] 字段
  * @param type 图片、音频、视频
  * @param url base64 或公网可访问的 URL
- * @param format 填写音频的格式，如 "wav"
+ * @param format 音频必填，如 "wav"
  */
-export const visionUrlToContentPart = (
-	type: "image" | "video" | "audio",
+export const urlToContentPart = (
 	url: string,
-	format?: string,
+	options?: {
+		type?: Extract<InputModality, "image" | "video" | "audio">;
+		format?: string;
+	},
 ) => {
-	const inputType =
+	const { type = "image", format = "wav" } = options ?? {};
+
+	const _type =
 		type === "image"
 			? "image_url"
 			: type === "video"
@@ -58,17 +63,18 @@ export const visionUrlToContentPart = (
 				: "input_audio";
 
 	const contentPart: any = {
-		type: inputType,
-		[inputType]: {
+		type: _type,
+		[_type]: {
 			url,
 		},
 	};
-	if (type === "audio") {
-		contentPart[inputType]!.format = format || "wav";
-		// base64 应该放在 data 字段，而不是 url
-		if (!url.startsWith("http")) {
-			delete contentPart[inputType].url;
-			contentPart[inputType].data = url;
+
+	if (_type === "input_audio") {
+		contentPart[_type].format = format;
+		// 音频的 base64 应该放在 data 字段，而不是 url
+		if (checkUrlType(url) === "base64") {
+			delete contentPart[_type].url;
+			contentPart[_type].data = url;
 		}
 	}
 
@@ -125,7 +131,7 @@ export const onebotToOpenaiMessages = async (
 	const mentionedUserIds: string[] = [];
 	const quotedMessages: ChatCompletions.Message[] = [];
 
-	const modelInputModalities = modelRef.value?.inputModalities ?? [];
+	const modelInputModalities = modelRef.current?.inputModalities ?? [];
 
 	/**
 	 * 解析消息段数组
@@ -140,7 +146,7 @@ export const onebotToOpenaiMessages = async (
 			const { url: tempUrl } = segment.data;
 			const fallbackItem = "（无法识别图片）";
 
-			// 1. 压缩并输出 base64
+			// 1. 压缩 + base64
 			const [error, base64] = await to(compressImage(tempUrl));
 			if (error) {
 				logger(`图片压缩失败：${error.message}`);
@@ -148,13 +154,13 @@ export const onebotToOpenaiMessages = async (
 				continue;
 			}
 
-			// 2. 对于多模态，使用压缩后的 base64
+			// 2. 对于多模态，直接使用 base64
 			if (modelInputModalities.includes("image")) {
 				imageItems.push(base64);
 			}
 			// 对于纯语言模型，使用多模态翻译后的自然语言
 			else {
-				const [error3, text] = await to(visionUrlToText(base64));
+				const [error3, text] = await to(visionToText(base64));
 				if (error3) {
 					logger(`图片翻译失败：${error3.message}`);
 					imageItems.push(fallbackItem);
@@ -165,28 +171,14 @@ export const onebotToOpenaiMessages = async (
 		}
 		// 视频
 		else if (isVideoSegment(segment)) {
-			const { file: filename, file_id: fileId } = segment.data;
+			const { file: filename, url: tempUrl } = segment.data;
 			const fallbackItem = "（无法识别视频）";
-
-			// getFileUrl 需要 groupId
-			if (!groupId) {
-				videoItems.push(fallbackItem);
-				continue;
-			}
 
 			// 1. 检查 WebDav 是否存在相同视频
 			let webdavUrl = filename ? await checkSameFileName(filename) : "";
 			if (!webdavUrl) {
-				// 2. 读取视频
-				const [error, fileUrl] = await to(getFileUrl(groupId, fileId));
-				if (error) {
-					logger(`获取视频失败：${error.message}`);
-					videoItems.push(fallbackItem);
-					continue;
-				}
-
-				// 3. 上传到 WebDav
-				const [error2, url] = await to(uploadToWebdav(fileUrl, { filename }));
+				// 2. 上传到 WebDav
+				const [error2, url] = await to(uploadToWebdav(tempUrl, { filename }));
 				if (error2) {
 					logger(`上传视频失败：${error2.message}`);
 					videoItems.push(fallbackItem);
@@ -201,7 +193,7 @@ export const onebotToOpenaiMessages = async (
 			}
 			// 对于纯语言模型，使用多模态翻译后的自然语言
 			else {
-				const [error3, text] = await to(visionUrlToText(webdavUrl));
+				const [error3, text] = await to(visionToText(webdavUrl, "video"));
 				if (error3) {
 					logger(`视频翻译失败：${error3.message}`);
 					videoItems.push(fallbackItem);
@@ -241,7 +233,7 @@ export const onebotToOpenaiMessages = async (
 			}
 			// 对于纯语言模型，使用多模态翻译后的自然语言
 			else {
-				const [error3, text] = await to(visionUrlToText(base64, "audio"));
+				const [error3, text] = await to(visionToText(base64, "audio"));
 				if (error3) {
 					logger(`音频翻译失败：${error3.message}`);
 					audioItems.push(fallbackItem);
@@ -291,7 +283,7 @@ export const onebotToOpenaiMessages = async (
 		// 当前图片消息
 		...imageItems.map((item) => {
 			const content = item.startsWith("http")
-				? [visionUrlToContentPart("image", item)]
+				? [urlToContentPart(item)]
 				: createTagText("image", item, {
 						sender_id: user_id,
 						sender_name: nickname,
@@ -301,7 +293,7 @@ export const onebotToOpenaiMessages = async (
 		// 当前视频消息
 		...videoItems.map((item) => {
 			const content = item.startsWith("http")
-				? [visionUrlToContentPart("video", item)]
+				? [urlToContentPart(item, { type: "video" })]
 				: createTagText("video", item, {
 						sender_id: user_id,
 						sender_name: nickname,
@@ -311,7 +303,7 @@ export const onebotToOpenaiMessages = async (
 		// 当前音频消息
 		...audioItems.map((item) => {
 			const content = item.startsWith("data:audio")
-				? [visionUrlToContentPart("audio", item, "wav")]
+				? [urlToContentPart(item, { type: "audio", format: "wav" })]
 				: createTagText("audio", item, {
 						sender_id: user_id,
 						sender_name: nickname,

@@ -5,17 +5,13 @@ import {
 	defineModel,
 	logger,
 } from "@nickyzj2023/utils";
-import { normalizeText } from "@/common/util.js";
+import { checkUrlType, normalizeText } from "@/common/util.js";
 import config from "@/config.js";
-import {
-	IDENTITY_ANCHOR,
-	MODELS,
-	VISION_UNDERSTANDING_PROMPT,
-} from "@/constants.js";
+import { IDENTITY_ANCHOR, VISION_UNDERSTANDING_PROMPT } from "@/constants.js";
 import type { Model } from "@/openai/schemas/model.js";
 import { openaiTools, toolHandlers } from "@/openai/tools/index.js";
-import { modelRef } from "@/openai/utils/model.js";
-import { contentToMessage, visionUrlToContentPart } from "./message.js";
+import { findModelByModality, modelRef } from "@/openai/utils/model.js";
+import { contentToMessage, urlToContentPart } from "./message.js";
 
 /**
  * 传入 OpenAI API 兼容的 messages 数组，返回大模型最终回复内容
@@ -30,7 +26,7 @@ export const generateContent = async (
 		extraBody?: Record<string, any>;
 	},
 ) => {
-	const { model = modelRef.value, extraBody } = options ?? {};
+	const { model = modelRef.current, extraBody } = options ?? {};
 	if (!model) {
 		throw new Error("当前没有可用的模型，请完善配置文件");
 	}
@@ -57,7 +53,6 @@ export const generateContent = async (
 	/**
 	 * 发出请求
 	 */
-	logger("处理消息", lastUserMessage?.content, modelConfig);
 	const { reasoningContent, content, usage } = await chatCompletions(
 		modelConfig,
 		messages,
@@ -70,43 +65,39 @@ export const generateContent = async (
 	);
 
 	// 打印对话数据
-	// if (reasoningContent) {
-	// 	logger("思考内容", compactStr(reasoningContent));
-	// }
-	// logger("回复内容", compactStr(content));
-	// logger("本轮消耗", usage, "\n");
+	reasoningContent && logger("思考内容：", "\n", compactStr(reasoningContent));
+	logger("回复内容：", "\n", compactStr(content));
+	logger("本轮消耗：", usage, "\n");
 
 	return {
 		content: normalizeText(content),
-		isTokenNearLimit: usage.total_tokens >= modelRef.value.totalContext * 0.8,
+		isTokenNearLimit: usage.total_tokens >= modelRef.current.totalContext * 0.8,
 	};
 };
 
 /**
  * 使用多模态模型，把视觉消息翻译成自然语言
- * @param visionUrl base64 或公网可访问的 URL
+ * @param url base64或公网可访问的URL
  * @throws 可能抛出异常
  */
-export const visionUrlToText = async (
-	visionUrl: string,
+export const visionToText = async (
+	url: string,
 	type: "image" | "video" | "audio" = "image",
 ) => {
-	const currentModel = modelRef.value;
-	if (!currentModel) {
-		throw new Error("当前没有可用的模型，请完善配置文件");
+	const urlType = checkUrlType(url);
+	if (urlType !== "base64" && urlType !== "remote") {
+		throw new Error(`不支持的URL：${url}`);
 	}
 
-	const multiModel = MODELS.find((model) =>
-		model.inputModalities?.includes(type),
-	);
+	const multiModel = findModelByModality(type);
 	if (!multiModel) {
-		throw new Error(`未配置支持${type}的多模态模型，请完善配置文件`);
+		throw new Error(`未配置支持${type}的多模态模型，请完善config.ts`);
 	}
 
 	const { content } = await generateContent(
 		[
 			contentToMessage([
-				visionUrlToContentPart(type, visionUrl),
+				urlToContentPart(url, { type }),
 				{ type: "text", text: VISION_UNDERSTANDING_PROMPT },
 			]),
 		],
