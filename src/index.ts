@@ -63,9 +63,9 @@ router.post("/", withContent, async (req) => {
 
 	try {
 		// 调试模式
-		if (groupId !== 669751957) {
-			throw new Error("🚧施工中");
-		}
+		// if (groupId !== 669751957) {
+		// 	throw new Error("🚧施工中");
+		// }
 
 		// 如果消息无需模型处理，则直接回复
 		const directlySegments = await beforeLLM(e);
@@ -86,7 +86,6 @@ router.post("/", withContent, async (req) => {
 			throw new Error();
 		}
 
-		logger("处理消息", e.message);
 		const { content, ...info } = await generateContent(messages);
 		if (!content) {
 			throw new Error("模型生成了空消息，可能是故障或无语了");

@@ -2,6 +2,7 @@ import {
 	type ChatCompletions,
 	chatCompletions,
 	compactStr,
+	defineModel,
 	logger,
 } from "@nickyzj2023/utils";
 import { normalizeText } from "@/common/util.js";
@@ -33,6 +34,7 @@ export const generateContent = async (
 	if (!model) {
 		throw new Error("当前没有可用的模型，请完善配置文件");
 	}
+	const modelConfig = defineModel(model);
 
 	/**
 	 * 巩固人设
@@ -55,12 +57,9 @@ export const generateContent = async (
 	/**
 	 * 发出请求
 	 */
+	logger("处理消息", lastUserMessage?.content, modelConfig);
 	const { reasoningContent, content, usage } = await chatCompletions(
-		{
-			baseUrl: model.baseUrl,
-			apiKey: model.apiKey,
-			model: model.model,
-		},
+		modelConfig,
 		messages,
 		{
 			tools: openaiTools,
@@ -71,11 +70,11 @@ export const generateContent = async (
 	);
 
 	// 打印对话数据
-	if (reasoningContent) {
-		logger("思考内容", compactStr(reasoningContent));
-	}
-	logger("回复内容", compactStr(content));
-	logger("本轮消耗", usage, "\n");
+	// if (reasoningContent) {
+	// 	logger("思考内容", compactStr(reasoningContent));
+	// }
+	// logger("回复内容", compactStr(content));
+	// logger("本轮消耗", usage, "\n");
 
 	return {
 		content: normalizeText(content),
