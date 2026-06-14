@@ -1,4 +1,4 @@
-import { logger } from "@nickyzj2023/utils";
+import { type ChatCompletions, logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { MCPRouter } from "@/openai/utils/mcp.js";
 import changeModel from "./changeModel.js";
@@ -7,7 +7,11 @@ import denyReply from "./denyReply.js";
 import getWeather from "./getWeather.js";
 
 const functionTools = [changeModel, getWeather, decodeAbbr, denyReply];
-logger("已启用 Function Calling Tools", functionTools.map((tool) => tool), "\n");
+logger(
+	"已启用 Function Calling Tools",
+	functionTools.map((tool) => tool),
+	"\n",
+);
 
 const mcpRouter = new MCPRouter();
 await Promise.all(
@@ -35,10 +39,10 @@ export const toolHandlers = Object.fromEntries(
 			const name = tool.function.name;
 			return [
 				name,
-				async (args: any) => {
+				async (args: any, extraArgs: ChatCompletions.ExtraArgs) => {
 					logger(`调用工具${name}(${JSON.stringify(args)})`);
 
-					const result = await tool.function._handler!(args);
+					const result = await tool.function._handler!(args, extraArgs);
 					logger(result);
 
 					return result;

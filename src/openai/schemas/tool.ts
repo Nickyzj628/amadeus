@@ -1,3 +1,5 @@
+import type { ChatCompletions } from "@nickyzj2023/utils";
+
 export type FunctionTool = {
 	name: string;
 	description?: string;
@@ -13,5 +15,5 @@ export type FunctionTool = {
 		>;
 		required?: string[];
 	};
-	_handler?: (args: Record<string, any>) => Promise<any>;
+	_handler?: ChatCompletions.ToolHandler;
 };

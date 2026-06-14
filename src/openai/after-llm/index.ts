@@ -1,11 +1,10 @@
 import type { ChatCompletions } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import type { GroupMessageEvent } from "@/onebot/schemas/http-post.js";
-import { saveGroupMessages } from "../utils/group-messages.js";
 import { removeMostImages, summarizeMessages } from "../utils/optimizations.js";
 
 /**
- * 调用大模型之后的生命周期，用于优化消息数组，保存到本地
+ * 调用大模型之后的生命周期，用于优化消息上下文
  */
 export const afterLLM = async (
 	e: GroupMessageEvent,
@@ -14,8 +13,6 @@ export const afterLLM = async (
 		isTokenNearLimit?: boolean;
 	},
 ) => {
-	const { group_id: groupId } = e;
-
 	// 消息超过上下文长度时，先缩减大小
 	if (info?.isTokenNearLimit) {
 		removeMostImages(messages);
@@ -25,7 +22,4 @@ export const afterLLM = async (
 	if (messages.length > config.etc.summarizeThreshold) {
 		await summarizeMessages(messages);
 	}
-
-	// 保存消息到本地
-	await saveGroupMessages(groupId, messages);
 };

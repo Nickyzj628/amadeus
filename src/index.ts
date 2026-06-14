@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { createServer } from "node:http";
-import { extractErrorMessage, logger } from "@nickyzj2023/utils";
+import { extractErrorMessage, logger, to } from "@nickyzj2023/utils";
 import { createServerAdapter } from "@whatwg-node/server";
 import { AutoRouter, json, status, withContent } from "itty-router";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -21,7 +21,6 @@ import {
 	saveGroupMessages,
 } from "./openai/utils/group-messages.js";
 import { onebotToOpenaiMessages } from "./openai/utils/message.js";
-import { summarizeMessages } from "./openai/utils/optimizations.js";
 
 if (!config.bot.selfId) {
 	throw new Error("请在 config.ts 文件中填写机器人 QQ 号（bot.selfId）");
@@ -62,7 +61,7 @@ router.post("/", withContent, async (req) => {
 
 	// 等待群聊其他消息释放队列
 	const release = await queue.waitInQueue();
-	let instantRelease = true;
+	let hasReleased = false;
 
 	try {
 		// 调试模式
@@ -94,42 +93,39 @@ router.post("/", withContent, async (req) => {
 			throw new Error("模型生成了空消息，可能是故障或无语了");
 		}
 
-		instantRelease = false;
-		Promise.all([
-			// 分段回复消息
-			replyLikeHuman(content, groupId, {
-				at: isAtSelf ? userId : undefined,
-			}),
-			// 整理消息数组，包括优化、保存到本地
-			afterLLM(e, messages, info),
-		]).finally(() => {
-			release();
+		// 分段回复消息
+		await replyLikeHuman(content, groupId, {
+			at: isAtSelf ? userId : undefined,
 		});
+
+		// 自动优化上下文
+		await afterLLM(e, messages, info);
+
+		// 释放消息队列
+		release();
+		hasReleased = true;
 	} catch (error) {
-		const errorMsg = extractErrorMessage(error);
-		if (errorMsg) {
-			if (isAtSelf && error instanceof Error && error.name !== "CustomError") {
-				return json(makeReplyBody(errorMsg));
-			}
-			logger(`抛出了一个异常：${errorMsg}`);
+		const isIgnorable =
+			error instanceof Error &&
+			(error.name === "denyReply" || error.message === "");
+		if (isIgnorable) {
+			return status(204);
 		}
+
+		const message = extractErrorMessage(error) || "未知错误";
+		if (isAtSelf) {
+			return json(makeReplyBody(message));
+		}
+		logger(`抛出了一个异常：${message}`);
 	} finally {
-		if (instantRelease) {
-			// 消息超过一定数量时，调用模型总结一部分
-			if (messages.length > config.etc.summarizeThreshold) {
-				await summarizeMessages(messages);
-			}
+		if (!hasReleased) {
+			await to(afterLLM(e, messages));
 			release();
 		}
 	}
 
 	return status(204);
 });
-
-// 其他路由返回 204 空响应
-// app.use((req, res) => {
-// 	res.status(204).end();
-// });
 
 // 启动 HTTP 服务器
 const ittyServer = createServerAdapter(router.fetch);

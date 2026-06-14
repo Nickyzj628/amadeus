@@ -10,16 +10,16 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@nickyzj2023/utils": "^1.0.74",
+    "@nickyzj2023/utils": "^1.0.75",
     "@whatwg-node/server": "^0.10.18",
-    "itty-router": "^5.0.23",
+    "itty-router": "^5.0.24",
     "sharp": "^0.34.5",
-    "undici": "^8.3.0",
-    "valibot": "^1.4.0"
+    "undici": "^8.4.1",
+    "valibot": "^1.4.1"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
-    "tsdown": "^0.22.0",
+    "@types/node": "^25.9.3",
+    "tsdown": "^0.22.2",
     "typescript": "^6.0.3"
   }
 }
