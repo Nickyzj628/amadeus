@@ -72,10 +72,24 @@ export const loadGroupMessages = async (
 	return { messages, queue };
 };
 
-/** 根据群号保存消息数组 */
+/**
+ * 根据群号保存消息数组
+ * @remarks 如果传参有缺省，则把内存中的所有消息保存到本地
+ */
 export const saveGroupMessages = async (
-	groupId: number,
-	messages: ChatCompletions.Message[],
+	groupId?: number,
+	messages?: ChatCompletions.Message[],
 ) => {
+	// 如果省略 groupId，则视为保存所有群的消息
+	if (!groupId) {
+		for (const [groupId, messages] of groupMessagesMap) {
+			await saveGroupMessages(groupId, messages);
+		}
+		return;
+	}
+
+	if (!messages) {
+		messages = groupMessagesMap.get(groupId);
+	}
 	await saveJSON(`/data/${groupId}.json`, messages);
 };

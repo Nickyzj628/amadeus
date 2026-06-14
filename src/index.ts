@@ -16,7 +16,10 @@ import { makeReplyBody, replyLikeHuman } from "./onebot/utils/action.js";
 import { sendGroupMessage } from "./onebot/utils/http.js";
 import { afterLLM } from "./openai/after-llm/index.js";
 import { generateContent } from "./openai/utils/generate-content.js";
-import { loadGroupMessages } from "./openai/utils/group-messages.js";
+import {
+	loadGroupMessages,
+	saveGroupMessages,
+} from "./openai/utils/group-messages.js";
 import { onebotToOpenaiMessages } from "./openai/utils/message.js";
 import { summarizeMessages } from "./openai/utils/optimizations.js";
 
@@ -142,6 +145,8 @@ const stopBiliLiveTimer = startBiliLiveTimer();
 // 退出程序
 const onShutdown = async (signal: string) => {
 	logger(`收到${signal}信号，正在关闭服务器...`);
+	// 保存所有消息到本地
+	await saveGroupMessages();
 	// 关闭 brec 定时器
 	stopBiliLiveTimer();
 	// 关闭 http 服务器
