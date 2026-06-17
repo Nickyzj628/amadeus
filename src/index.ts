@@ -33,7 +33,7 @@ if (!config.bot.onebotHttpPostPort) {
 
 // 启用代理
 const proxy = execSync("npm config get proxy").toString().trim();
-if (proxy) {
+if (proxy && proxy !== "null") {
 	const proxyAgent = new ProxyAgent(proxy);
 	setGlobalDispatcher(proxyAgent);
 }
