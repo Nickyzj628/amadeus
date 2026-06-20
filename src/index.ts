@@ -97,10 +97,10 @@ router.post("/", withContent, async (req) => {
 		await replyLikeHuman(content, groupId, {
 			at: isAtSelf ? userId : undefined,
 		});
-
 		// 自动优化上下文
 		await afterLLM(e, messages, info);
-
+		// 保存消息到本地
+		await saveGroupMessages(groupId, messages);
 		// 释放消息队列
 		release();
 		hasReleased = true;
