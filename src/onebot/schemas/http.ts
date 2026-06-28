@@ -11,11 +11,7 @@ import {
 	object,
 	string,
 } from "valibot";
-import {
-	GroupMessageEventSchema,
-	SegmentSchema,
-	SenderSchema,
-} from "./http-post.js";
+import { GroupMessageEventSchema } from "./http-post.js";
 
 /**
  * 创建通用响应 Schema
@@ -36,15 +32,7 @@ const createResponseSchema = <TSchema extends GenericSchema>(
  */
 export const GetForwardMessageResponseSchema = createResponseSchema(
 	object({
-		messages: array(
-			object({
-				content: array(SegmentSchema),
-				sender: SenderSchema,
-				time: number(),
-				message_format: string(),
-				message_type: string(),
-			}),
-		),
+		messages: array(GroupMessageEventSchema),
 	}),
 );
 export type GetForwardMessageResponse = InferOutput<

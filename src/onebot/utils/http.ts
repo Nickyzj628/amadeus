@@ -1,4 +1,4 @@
-import { fetcher, logger, to } from "@nickyzj2023/utils";
+import { fetcher } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import config from "@/config.js";
 import {
@@ -8,11 +8,7 @@ import {
 	GetMessageResponseSchema,
 	GetRecordResponseSchema,
 } from "@/onebot/schemas/http.js";
-import {
-	isForwardSegment,
-	type MinimalMessageEvent,
-	type Segment,
-} from "@/onebot/schemas/http-post.js";
+import type { Segment } from "@/onebot/schemas/http-post.js";
 
 const api = fetcher(`http://127.0.0.1:${config.bot.onebotHttpPort}`);
 
@@ -66,43 +62,6 @@ export const getForwardMessage = async (messageId: string) => {
 	}
 
 	return validation.output.data.messages;
-};
-
-/**
- * 递归查询转发消息详情
- * @remarks 保证安全返回数组，即使报错也返回空数组
- */
-export const getForwardMessages = async (
-	messageId: string,
-	count: number,
-): Promise<MinimalMessageEvent[]> => {
-	const [error, response] = await to(getForwardMessage(messageId));
-	if (error) {
-		logger(`查询合并转发消息失败：${error.message}`);
-		return [];
-	}
-
-	const result: MinimalMessageEvent[] = [];
-	const restCount = response.reduce((acc, e) => acc - e.content.length, count);
-
-	for (const e of response) {
-		const { sender } = e;
-		for (const segment of e.content) {
-			// 递归添加深层转发消息
-			if (isForwardSegment(segment) && restCount > 0) {
-				result.push(...(await getForwardMessages(segment.data.id, restCount)));
-			}
-			// 添加当前消息
-			else {
-				result.push({
-					sender,
-					message: [segment],
-				});
-			}
-		}
-	}
-
-	return result;
 };
 
 /**

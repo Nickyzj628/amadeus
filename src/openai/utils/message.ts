@@ -3,6 +3,7 @@ import { type ChatCompletions, logger, to } from "@nickyzj2023/utils";
 import { checkUrlType, compressImage } from "@/common/util.js";
 import { checkSameFileName, uploadToWebdav } from "@/common/webdav.js";
 import {
+	type GroupMessageEvent,
 	isAtSegment,
 	isAudioSegment,
 	isForwardSegment,
@@ -12,8 +13,11 @@ import {
 	isVideoSegment,
 	type MinimalMessageEvent,
 } from "@/onebot/schemas/http-post.js";
-import { getMessage, getRecord } from "@/onebot/utils/http.js";
-import { flattenForwardSegment } from "@/onebot/utils/segment.js";
+import {
+	getForwardMessage,
+	getMessage,
+	getRecord,
+} from "@/onebot/utils/http.js";
 import { modelRef } from "@/openai/utils/model.js";
 import type { InputModality } from "../schemas/model.js";
 import { visionToText } from "./generate-content.js";
@@ -100,27 +104,15 @@ const createTagText = (
 export const onebotToOpenaiMessages = async (
 	e: MinimalMessageEvent,
 	options?: {
-		/** 是否忽略回复的消息 */
-		ignoreReply?: boolean;
-		/** 是否忽略合并转发消息 */
-		ignoreForward?: boolean;
-		/** 每条转发消息允许递归获取的消息数 */
-		forwardCount?: number;
 		/** 是否为被引用的上下文消息 */
 		isQuoted?: boolean;
 	},
 ) => {
 	const {
 		sender: { nickname, user_id },
-		group_id: groupId,
 	} = e;
 
-	const {
-		ignoreReply,
-		ignoreForward,
-		forwardCount,
-		isQuoted = false,
-	} = options ?? {};
+	const { isQuoted = false } = options ?? {};
 
 	const bodyItems: string[] = [];
 
@@ -262,22 +254,28 @@ export const onebotToOpenaiMessages = async (
 			mentionedUserIds.push(segment.data.qq);
 		}
 		// 合并转发
-		else if (isForwardSegment(segment) && !ignoreForward) {
-			const forwardedMessages = (
-				await flattenForwardSegment(segment.data.id, {
-					count: forwardCount,
-					processMessageEvent: (e) =>
-						onebotToOpenaiMessages(e, {
-							...options,
-							isQuoted: true,
-						}),
-				})
-			).flat();
+		else if (isForwardSegment(segment)) {
+			// 获取转发消息（NapCatQQ能够读到嵌套的转发消息）
+			const forwardMessages = await getForwardMessage(segment.data.id);
 
-			quotedMessages.push(...forwardedMessages);
+			// 递归push第一个消息段，直到全部消费完毕
+			const preorderTraverse = async (e: GroupMessageEvent) => {
+				const [firstMessage] = e.message;
+				if (isForwardSegment(firstMessage)) {
+					for (const e of firstMessage.data.content) {
+						await preorderTraverse(e);
+					}
+				} else {
+					const messages = await onebotToOpenaiMessages(e);
+					quotedMessages.push(...messages);
+				}
+			};
+			for (const e of forwardMessages) {
+				await preorderTraverse(e);
+			}
 		}
 		// 回复
-		else if (isReplySegment(segment) && !ignoreReply) {
+		else if (isReplySegment(segment)) {
 			const e = await getMessage(segment.data.id);
 			if (e) {
 				const repliedMessages = await onebotToOpenaiMessages(e, {

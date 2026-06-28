@@ -4,16 +4,17 @@
 // ================================
 
 import {
-    array,
-    type InferOutput,
-    literal,
-    number,
-    object,
-    optional,
-    pipe,
-    string,
-    transform,
-    union,
+	any,
+	array,
+	type InferOutput,
+	literal,
+	number,
+	object,
+	optional,
+	pipe,
+	string,
+	transform,
+	union,
 } from "valibot";
 import { normalizeText } from "@/common/util.js";
 import config from "@/config.js";
@@ -133,6 +134,8 @@ export const ForwardSegmentSchema = object({
 	data: object({
 		/** 合并转发 ID，可通过 get_forward_msg API 获取具体转发内容 */
 		id: string(),
+		/** 嵌套的合并转发消息，已被NapCatQQ递归提取出实际内容，不用再获取 */
+		content: optional(any()),
 	}),
 });
 export type ForwardSegment = InferOutput<typeof ForwardSegmentSchema>;
@@ -249,8 +252,7 @@ export type GroupMessageEvent = InferOutput<typeof GroupMessageEventSchema>;
 /**
  * 大多数事件所需的最小 event 属性
  */
-export type MinimalMessageEvent = Pick<
-	GroupMessageEvent,
-	"sender" | "message"
-> &
-	Partial<Omit<GroupMessageEvent, "sender" | "message">>;
+export type MinimalMessageEvent = {
+	sender: Sender;
+	message: Segment[];
+};
