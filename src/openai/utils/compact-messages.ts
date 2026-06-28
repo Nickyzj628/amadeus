@@ -1,11 +1,15 @@
-import { type ChatCompletions, logger, to } from "@nickyzj2023/utils";
+import type { ChatCompletions } from "@nickyzj2023/utils";
+import { logger, to } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "@/constants.js";
 import { generateContent } from "./generate-content.js";
+import { saveGroupMessages } from "./group-messages.js";
 import { contentToMessage } from "./message.js";
 
-/** 移除消息中的图片，只保留最后一张 */
-export const removeMostImages = (messages: ChatCompletions.Message[]) => {
+/**
+ * 移除消息中的图片，只保留最后一张
+ */
+const removeMostImages = (messages: ChatCompletions.Message[]) => {
 	// 收集所有包含图片的消息
 	const imageMessages: ChatCompletions.Message[] = [];
 	for (const message of messages) {
@@ -99,3 +103,33 @@ export const summarizeMessages = async (
 	// 修改原始消息数组
 	messages.splice(startIndex, count, ...summarizedMessages);
 };
+
+/**
+ * 优化消息上下文，类似 AI Coding Agent 的 /compact 命令
+ */
+const compactMessages = async (
+	messages: ChatCompletions.Message[],
+	options?: {
+		isTokenNearLimit?: boolean;
+		shouldSave?: boolean;
+		/** shouldSave=true 时必传此参数，否则会保存所有群的消息 */
+		groupId?: number;
+	},
+) => {
+	// 消息超过上下文长度时，先缩减大小
+	if (options?.isTokenNearLimit) {
+		removeMostImages(messages);
+	}
+
+	// 消息超过一定数量时，调用模型总结一部分
+	if (messages.length > config.etc.summarizeThreshold) {
+		await summarizeMessages(messages);
+	}
+
+	// 保存消息到本地
+	if (options?.shouldSave) {
+		await saveGroupMessages(options?.groupId, messages);
+	}
+};
+
+export default compactMessages;

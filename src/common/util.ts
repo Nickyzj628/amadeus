@@ -218,7 +218,7 @@ export const compressImage = async (
 
 	const mime = isAnimatedGif ? "image/gif" : "image/webp";
 	logger(
-		`压缩了一张图片：${formatBytes(metadata.size ?? 0)} => ${formatBytes(outputBuffer.length)}`,
+		`压缩了一张${mime}图片：${formatBytes(metadata.size ?? 0)} => ${formatBytes(outputBuffer.length)}`,
 	);
 	return `data:${mime};base64,${outputBuffer.toString("base64")}`;
 };

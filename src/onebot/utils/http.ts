@@ -130,7 +130,7 @@ export const getFileUrl = async (groupId: number, fileId: string) => {
 export const getRecord = async (file: string) => {
 	const response = await api.post("/get_record", {
 		file,
-		out_format: "wav", // 默认的 mp3 会报错
+		out_format: "wav",
 	});
 
 	const validation = safeParse(GetRecordResponseSchema, response);

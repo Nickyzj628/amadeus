@@ -11,6 +11,7 @@ import type { Segment } from "../schemas/http-post.js";
 import { srcToImageSegment, textToSegment } from "../utils/segment.js";
 
 const api = fetcher("https://api.bilibili.com/x/web-interface");
+let lastResolveDate = Date.now();
 
 /**
  * 匹配 bilibili 链接的正则表达式
@@ -25,6 +26,7 @@ const regexp =
  * 解析 bilibili 链接，支持视频（BV号长链接、小程序短链接）、直播
  * @remarks 解析失败会抛出异常
  * @returns 解析后的干净链接 + 视频详情或直播详情 组成的对象
+ * @remarks 为防群内多个支持解析B站链接的机器人循环发消息，故设定5秒节流
  */
 export const resolveBiliLink = async (text: string) => {
 	const link = text.match(regexp)?.[0];
@@ -35,8 +37,24 @@ export const resolveBiliLink = async (text: string) => {
 	// 还原短链接
 	const url = new URL(link.includes("b23.tv") ? await getRealURL(link) : link);
 
+	// 识别链接类型
+	const type = url.pathname.includes("/video/BV")
+		? "video"
+		: url.hostname === "live.bilibili.com"
+			? "live"
+			: "";
+	if (type === "") {
+		return {};
+	}
+
+	// 节流
+	if (Date.now() - lastResolveDate <= 5000) {
+		return {};
+	}
+	lastResolveDate = Date.now();
+
 	// 解析视频
-	if (url.pathname.includes("/video/BV")) {
+	if (type === "video") {
 		// 使用bv号获取详情
 		const bv = url.pathname.match(/BV[a-zA-Z0-9]+/)?.[0];
 		const videoDetail = await api.get(`/view?bvid=${bv}`);
@@ -54,19 +72,16 @@ export const resolveBiliLink = async (text: string) => {
 			videoDetail: data,
 		};
 	}
+
 	// 解析直播
-	else if (url.hostname === "live.bilibili.com") {
-		// 使用房间号获取详情
-		const roomId = url.pathname.replace("/", "");
-		const roomInfo = await queryRoomInfo(roomId);
+	// 使用房间号获取详情
+	const roomId = url.pathname.replace("/", "");
+	const roomInfo = await queryRoomInfo(roomId);
 
-		return {
-			url: `${url.origin}${url.pathname}`,
-			roomInfo,
-		};
-	}
-
-	throw new Error(`不支持的URL：${url.href}`);
+	return {
+		url: `${url.origin}${url.pathname}`,
+		roomInfo,
+	};
 };
 
 export const videoDetailToSegments = (videoDetail: GetVideoDetail["data"]) => {

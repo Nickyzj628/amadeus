@@ -1,4 +1,4 @@
-import { type ChatCompletions, logger } from "@nickyzj2023/utils";
+import { type ChatCompletions, compactStr, logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { MCPRouter } from "@/openai/utils/mcp.js";
 import changeModel from "./changeModel.js";
@@ -7,27 +7,22 @@ import denyReply from "./denyReply.js";
 import getWeather from "./getWeather.js";
 
 const functionTools = [changeModel, getWeather, decodeAbbr, denyReply];
-logger(
-	"已启用 Function Calling Tools",
-	functionTools.map((tool) => tool),
-	"\n",
-);
 
 const mcpRouter = new MCPRouter();
-await Promise.all(
-	Object.entries(config.mcpServers).map(async ([name, server]) => {
-		await mcpRouter.addClient(name, server.url, {
-			ignoredToolNames: server.ignoredToolNames,
-		});
-	}),
-);
+for (const [name, server] of Object.entries(config.mcpServers)) {
+	await mcpRouter.addClient(name, server.url, {
+		ignoredToolNames: server.ignoredToolNames,
+	});
+}
 const mcpOpenAITools = await mcpRouter.getOpenAITools();
-logger("已启用 MCP Tools", ...mcpOpenAITools, "\n");
 
 /**
  * 可直接传入 OpenAI API /chat-completions 的 tools 请求体
  */
 export const openaiTools = [...functionTools, ...mcpOpenAITools];
+openaiTools.forEach((tool) => {
+	logger(`已启用${tool.function.name}：${compactStr(tool.function.description)}`);
+});
 
 /**
  * 可直接传入 @nickyzj2023/utils ai.chatCompletions extraBody 的 tools 处理函数表
@@ -49,4 +44,4 @@ export const toolHandlers = Object.fromEntries(
 				},
 			];
 		}),
-);
+) as ChatCompletions.ToolHandlers;

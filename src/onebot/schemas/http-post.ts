@@ -78,11 +78,6 @@ export const VideoSegmentSchema = object({
 		file_size: string(),
 		/** 临时地址，会过期 */
 		url: string(),
-		/**
-		 * 本地文件路径
-		 * @example "C:\\Users\\Administrator\\Documents\\Tencent Files\\3696448148\\nt_qq\\nt_data\\Ptt\\2026-05\\Ori\\eb103aa19edc119800182322413b3c7c.amr"
-		 */
-		path: string(),
 	}),
 });
 export type VideoSegment = InferOutput<typeof VideoSegmentSchema>;
@@ -246,6 +241,8 @@ export const GroupMessageEventSchema = object({
 	),
 	/** 发送人信息 */
 	sender: SenderSchema,
+	/** 事件发生的时间戳（秒） */
+	time: number(),
 });
 export type GroupMessageEvent = InferOutput<typeof GroupMessageEventSchema>;
 

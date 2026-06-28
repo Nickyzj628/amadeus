@@ -74,7 +74,7 @@ export const urlToContentPart = (
 		// 音频的 base64 应该放在 data 字段，而不是 url
 		if (checkUrlType(url) === "base64") {
 			delete contentPart[_type].url;
-			contentPart[_type].data = url;
+			contentPart[_type].data = url.split("base64,").at(-1);
 		}
 	}
 
@@ -172,6 +172,7 @@ export const onebotToOpenaiMessages = async (
 		// 视频
 		else if (isVideoSegment(segment)) {
 			const { file: filename, url: tempUrl } = segment.data;
+			const ext = filename.slice(filename.lastIndexOf(".") + 1);
 			const fallbackItem = "（无法识别视频）";
 
 			// 1. 检查 WebDav 是否存在相同视频
@@ -187,13 +188,26 @@ export const onebotToOpenaiMessages = async (
 				webdavUrl = url;
 			}
 
-			// 4. 对于多模态，WebDav URL
+			// 3. 将WebDav视频转为 base64
+			const [error3, base64Body] = await to(
+				readFile(`E:/Storage/Amadeus/${filename}`).then((buf) =>
+					buf.toString("base64"),
+				),
+			);
+			if (error3) {
+				logger(`读取视频文件失败：${error3.message}`);
+				videoItems.push(fallbackItem);
+				continue;
+			}
+			const base64 = `data:video/${ext};base64,${base64Body}`;
+
+			// 4. 对于多模态，直接传入base64
 			if (modelInputModalities.includes("video")) {
-				videoItems.push(webdavUrl);
+				videoItems.push(base64);
 			}
 			// 对于纯语言模型，使用多模态翻译后的自然语言
 			else {
-				const [error3, text] = await to(visionToText(webdavUrl, "video"));
+				const [error3, text] = await to(visionToText(base64, "video"));
 				if (error3) {
 					logger(`视频翻译失败：${error3.message}`);
 					videoItems.push(fallbackItem);
@@ -218,7 +232,7 @@ export const onebotToOpenaiMessages = async (
 			}
 
 			// 2. 将本地音频文件转为 base64
-			const [error2, base64] = await to(
+			const [error2, base64Body] = await to(
 				readFile(record.file).then((buf) => buf.toString("base64")),
 			);
 			if (error2) {
@@ -226,6 +240,7 @@ export const onebotToOpenaiMessages = async (
 				audioItems.push(fallbackItem);
 				continue;
 			}
+			const base64 = `data:audio/wav;base64,${base64Body}`;
 
 			// 3. 对于多模态，使用 base64
 			if (modelInputModalities.includes("audio")) {
