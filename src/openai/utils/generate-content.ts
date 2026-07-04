@@ -7,10 +7,10 @@ import {
 } from "@nickyzj2023/utils";
 import { checkUrlType, normalizeText } from "@/common/util.js";
 import config from "@/config.js";
-import { IDENTITY_ANCHOR, VISION_UNDERSTANDING_PROMPT } from "@/constants.js";
 import type { Model } from "@/openai/schemas/model.js";
 import { openaiTools, toolHandlers } from "@/openai/tools/index.js";
 import { findModelByModality, modelRef } from "@/openai/utils/model.js";
+import { IDENTITY_ANCHOR, VISION_UNDERSTANDING_PROMPT } from "./constants.js";
 import { contentToMessage, urlToContentPart } from "./message.js";
 
 /**

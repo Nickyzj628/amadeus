@@ -8,7 +8,7 @@ import {
 	QueryRoomInfoResponseSchema,
 	QueryRoomStatusResponseSchema,
 	type RoomStatus,
-} from "../openai/schemas/bili.js";
+} from "./schemas/bili.js";
 
 const GROUP_IDS = config.brec?.groupIds ?? [];
 const UIDS = config.brec?.uids ?? [];

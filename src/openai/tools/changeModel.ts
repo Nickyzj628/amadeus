@@ -1,4 +1,4 @@
-import { MODELS } from "@/constants.js";
+import { MODELS } from "@/openai/utils/constants.js";
 import { defineFunctionTool } from "@/openai/utils/function-tool.js";
 import { findModelByName, modelRef } from "@/openai/utils/model.js";
 

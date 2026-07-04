@@ -1,25 +1,14 @@
 import { type ChatCompletions, LockQueue, logger } from "@nickyzj2023/utils";
-import { loadJSON, saveJSON } from "@/common/util.js";
+import { loadJSON, saveJSON } from "@/common/db.js";
 import config from "@/config.js";
-import { SYSTEM_PROMPT } from "@/constants.js";
+import { SYSTEM_PROMPT } from "./constants.js";
 
 const groupMessagesMap = new Map<number, ChatCompletions.Message[]>();
 const groupQueueMap = new Map<number, LockQueue>();
 
 /** 根据群号读取消息数组 */
-export const loadGroupMessages = async (
-	groupId: number,
-	options?: {
-		/**
-		 * 是否在每次读取群消息进内存时，重置消息里的系统提示词
-		 * @default true
-		 */
-		resetSystemPromptWhenLoad?: boolean;
-	},
-) => {
-	const { resetSystemPromptWhenLoad = true } = options ?? {};
-
-	// 如果内存中有该群的消息，则直接返回
+export const loadMessages = async (groupId: number) => {
+	// 如果在内存里，则直接返回
 	if (groupMessagesMap.has(groupId)) {
 		return {
 			messages: groupMessagesMap.get(groupId)!,
@@ -27,32 +16,26 @@ export const loadGroupMessages = async (
 		};
 	}
 
-	// 从文件读取群消息
+	// 从本地读取群消息
 	const messages = await loadJSON<ChatCompletions.Message[]>(
 		`/data/${groupId}.json`,
 		{
-			createWithDataIfNotExist: [],
+			fallbackData: [],
 		},
 	);
+	// 读取群聊排队锁
+	const queue = groupQueueMap.getOrInsert(groupId, new LockQueue());
 
-	// 创建排队锁
-	if (!groupQueueMap.has(groupId)) {
-		groupQueueMap.set(groupId, new LockQueue());
-	}
-	const queue = groupQueueMap.get(groupId)!;
+	// 刷新系统提示词
+	messages[0] = {
+		role: "system",
+		content: SYSTEM_PROMPT,
+	};
 
-	// 重置系统提示词
-	if (resetSystemPromptWhenLoad || messages.length === 0) {
-		messages[0] = {
-			role: "system",
-			content: SYSTEM_PROMPT,
-		};
-	}
-
-	// 加入活跃群聊 Map
+	// 常驻内存
 	groupMessagesMap.set(groupId, messages);
 
-	// 释放不活跃的群聊内存
+	// 释放内存中不活跃的群消息
 	if (groupMessagesMap.size > config.etc.maxActiveGroupCount) {
 		for (const [groupId, messages] of groupMessagesMap) {
 			if (groupQueueMap.has(groupId)) {
@@ -61,10 +44,10 @@ export const loadGroupMessages = async (
 			saveJSON(`/data/${groupId}.json`, messages)
 				.then(() => {
 					groupMessagesMap.delete(groupId);
-					logger(`释放了${groupId}的消息内存`);
+					logger(`已释放内存中不活跃的群消息：${groupId}`);
 				})
 				.catch((e) => {
-					logger(`释放${groupId}的消息内存失败：${e.message}`);
+					logger(`未能释放内存中的群消息：${e.message}`);
 				});
 		}
 	}
@@ -76,20 +59,20 @@ export const loadGroupMessages = async (
  * 根据群号保存消息数组
  * @remarks 如果传参有缺省，则把内存中的所有消息保存到本地
  */
-export const saveGroupMessages = async (
+export const saveMessages = async (
 	groupId?: number,
 	messages?: ChatCompletions.Message[],
 ) => {
 	// 如果省略 groupId，则视为保存所有群的消息
 	if (!groupId) {
 		for (const [groupId, messages] of groupMessagesMap) {
-			await saveGroupMessages(groupId, messages);
+			await saveMessages(groupId, messages);
 		}
 		return;
 	}
 
-	if (!messages) {
-		messages = groupMessagesMap.get(groupId);
-	}
-	await saveJSON(`/data/${groupId}.json`, messages);
+	await saveJSON(
+		`/data/${groupId}.json`,
+		messages ?? groupMessagesMap.get(groupId),
+	);
 };

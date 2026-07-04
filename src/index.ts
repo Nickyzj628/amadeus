@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { extractErrorMessage, logger, to } from "@nickyzj2023/utils";
 import { createServerAdapter } from "@whatwg-node/server";
 import { AutoRouter, json, status, withContent } from "itty-router";
-import { ProxyAgent, setGlobalDispatcher } from "undici";
+import { ProxyAgent, request, setGlobalDispatcher } from "undici";
 import { safeParse } from "valibot";
 import { startBiliLiveTimer } from "./common/bililive.js";
 import config from "./config.js";
@@ -16,29 +16,47 @@ import { makeReplyBody, replyLikeHuman } from "./onebot/utils/action.js";
 import { sendGroupMessage } from "./onebot/utils/http.js";
 import compactMessages from "./openai/utils/compact-messages.js";
 import { generateContent } from "./openai/utils/generate-content.js";
-import {
-	loadGroupMessages,
-	saveGroupMessages,
-} from "./openai/utils/group-messages.js";
 import { onebotToOpenaiMessages } from "./openai/utils/message.js";
+import { loadMessages, saveMessages } from "./openai/utils/messages.js";
 
-if (!config.bot.selfId) {
-	throw new Error("请在 config.ts 文件中填写机器人 QQ 号（bot.selfId）");
-}
-if (!config.bot.onebotHttpPostPort) {
-	throw new Error(
-		"请在 config.ts 文件中填写机器人接收消息的端口号（bot.onebotHttpPostPort）",
-	);
-}
+const checkRequiredConfig = () => {
+	if (!config.bot.selfId) {
+		throw new Error("请在/src/config.ts中填写机器人QQ号（bot.selfId）");
+	}
+	if (!config.bot.onebotHttpPostPort) {
+		throw new Error(
+			"请在/src/config.ts中填写从协议端接收消息的端口号（bot.onebotHttpPostPort）",
+		);
+	}
+};
+checkRequiredConfig();
 
-// 启用代理
-const proxy = execSync("npm config get proxy").toString().trim();
-if (proxy && proxy !== "null") {
+const enableProxy = async () => {
+	const proxy =
+		process.env.HTTPS_PROXY ||
+		process.env.HTTP_PROXY ||
+		execSync("npm config get proxy").toString().trim();
+	if (!proxy || proxy === "null") {
+		return;
+	}
+
 	const proxyAgent = new ProxyAgent(proxy);
-	setGlobalDispatcher(proxyAgent);
-}
+	const [error] = await to(
+		request("https://www.google.com/generate_204", {
+			dispatcher: proxyAgent,
+			signal: AbortSignal.timeout(3000),
+		}),
+	);
+	if (error) {
+		logger(`未能启用代理，请检查${proxy}能否在3秒内加载出google.com`);
+		return;
+	}
 
-// 创建唯一路由
+	setGlobalDispatcher(proxyAgent);
+	logger(`已启用代理: ${proxy}`);
+};
+await enableProxy();
+
 const router = AutoRouter();
 router.post("/", withContent, async (req) => {
 	// 验证请求体格式
@@ -56,7 +74,7 @@ router.post("/", withContent, async (req) => {
 
 	// 读取群聊消息
 	const { group_id: groupId, user_id: userId } = e;
-	const { messages, queue } = await loadGroupMessages(groupId);
+	const { messages, queue } = await loadMessages(groupId);
 	const isAtSelf = e.message.some(isAtSelfSegment);
 
 	// 等待群聊其他消息释放队列
@@ -75,7 +93,7 @@ router.post("/", withContent, async (req) => {
 			if (isAtSelf) {
 				return json(makeReplyBody(...directlySegments));
 			}
-			sendGroupMessage(groupId, directlySegments);
+			await sendGroupMessage(groupId, directlySegments);
 			return status(204);
 		}
 
@@ -147,7 +165,7 @@ const stopBiliLiveTimer = startBiliLiveTimer();
 const onShutdown = async (signal: string) => {
 	logger(`收到${signal}信号，正在关闭服务器...`);
 	// 保存所有消息到本地
-	await saveGroupMessages();
+	await saveMessages();
 	// 关闭 brec 定时器
 	stopBiliLiveTimer();
 	// 关闭 http 服务器

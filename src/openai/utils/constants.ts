@@ -1,25 +1,23 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { get } from "./common/util.js";
-import config from "./config.js";
-import type { Model } from "./openai/schemas/model.js";
+import { logger } from "@nickyzj2023/utils";
+import { get } from "@/common/util.js";
+import config from "@/config.js";
+import type { Model } from "@/openai/schemas/model.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PROMPTS_DIR = path.resolve("src/openai/prompts");
 
 /** 加载提示词，替换其中的 {xxx} 变量 */
 const loadPrompt = (filename: string): string => {
-	const promptPath = path.join(
-		__dirname,
-		"openai",
-		"prompts",
-		`${filename}.md`,
-	);
-	return fs.readFileSync(promptPath, "utf-8").replace(/\{[^}]+\}/g, (match) => {
-		const path = match.slice(1, -1);
-		const value = get(config, path);
-		return String(value || match);
-	});
+	const prompt = fs
+		.readFileSync(path.join(PROMPTS_DIR, `${filename}.md`), "utf-8")
+		.replace(/\{[^}]+\}/g, (match) => {
+			const path = match.slice(1, -1);
+			const value = get(config, path);
+			return String(value || match);
+		});
+	logger(`已加载提示词：${filename}`);
+	return prompt;
 };
 
 /** 维持人设的临时系统提示词 */

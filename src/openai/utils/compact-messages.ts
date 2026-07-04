@@ -1,10 +1,10 @@
 import type { ChatCompletions } from "@nickyzj2023/utils";
 import { logger, to } from "@nickyzj2023/utils";
 import config from "@/config.js";
-import { SUMMARIZE_PROMPT } from "@/constants.js";
+import { SUMMARIZE_PROMPT } from "./constants.js";
 import { generateContent } from "./generate-content.js";
-import { saveGroupMessages } from "./group-messages.js";
 import { contentToMessage } from "./message.js";
+import { saveMessages } from "./messages.js";
 
 /**
  * 移除消息中的图片，只保留最后一张
@@ -128,7 +128,7 @@ const compactMessages = async (
 
 	// 保存消息到本地
 	if (options?.shouldSave) {
-		await saveGroupMessages(options?.groupId, messages);
+		await saveMessages(options?.groupId, messages);
 	}
 };
 

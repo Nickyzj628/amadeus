@@ -1,17 +1,16 @@
 import { fetcher, getRealURL } from "@nickyzj2023/utils";
 import { parse } from "valibot";
 import { queryRoomInfo } from "@/common/bililive.js";
-import { formatNumberCompact } from "@/common/util.js";
-import type { RoomInfo } from "@/openai/schemas/bili.js";
+import type { RoomInfo } from "@/common/schemas/bili.js";
 import {
 	type GetVideoDetail,
 	GetVideoDetailSchema,
-} from "@/openai/schemas/bili.js";
+} from "@/common/schemas/bili.js";
+import { formatNumberCompact } from "@/common/util.js";
 import type { Segment } from "../schemas/http-post.js";
 import { srcToImageSegment, textToSegment } from "../utils/segment.js";
 
 const api = fetcher("https://api.bilibili.com/x/web-interface");
-let lastResolveDate = Date.now();
 
 /**
  * 匹配 bilibili 链接的正则表达式
@@ -46,12 +45,6 @@ export const resolveBiliLink = async (text: string) => {
 	if (type === "") {
 		return {};
 	}
-
-	// 节流
-	if (Date.now() - lastResolveDate <= 5000) {
-		return {};
-	}
-	lastResolveDate = Date.now();
 
 	// 解析视频
 	if (type === "video") {

@@ -17,10 +17,11 @@ export const beforeLLM = async (e: GroupMessageEvent): Promise<Segment[]> => {
 	try {
 		// 解析B站链接
 		const { videoDetail, roomInfo } = await resolveBiliLink(dataString);
-		if (videoDetail) {
+		const allowOutput = Date.now() - lastHandleDate > 5000;
+		if (videoDetail && allowOutput) {
 			return videoDetailToSegments(videoDetail);
 		}
-		if (roomInfo) {
+		if (roomInfo && allowOutput) {
 			return roomInfoToSegments(roomInfo);
 		}
 
