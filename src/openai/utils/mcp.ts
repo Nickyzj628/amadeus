@@ -1,5 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { McpServer } from "../schemas/model.js";
 import { defineFunctionTool } from "./function-tool.js";
 
 export class MCPRouter {
@@ -14,9 +15,11 @@ export class MCPRouter {
 	async addClient(
 		name: string,
 		url: string,
-		options?: { ignoredToolNames?: string[] },
+		options?: Omit<McpServer, "type" | "url">,
 	) {
-		const transport = new StreamableHTTPClientTransport(new URL(url));
+		const transport = new StreamableHTTPClientTransport(new URL(url), {
+			requestInit: { headers: options?.headers },
+		});
 		const client = new Client({ name, version: "1.0.0" });
 		await client.connect(transport);
 

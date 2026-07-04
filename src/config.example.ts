@@ -84,6 +84,10 @@ export default {
 		"tavily-remote-mcp": {
 			type: "streamable_http",
 			url: "https://mcp.tavily.com/mcp/?tavilyApiKey=xxxxx",
+			// 如果MCP服务不支持在url里直接携带apikey，则还有在请求头内携带的方法
+			// headers: {
+			//      "x-api-key": "dfd5de63-4a4f-4fc2-87d7-8f20abad5d18",
+			//    },
 			// 如果 MCP 客户端中含有不需要的工具，可以写在这里忽略，减少上下文长度
 			ignoredToolNames: [
 				"tavily_crawl",

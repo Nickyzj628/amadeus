@@ -12,3 +12,10 @@ export type Model = {
 };
 
 export type InputModality = "text" | "image" | "file" | "video" | "audio";
+
+export type McpServer = {
+	type: "streamable_http" | "sse";
+	url: string;
+	headers?: Record<string, any>;
+	ignoredToolNames?: string[];
+};

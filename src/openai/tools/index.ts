@@ -1,4 +1,9 @@
-import { type ChatCompletions, compactStr, logger } from "@nickyzj2023/utils";
+import {
+	type ChatCompletions,
+	compactStr,
+	logger,
+	omit,
+} from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { MCPRouter } from "@/openai/utils/mcp.js";
 import changeModel from "./changeModel.js";
@@ -10,9 +15,7 @@ const functionTools = [changeModel, getWeather, decodeAbbr, denyReply];
 
 const mcpRouter = new MCPRouter();
 for (const [name, server] of Object.entries(config.mcpServers)) {
-	await mcpRouter.addClient(name, server.url, {
-		ignoredToolNames: server.ignoredToolNames,
-	});
+	await mcpRouter.addClient(name, server.url, omit(server, ["type", "url"]));
 }
 const mcpOpenAITools = await mcpRouter.getOpenAITools();
 
@@ -21,7 +24,9 @@ const mcpOpenAITools = await mcpRouter.getOpenAITools();
  */
 export const openaiTools = [...functionTools, ...mcpOpenAITools];
 openaiTools.forEach((tool) => {
-	logger(`已启用${tool.function.name}：${compactStr(tool.function.description)}`);
+	logger(
+		`已启用${tool.function.name}：${compactStr(tool.function.description)}`,
+	);
 });
 
 /**
