@@ -52,7 +52,7 @@ export const summarizeMessages = async (
 	const startIndex = messages.findIndex((message) => message.role === "user");
 
 	// 粗略计算需要总结的消息条数
-	const count = Math.floor(messages.length * 0.5);
+	const count = Math.floor(messages.length * 0.8);
 	const endIndex = startIndex + count;
 	const summarizingMessages = messages.slice(startIndex, endIndex);
 
