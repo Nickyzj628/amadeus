@@ -1,7 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { type ChatCompletions, logger, to } from "@nickyzj2023/utils";
 import { checkUrlType, compressImage } from "@/common/util.js";
-import { checkSameFileName, uploadToWebdav } from "@/common/webdav.js";
+import {
+	checkSameFileName,
+	uploadToWebdav,
+	WEBDAV_LOCAL_BASE,
+} from "@/common/webdav.js";
 import {
 	type GroupMessageEvent,
 	isAtSegment,
@@ -66,7 +70,7 @@ export const urlToContentPart = (
 				? "video_url"
 				: "input_audio";
 
-	const contentPart: any = {
+	const contentPart: Record<string, any> = {
 		type: _type,
 		[_type]: {
 			url,
@@ -111,19 +115,17 @@ export const onebotToOpenaiMessages = async (
 	const {
 		sender: { nickname, user_id },
 	} = e;
-
 	const { isQuoted = false } = options ?? {};
 
-	const bodyItems: string[] = [];
+	const modelInputModalities = modelRef.current?.inputModalities ?? [];
 
+	const bodyItems: string[] = [];
 	const imageItems: string[] = [];
 	const videoItems: string[] = [];
 	const audioItems: string[] = [];
 
 	const mentionedUserIds: string[] = [];
 	const quotedMessages: ChatCompletions.Message[] = [];
-
-	const modelInputModalities = modelRef.current?.inputModalities ?? [];
 
 	/**
 	 * 解析消息段数组
@@ -152,9 +154,9 @@ export const onebotToOpenaiMessages = async (
 			}
 			// 对于纯语言模型，使用多模态翻译后的自然语言
 			else {
-				const [error3, text] = await to(visionToText(base64));
-				if (error3) {
-					logger(`图片翻译失败：${error3.message}`);
+				const [error2, text] = await to(visionToText(base64));
+				if (error2) {
+					logger(`图片翻译失败：${error2.message}`);
 					imageItems.push(fallbackItem);
 					continue;
 				}
@@ -171,9 +173,9 @@ export const onebotToOpenaiMessages = async (
 			let webdavUrl = filename ? await checkSameFileName(filename) : "";
 			if (!webdavUrl) {
 				// 2. 上传到 WebDav
-				const [error2, url] = await to(uploadToWebdav(tempUrl, { filename }));
-				if (error2) {
-					logger(`上传视频失败：${error2.message}`);
+				const [error, url] = await to(uploadToWebdav(tempUrl, { filename }));
+				if (error) {
+					logger(`上传视频失败：${error.message}`);
 					videoItems.push(fallbackItem);
 					continue;
 				}
@@ -181,39 +183,31 @@ export const onebotToOpenaiMessages = async (
 			}
 
 			// 3. 将WebDav视频转为 base64
-			const [error3, base64Body] = await to(
-				readFile(`E:/Storage/Amadeus/${filename}`).then((buf) =>
+			const [error2, base64Body] = await to(
+				readFile(`${WEBDAV_LOCAL_BASE}/${filename}`).then((buf) =>
 					buf.toString("base64"),
 				),
 			);
-			if (error3) {
-				logger(`读取视频文件失败：${error3.message}`);
+			if (error2) {
+				logger(`读取视频文件失败：${error2.message}`);
 				videoItems.push(fallbackItem);
 				continue;
 			}
-			const base64 = `data:video/${ext};base64,${base64Body}`;
 
-			// 4. 对于多模态，直接传入base64
-			if (modelInputModalities.includes("video")) {
-				videoItems.push(base64);
+			// 4. 使用多模态单独翻译后的自然语言
+			const base64 = `data:video/${ext};base64,${base64Body}`;
+			const [error3, text] = await to(visionToText(base64, "video"));
+			if (error3) {
+				logger(`视频翻译失败：${error3.message}`);
+				videoItems.push(fallbackItem);
+				continue;
 			}
-			// 对于纯语言模型，使用多模态翻译后的自然语言
-			else {
-				const [error3, text] = await to(visionToText(base64, "video"));
-				if (error3) {
-					logger(`视频翻译失败：${error3.message}`);
-					videoItems.push(fallbackItem);
-					continue;
-				}
-				videoItems.push(text);
-			}
+			videoItems.push(text);
 		}
 		// 音频
-		// - 对于多模态，使用 base64
-		// - 对于纯语言模型，使用多模态翻译后的自然语言
 		else if (isAudioSegment(segment)) {
 			const { file: filename } = segment.data;
-			const fallbackItem = "[不具备音频理解能力，无法识别]";
+			const fallbackItem = "[无法识别音频]";
 
 			// 1. 读取音频
 			const [error, record] = await to(getRecord(filename));
@@ -232,22 +226,16 @@ export const onebotToOpenaiMessages = async (
 				audioItems.push(fallbackItem);
 				continue;
 			}
-			const base64 = `data:audio/wav;base64,${base64Body}`;
 
-			// 3. 对于多模态，使用 base64
-			if (modelInputModalities.includes("audio")) {
-				audioItems.push(base64);
+			// 3. 使用多模态单独翻译后的自然语言
+			const base64 = `data:audio/wav;base64,${base64Body}`;
+			const [error3, text] = await to(visionToText(base64, "audio"));
+			if (error3) {
+				logger(`音频翻译失败：${error3.message}`);
+				audioItems.push(fallbackItem);
+				continue;
 			}
-			// 对于纯语言模型，使用多模态翻译后的自然语言
-			else {
-				const [error3, text] = await to(visionToText(base64, "audio"));
-				if (error3) {
-					logger(`音频翻译失败：${error3.message}`);
-					audioItems.push(fallbackItem);
-					continue;
-				}
-				audioItems.push(text);
-			}
+			audioItems.push(text);
 		}
 		// @ 某人
 		else if (isAtSegment(segment)) {
@@ -255,14 +243,16 @@ export const onebotToOpenaiMessages = async (
 		}
 		// 合并转发
 		else if (isForwardSegment(segment)) {
-			// 获取转发消息（NapCatQQ能够读到嵌套的转发消息）
+			// 获取转发消息
 			const forwardMessages = await getForwardMessage(segment.data.id);
 
-			// 递归push第一个消息段，直到全部消费完毕
+			// 前序遍历消息段，直到全部消费完毕
 			const preorderTraverse = async (e: GroupMessageEvent) => {
 				const [firstMessage] = e.message;
+				// 如果遇到嵌套的转发消息，则重复外层的解析操作
 				if (isForwardSegment(firstMessage)) {
-					for (const e of firstMessage.data.content) {
+					const forwardMessages = await getForwardMessage(firstMessage.data.id);
+					for (const e of forwardMessages) {
 						await preorderTraverse(e);
 					}
 				} else {
@@ -270,6 +260,7 @@ export const onebotToOpenaiMessages = async (
 					quotedMessages.push(...messages);
 				}
 			};
+
 			for (const e of forwardMessages) {
 				await preorderTraverse(e);
 			}
@@ -293,7 +284,7 @@ export const onebotToOpenaiMessages = async (
 	return [
 		// 上下文消息
 		...quotedMessages,
-		// 当前图片消息
+		// 图片消息
 		...imageItems.map((item) => {
 			const content = item.startsWith("http")
 				? [urlToContentPart(item)]
@@ -303,7 +294,7 @@ export const onebotToOpenaiMessages = async (
 					});
 			return contentToMessage(content);
 		}),
-		// 当前视频消息
+		// 视频消息
 		...videoItems.map((item) => {
 			const content = item.startsWith("http")
 				? [urlToContentPart(item, { type: "video" })]
@@ -313,7 +304,7 @@ export const onebotToOpenaiMessages = async (
 					});
 			return contentToMessage(content);
 		}),
-		// 当前音频消息
+		// 音频消息
 		...audioItems.map((item) => {
 			const content = item.startsWith("data:audio")
 				? [urlToContentPart(item, { type: "audio", format: "wav" })]
@@ -323,7 +314,7 @@ export const onebotToOpenaiMessages = async (
 					});
 			return contentToMessage(content);
 		}),
-		// 当前消息
+		// 文本消息
 		bodyItems.length > 0 &&
 			contentToMessage(
 				createTagText(

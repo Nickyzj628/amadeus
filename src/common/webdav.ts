@@ -1,7 +1,8 @@
 import { readFile, unlink } from "node:fs/promises";
 import { checkUrlType } from "./util.js";
 
-const WEBDAV_BASE = "https://nickyzj.run:2020/Amadeus";
+export const WEBDAV_BASE = "https://nickyzj.run:2020/Amadeus";
+export const WEBDAV_LOCAL_BASE = "E:/Storage/Amadeus";
 
 const EXT_MIME_PAIRS: [string, string][] = [
 	["png", "image/png"],

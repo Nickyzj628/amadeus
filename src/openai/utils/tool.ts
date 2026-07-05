@@ -1,7 +1,12 @@
 import { Client } from "@modelcontextprotocol/sdk/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { FunctionTool } from "@/openai/schemas/tool.js";
 import type { McpServer } from "../schemas/model.js";
-import { defineFunctionTool } from "./function-tool.js";
+
+export const defineFunctionTool = (config: FunctionTool) => ({
+	type: "function" as const,
+	function: config,
+});
 
 export class MCPRouter {
 	clients: Client[];

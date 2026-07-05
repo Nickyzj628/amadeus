@@ -89,7 +89,7 @@ const checkAndSend = async () => {
 
 			// 初始化直播间状态，不推送通知
 			if (!prevRoomStatus) {
-				logger(`初始化直播间：${roomId}（${room.uname}）`);
+				logger(`载入直播间：${roomId}（${room.uname}）`);
 				return result;
 			}
 
@@ -146,7 +146,7 @@ export const startBiliLiveTimer = () => {
 		checkAndSend();
 	}, INTERVAL_MS);
 
-	logger("直播推送定时器已启动");
+	logger("启动直播推送服务");
 	return () => {
 		clearInterval(timer);
 	};

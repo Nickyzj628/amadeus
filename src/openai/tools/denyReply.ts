@@ -1,5 +1,5 @@
-import { defineFunctionTool } from "@/openai/utils/function-tool.js";
-import { contentToMessage } from "../utils/message.js";
+import { defineFunctionTool } from "@/openai/utils/tool.js";
+import { contentToMessage } from "../utils/convert.js";
 
 export default defineFunctionTool({
 	name: "denyReply",

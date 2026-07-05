@@ -1,6 +1,6 @@
 import { MODELS } from "@/openai/utils/constants.js";
-import { defineFunctionTool } from "@/openai/utils/function-tool.js";
 import { findModelByName, modelRef } from "@/openai/utils/model.js";
+import { defineFunctionTool } from "@/openai/utils/tool.js";
 
 export default defineFunctionTool({
 	name: "changeModel",

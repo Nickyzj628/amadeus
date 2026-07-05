@@ -2,8 +2,8 @@ import type { ChatCompletions } from "@nickyzj2023/utils";
 import { logger, to } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "./constants.js";
+import { contentToMessage } from "./convert.js";
 import { generateContent } from "./generate-content.js";
-import { contentToMessage } from "./message.js";
 import { saveMessages } from "./messages.js";
 
 /**

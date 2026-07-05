@@ -14,9 +14,9 @@ import {
 } from "./onebot/schemas/http-post.js";
 import { makeReplyBody, replyLikeHuman } from "./onebot/utils/action.js";
 import { sendGroupMessage } from "./onebot/utils/http.js";
-import compactMessages from "./openai/utils/compact-messages.js";
+import compactMessages from "./openai/utils/compact.js";
+import { onebotToOpenaiMessages } from "./openai/utils/convert.js";
 import { generateContent } from "./openai/utils/generate-content.js";
-import { onebotToOpenaiMessages } from "./openai/utils/message.js";
 import { loadMessages, saveMessages } from "./openai/utils/messages.js";
 
 const checkRequiredConfig = () => {
@@ -83,17 +83,17 @@ router.post("/", withContent, async (req) => {
 
 	try {
 		// 调试模式
-		// if (groupId !== 669751957) {
-		// 	throw new Error("🚧施工中");
-		// }
+		if (groupId !== 669751957) {
+			throw new Error("🚧施工中");
+		}
 
 		// 如果消息无需模型处理，则直接回复
-		const directlySegments = await beforeLLM(e);
-		if (directlySegments.length > 0) {
+		const segments = await beforeLLM(e);
+		if (segments.length > 0) {
 			if (isAtSelf) {
-				return json(makeReplyBody(...directlySegments));
+				return json(makeReplyBody(...segments));
 			}
-			await sendGroupMessage(groupId, directlySegments);
+			await sendGroupMessage(groupId, segments);
 			return status(204);
 		}
 

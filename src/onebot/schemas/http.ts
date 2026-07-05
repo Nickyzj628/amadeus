@@ -9,6 +9,8 @@ import {
 	type InferOutput,
 	number,
 	object,
+	omit,
+	optional,
 	string,
 } from "valibot";
 import { GroupMessageEventSchema } from "./http-post.js";
@@ -22,7 +24,7 @@ const createResponseSchema = <TSchema extends GenericSchema>(
 	return object({
 		status: string(),
 		retcode: number(),
-		message: string(),
+		message: optional(string()),
 		data: dataSchema,
 	});
 };
@@ -57,7 +59,7 @@ export type GetMessageHistoryResponse = InferOutput<
  * POST /get_msg 结果
  */
 export const GetMessageResponseSchema = createResponseSchema(
-	GroupMessageEventSchema,
+	omit(GroupMessageEventSchema, ["self_id"]),
 );
 export type GetMessageResponse = InferOutput<typeof GetMessageResponseSchema>;
 

@@ -11,7 +11,7 @@ import type { Model } from "@/openai/schemas/model.js";
 import { openaiTools, toolHandlers } from "@/openai/tools/index.js";
 import { findModelByModality, modelRef } from "@/openai/utils/model.js";
 import { IDENTITY_ANCHOR, VISION_UNDERSTANDING_PROMPT } from "./constants.js";
-import { contentToMessage, urlToContentPart } from "./message.js";
+import { contentToMessage, urlToContentPart } from "./convert.js";
 
 /**
  * 传入 OpenAI API 兼容的 messages 数组，返回大模型最终回复内容
@@ -53,6 +53,7 @@ export const generateContent = async (
 	/**
 	 * 发出请求
 	 */
+
 	const { reasoningContent, content, usage } = await chatCompletions(
 		modelConfig,
 		messages,
@@ -65,8 +66,8 @@ export const generateContent = async (
 	);
 
 	// 打印对话数据
-	reasoningContent && logger("思考内容：", "\n", compactStr(reasoningContent));
-	logger("回复内容：", "\n", compactStr(content));
+	reasoningContent && logger("思考内容：", compactStr(reasoningContent));
+	logger("回复内容：", compactStr(content));
 	logger("本轮消耗：", usage, "\n");
 
 	return {
@@ -91,7 +92,7 @@ export const visionToText = async (
 
 	const multiModel = findModelByModality(type);
 	if (!multiModel) {
-		throw new Error(`未配置支持${type}的多模态模型，请完善config.ts`);
+		throw new Error(`未配置支持${type}的多模态模型，请完善/src/config.ts`);
 	}
 
 	const { content } = await generateContent(

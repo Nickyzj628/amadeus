@@ -1,11 +1,6 @@
-import {
-	type ChatCompletions,
-	compactStr,
-	logger,
-	omit,
-} from "@nickyzj2023/utils";
+import { type ChatCompletions, logger, omit } from "@nickyzj2023/utils";
 import config from "@/config.js";
-import { MCPRouter } from "@/openai/utils/mcp.js";
+import { MCPRouter } from "@/openai/utils/tool.js";
 import changeModel from "./changeModel.js";
 import decodeAbbr from "./decodeAbbr.js";
 import denyReply from "./denyReply.js";
@@ -24,9 +19,7 @@ const mcpOpenAITools = await mcpRouter.getOpenAITools();
  */
 export const openaiTools = [...functionTools, ...mcpOpenAITools];
 openaiTools.forEach((tool) => {
-	logger(
-		`已启用${tool.function.name}：${compactStr(tool.function.description)}`,
-	);
+	logger(`启用工具：${tool.function.name}`);
 });
 
 /**
@@ -40,7 +33,7 @@ export const toolHandlers = Object.fromEntries(
 			return [
 				name,
 				async (args: any, extraArgs: ChatCompletions.ExtraArgs) => {
-					logger(`调用工具${name}(${JSON.stringify(args)})`);
+					logger(`调用工具：${name}(${JSON.stringify(args)})`);
 
 					const result = await tool.function._handler!(args, extraArgs);
 					logger(result);

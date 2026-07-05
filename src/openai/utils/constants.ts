@@ -16,7 +16,7 @@ const loadPrompt = (filename: string): string => {
 			const value = get(config, path);
 			return String(value || match);
 		});
-	logger(`已加载提示词：${filename}`);
+	logger(`载入提示词：${filename}`);
 	return prompt;
 };
 

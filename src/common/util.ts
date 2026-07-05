@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { logger } from "@nickyzj2023/utils";
 import sharp, { type SharpInput } from "sharp";
@@ -11,7 +12,7 @@ export const formatNumberCompact = (num: number) => {
 };
 
 /**
- * 判断地址是本地/远程还是base64
+ * 判断地址是本地/远程/base64
  */
 export const checkUrlType = (str: string) => {
 	// 网络地址
