@@ -72,6 +72,11 @@ router.post("/", withContent, async (req) => {
 		return status(204);
 	}
 
+	// 过滤非当前绑定机器人
+	if (e.self_id !== Number(config.bot.selfId)) {
+		return status(204);
+	}
+
 	// 读取群聊消息
 	const { group_id: groupId, user_id: userId } = e;
 	const { messages, queue } = await loadMessages(groupId);
