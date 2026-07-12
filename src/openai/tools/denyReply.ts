@@ -4,7 +4,7 @@ import { contentToMessage } from "../utils/convert.js";
 export default defineFunctionTool({
 	name: "denyReply",
 	description:
-		"不回复消息，调用后不会向用户输出任何内容。你应该在什么时候调用：\n- 用户主动要求终止对话时\n - 轮到你发言但话题和你无关时",
+		"不回复消息，调用后不会向用户输出任何内容。你应该在什么时候调用：\n- 用户主动要求终止对话时",
 	parameters: {
 		type: "object",
 		properties: {
