@@ -121,7 +121,5 @@ export default {
 		maxActiveGroupCount: 2,
 		/** 安全词，在消息中检测到时添加人设锚点，修正人设 */
 		safeWord: "myfork",
-		/** 消息数量达到阈值时总结一部分 */
-		summarizeThreshold: 50,
 	},
 };

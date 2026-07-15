@@ -4,40 +4,30 @@ import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "./constants.js";
 import { contentToMessage } from "./convert.js";
 import { generateContent } from "./generate-content.js";
-import { saveMessages } from "./messages.js";
+import { estimateTokens } from "./messages.js";
+import { modelRef } from "./model.js";
 
 /**
- * 移除消息中的图片，只保留最后一张
+ * 软删除旧消息中的图片、音频和视频消息
+ * @remarks 不会处理最新一条消息
  */
-const removeMostImages = (messages: ChatCompletions.Message[]) => {
-	// 收集所有包含图片的消息
-	const imageMessages: ChatCompletions.Message[] = [];
-	for (const message of messages) {
+const softDeleteOldMediaMessages = (messages: ChatCompletions.Message[]) => {
+	const mediaTypes = new Set(["image_url", "input_audio", "video_url"]);
+	let deletedCount = 0;
+
+	for (const message of messages.slice(0, -1)) {
 		if (
-			message &&
 			Array.isArray(message.content) &&
-			message.content.some((part) => part.type === "image_url")
+			message.content.some((part) => mediaTypes.has(part.type))
 		) {
-			imageMessages.push(message);
+			message.content = "资源已过期";
+			deletedCount++;
 		}
 	}
 
-	// 如果没有图片，则不做处理
-	if (imageMessages.length <= 1) {
-		return;
+	if (deletedCount > 0) {
+		logger(`软删除了${deletedCount}条旧媒体消息`);
 	}
-
-	// 移除所有图片，仅保留最后一张
-	// 倒序遍历避免索引错乱
-	const lastImage = imageMessages.at(-1);
-	for (let i = messages.length - 1; i >= 0; i--) {
-		const message = messages[i];
-		if (message && imageMessages.includes(message) && message !== lastImage) {
-			messages.splice(i, 1);
-		}
-	}
-
-	logger(`已移除${imageMessages.length - 1}张图片，保留了最后1张`);
 };
 
 /**
@@ -57,7 +47,7 @@ export const summarizeMessages = async (
 	const summarizingMessages = messages.slice(startIndex, endIndex);
 
 	// 切片总结，防止一次性喂给模型的消息超过上下文窗口
-	const countPerChunk = Math.min(count, config.etc.summarizeThreshold);
+	const countPerChunk = Math.min(count, 100);
 	const summarizingMessagesChunks = Array.from(
 		{
 			length: Math.ceil(summarizingMessages.length / countPerChunk),
@@ -105,31 +95,30 @@ export const summarizeMessages = async (
 };
 
 /**
- * 优化消息上下文，类似 AI Coding Agent 的 /compact 命令
+ * 自动优化上下文，类似AI Coding Agent的/compact命令
  */
-const compactMessages = async (
+const autoCompactMessages = async (
 	messages: ChatCompletions.Message[],
 	options?: {
-		isTokenNearLimit?: boolean;
-		shouldSave?: boolean;
-		/** shouldSave=true 时必传此参数，否则会保存所有群的消息 */
-		groupId?: number;
+		/** 提供token消耗情况时，能更准确地判断上下文是否达到阈值（80%） */
+		usage?: ChatCompletions.Usage;
 	},
 ) => {
-	// 消息超过上下文长度时，先缩减大小
-	if (options?.isTokenNearLimit) {
-		removeMostImages(messages);
+	const { usage } = options ?? {};
+
+	const thresholdTokens = modelRef.current.totalContext * 0.8;
+	const isTokenNearLimit = usage
+		? usage.total_tokens > thresholdTokens
+		: estimateTokens(messages) > thresholdTokens;
+	if (!isTokenNearLimit) {
+		return;
 	}
 
-	// 消息超过一定数量时，调用模型总结一部分
-	if (messages.length > config.etc.summarizeThreshold) {
-		await summarizeMessages(messages);
-	}
+	// 移除多模态消息
+	softDeleteOldMediaMessages(messages);
 
-	// 保存消息到本地
-	if (options?.shouldSave) {
-		await saveMessages(options?.groupId, messages);
-	}
+	// 总结剩下的消息
+	await summarizeMessages(messages);
 };
 
-export default compactMessages;
+export default autoCompactMessages;

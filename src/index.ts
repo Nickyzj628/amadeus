@@ -14,7 +14,7 @@ import {
 } from "./onebot/schemas/http-post.js";
 import { makeReplyBody, replyLikeHuman } from "./onebot/utils/action.js";
 import { sendGroupMessage } from "./onebot/utils/http.js";
-import compactMessages from "./openai/utils/compact.js";
+import autoCompactMessages from "./openai/utils/compact.js";
 import { onebotToOpenaiMessages } from "./openai/utils/convert.js";
 import { generateContent } from "./openai/utils/generate-content.js";
 import { loadMessages, saveMessages } from "./openai/utils/messages.js";
@@ -111,7 +111,7 @@ router.post("/", withContent, async (req) => {
 			throw new Error();
 		}
 
-		const { content, isTokenNearLimit } = await generateContent(messages);
+		const { content, usage } = await generateContent(messages);
 		if (!content) {
 			throw new Error("模型生成了空消息，可能是故障或无语了");
 		}
@@ -121,12 +121,13 @@ router.post("/", withContent, async (req) => {
 			at: isAtSelf ? userId : undefined,
 		});
 
-		// 优化上下文
-		await compactMessages(messages, {
-			isTokenNearLimit,
-			shouldSave: true,
-			groupId,
+		// 自动优化上下文
+		await autoCompactMessages(messages, {
+			usage,
 		});
+
+		// 保存到本地
+		await saveMessages(groupId, messages);
 
 		// 释放消息队列
 		release();
@@ -134,11 +135,13 @@ router.post("/", withContent, async (req) => {
 	} catch (error) {
 		// 不处理不予放行、denyReply工具抛出的异常
 		const isIgnorable =
-			error instanceof Error &&
-			(error.message === "" || error.name === "denyReply");
+			!(error instanceof Error) ||
+			error.message === "" ||
+			error.name === "denyReply";
 		if (isIgnorable) {
 			return status(204);
 		}
+
 		// 主动回复/被动打印报错信息
 		const message = extractErrorMessage(error);
 		if (isAtSelf) {
@@ -146,8 +149,13 @@ router.post("/", withContent, async (req) => {
 		}
 		logger(`抛出了一个异常：${message}`);
 	} finally {
+		// 如果AI正常回复了用户，hasReleased应该为true
+		// 进到这里代表没回复，但还是要做些收尾工作
 		if (!hasReleased) {
-			await to(compactMessages(messages));
+			// 自动优化上下文
+			await to(autoCompactMessages(messages));
+
+			// 释放消息队列
 			release();
 		}
 	}

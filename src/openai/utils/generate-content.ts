@@ -71,8 +71,9 @@ export const generateContent = async (
 	logger("本轮消耗：", usage, "\n");
 
 	return {
+		reasoningContent,
 		content: normalizeText(content),
-		isTokenNearLimit: usage.total_tokens >= modelRef.current.totalContext * 0.8,
+		usage,
 	};
 };
 

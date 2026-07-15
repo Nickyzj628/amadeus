@@ -1,4 +1,4 @@
-import { fetcher, getRealURL } from "@nickyzj2023/utils";
+import { fetcher, getRealURL, logger } from "@nickyzj2023/utils";
 import { parse } from "valibot";
 import { queryRoomInfo } from "@/common/bililive.js";
 import type { RoomInfo } from "@/common/schemas/bili.js";
@@ -60,8 +60,11 @@ export const resolveBiliLink = async (text: string) => {
 		if (url.searchParams.has("t"))
 			params.push(`t=${url.searchParams.get("t")}`);
 
+		const cleanUrl = `${url.origin}${url.pathname}${params.length > 0 ? `?${params.join("&")}` : ""}`;
+		logger(`解析到B站视频：${cleanUrl}`);
+
 		return {
-			url: `${url.origin}${url.pathname}${params.length > 0 ? `?${params.join("&")}` : ""}`,
+			url: cleanUrl,
 			videoDetail: data,
 		};
 	}
@@ -71,8 +74,10 @@ export const resolveBiliLink = async (text: string) => {
 	const roomId = url.pathname.replace("/", "");
 	const roomInfo = await queryRoomInfo(roomId);
 
+	const cleanUrl = `${url.origin}${url.pathname}`;
+	logger(`解析到B站直播：${cleanUrl}`);
 	return {
-		url: `${url.origin}${url.pathname}`,
+		url: cleanUrl,
 		roomInfo,
 	};
 };
