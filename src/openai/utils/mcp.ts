@@ -1,12 +1,13 @@
 import { Client } from "@modelcontextprotocol/sdk/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import type { FunctionTool } from "@/openai/schemas/tool.js";
-import type { McpServer } from "../schemas/model.js";
+import { type AI, defineTool, isObject } from "@nickyzj2023/utils";
 
-export const defineFunctionTool = (config: FunctionTool) => ({
-	type: "function" as const,
-	function: config,
-});
+export type McpServer = {
+	type: "streamable_http" | "sse";
+	url: string;
+	headers?: Record<string, any>;
+	ignoredToolNames?: string[];
+};
 
 export class MCPRouter {
 	clients: Client[];
@@ -49,18 +50,26 @@ export class MCPRouter {
 			result.push(
 				...tools
 					.filter((tool) => this.toolClientMap.has(tool.name))
-					.map((tool) =>
-						defineFunctionTool({
-							name: tool.name,
-							description: tool.description ?? "",
-							parameters: tool.inputSchema,
-							_handler: (args) =>
+					.map((tool) => {
+						const _properties = (tool.inputSchema.properties ??
+							{}) as AI.ToolDefinition["function"]["parameters"]["properties"];
+						tool.inputSchema.required?.forEach((key) => {
+							if (isObject(_properties[key])) {
+								_properties[key].required = true;
+							}
+						});
+
+						return defineTool(
+							tool.name,
+							tool.description ?? "",
+							_properties,
+							(args) =>
 								client.callTool({
 									name: tool.name,
 									arguments: args,
 								}),
-						}),
-					),
+						);
+					}),
 			);
 		}
 		return result;

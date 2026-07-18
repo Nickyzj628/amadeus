@@ -1,9 +1,9 @@
-import { type ChatCompletions, LockQueue, logger } from "@nickyzj2023/utils";
+import { type AI, LockQueue, logger } from "@nickyzj2023/utils";
 import { loadJSON, saveJSON } from "@/common/db.js";
 import config from "@/config.js";
 import { SYSTEM_PROMPT } from "./constants.js";
 
-const groupMessagesMap = new Map<number, ChatCompletions.Message[]>();
+const groupMessagesMap = new Map<number, AI.Message[]>();
 const groupQueueMap = new Map<number, LockQueue>();
 
 /** 根据群号读取消息数组 */
@@ -17,12 +17,9 @@ export const loadMessages = async (groupId: number) => {
 	}
 
 	// 从本地读取群消息
-	const messages = await loadJSON<ChatCompletions.Message[]>(
-		`/data/${groupId}.json`,
-		{
-			fallbackData: [],
-		},
-	);
+	const messages = await loadJSON<AI.Message[]>(`/data/${groupId}.json`, {
+		fallbackData: [],
+	});
 	// 读取群聊排队锁
 	const queue = groupQueueMap.getOrInsert(groupId, new LockQueue());
 
@@ -61,7 +58,7 @@ export const loadMessages = async (groupId: number) => {
  */
 export const saveMessages = async (
 	groupId?: number,
-	messages?: ChatCompletions.Message[],
+	messages?: AI.Message[],
 ) => {
 	// 如果省略 groupId，则视为保存所有群的消息
 	if (!groupId) {
@@ -80,7 +77,7 @@ export const saveMessages = async (
 /**
  * 根据上下文里的中/英文，估算出可能消耗的token
  */
-export const estimateTokens = (messages?: ChatCompletions.Message[]) => {
+export const estimateTokens = (messages?: AI.Message[]) => {
 	if (!messages?.length) {
 		return 0;
 	}

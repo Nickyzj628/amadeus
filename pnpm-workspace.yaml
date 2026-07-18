@@ -1,5 +1,6 @@
 allowBuilds:
   esbuild: true
+  gifsicle: true
   sharp: true
 minimumReleaseAgeExclude:
   - "@nickyzj2023/*"

@@ -1,6 +1,6 @@
-import { type ChatCompletions, logger, omit } from "@nickyzj2023/utils";
+import { logger, omit } from "@nickyzj2023/utils";
 import config from "@/config.js";
-import { MCPRouter } from "@/openai/utils/tool.js";
+import { MCPRouter } from "@/openai/utils/mcp.js";
 import changeModel from "./changeModel.js";
 import decodeAbbr from "./decodeAbbr.js";
 import denyReply from "./denyReply.js";
@@ -21,25 +21,3 @@ export const openaiTools = [...functionTools, ...mcpOpenAITools];
 openaiTools.forEach((tool) => {
 	logger(`启用工具：${tool.function.name}`);
 });
-
-/**
- * 可直接传入 @nickyzj2023/utils ai.chatCompletions extraBody 的 tools 处理函数表
- */
-export const toolHandlers = Object.fromEntries(
-	[...functionTools, ...mcpOpenAITools]
-		.filter((tool) => "_handler" in tool.function)
-		.map((tool) => {
-			const name = tool.function.name;
-			return [
-				name,
-				async (args: any, extraArgs: ChatCompletions.ExtraArgs) => {
-					logger(`调用工具：${name}(${JSON.stringify(args)})`);
-
-					const result = await tool.function._handler!(args, extraArgs);
-					logger(result);
-
-					return result;
-				},
-			];
-		}),
-) as ChatCompletions.ToolHandlers;

@@ -1,6 +1,5 @@
-import type { ChatCompletions } from "@nickyzj2023/utils";
+import type { AI, ChatCompletions } from "@nickyzj2023/utils";
 import { logger, to } from "@nickyzj2023/utils";
-import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "./constants.js";
 import { contentToMessage } from "./convert.js";
 import { generateContent } from "./generate-content.js";
@@ -11,7 +10,7 @@ import { modelRef } from "./model.js";
  * 软删除旧消息中的图片、音频和视频消息
  * @remarks 不会处理最新一条消息
  */
-const softDeleteOldMediaMessages = (messages: ChatCompletions.Message[]) => {
+const softDeleteOldMediaMessages = (messages: AI.Message[]) => {
 	const mediaTypes = new Set(["image_url", "input_audio", "video_url"]);
 	let deletedCount = 0;
 
@@ -35,9 +34,7 @@ const softDeleteOldMediaMessages = (messages: ChatCompletions.Message[]) => {
  * @param messages 原始消息数组，会被本函数修改
  * @remarks 如果总结失败，则不改变原始数组
  */
-export const summarizeMessages = async (
-	messages: ChatCompletions.Message[],
-) => {
+export const summarizeMessages = async (messages: AI.Message[]) => {
 	// 从第一条用户消息开始总结
 	const startIndex = messages.findIndex((message) => message.role === "user");
 
@@ -65,7 +62,7 @@ export const summarizeMessages = async (
 
 	// 开始总结
 	// 使用 for 循环依次请求，而不是用 Promise.all，原因是部分模型对并发请求有严格限制
-	const summarizedMessages: ChatCompletions.Message[] = [];
+	const summarizedMessages: AI.Message[] = [];
 	for (const chunk of summarizingMessagesChunks) {
 		chunk.push(
 			contentToMessage(SUMMARIZE_PROMPT, { role: "system" }),
@@ -98,7 +95,7 @@ export const summarizeMessages = async (
  * 自动优化上下文，类似AI Coding Agent的/compact命令
  */
 const autoCompactMessages = async (
-	messages: ChatCompletions.Message[],
+	messages: AI.Message[],
 	options?: {
 		/** 提供token消耗情况时，能更准确地判断上下文是否达到阈值（80%） */
 		usage?: ChatCompletions.Usage;
@@ -106,7 +103,7 @@ const autoCompactMessages = async (
 ) => {
 	const { usage } = options ?? {};
 
-	const thresholdTokens = modelRef.current.totalContext * 0.8;
+	const thresholdTokens = (modelRef.current.context ?? 128000) * 0.8;
 	const isTokenNearLimit = usage
 		? usage.total_tokens > thresholdTokens
 		: estimateTokens(messages) > thresholdTokens;

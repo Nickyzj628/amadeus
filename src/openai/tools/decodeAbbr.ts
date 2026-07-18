@@ -1,6 +1,5 @@
-import { fetcher, to } from "@nickyzj2023/utils";
+import { defineTool, fetcher, to } from "@nickyzj2023/utils";
 import { array, object, optional, safeParse, string } from "valibot";
-import { defineFunctionTool } from "@/openai/utils/tool.js";
 
 const DecodeResponseSchema = array(
 	object({
@@ -9,20 +8,17 @@ const DecodeResponseSchema = array(
 	}),
 );
 
-export default defineFunctionTool({
-	name: "decodeAbbr",
-	description: "把用户输入的未知拼音缩写转换成可能的释义",
-	parameters: {
-		type: "object",
-		properties: {
-			abbr: {
-				type: "string",
-				description: "待转换的拼音缩写",
-			},
+export default defineTool(
+	"decodeAbbr",
+	"把用户输入的未知拼音缩写转换成可能的释义",
+	{
+		abbr: {
+			type: "string",
+			description: "待转换的拼音缩写",
+			required: true,
 		},
-		required: ["abbr"],
 	},
-	_handler: async ({ abbr }) => {
+	async ({ abbr }) => {
 		const api = fetcher("https://lab.magiconch.com/api/nbnhhsh");
 		const [error, response] = await to(api.post("/guess", { text: abbr }));
 		if (error) {
@@ -42,4 +38,4 @@ export default defineFunctionTool({
 
 		return `用户想说的可能是：${items.join("、")}`;
 	},
-});
+);

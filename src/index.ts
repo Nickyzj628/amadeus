@@ -1,9 +1,7 @@
-import { execSync } from "node:child_process";
 import { createServer } from "node:http";
 import { extractErrorMessage, logger, to } from "@nickyzj2023/utils";
 import { createServerAdapter } from "@whatwg-node/server";
 import { AutoRouter, json, status, withContent } from "itty-router";
-import { ProxyAgent, request, setGlobalDispatcher } from "undici";
 import { safeParse } from "valibot";
 import { startBiliLiveTimer } from "./common/bililive.js";
 import config from "./config.js";
@@ -30,32 +28,6 @@ const checkRequiredConfig = () => {
 	}
 };
 checkRequiredConfig();
-
-const enableProxy = async () => {
-	const proxy =
-		process.env.HTTPS_PROXY ||
-		process.env.HTTP_PROXY ||
-		execSync("npm config get proxy").toString().trim();
-	if (!proxy || proxy === "null") {
-		return;
-	}
-
-	const proxyAgent = new ProxyAgent(proxy);
-	const [error] = await to(
-		request("https://www.google.com/generate_204", {
-			dispatcher: proxyAgent,
-			signal: AbortSignal.timeout(3000),
-		}),
-	);
-	if (error) {
-		logger(`未能启用代理，请检查${proxy}能否在3秒内加载出google.com`);
-		return;
-	}
-
-	setGlobalDispatcher(proxyAgent);
-	logger(`已启用代理: ${proxy}`);
-};
-await enableProxy();
 
 const router = AutoRouter();
 router.post("/", withContent, async (req) => {
@@ -88,9 +60,9 @@ router.post("/", withContent, async (req) => {
 
 	try {
 		// 调试模式
-		// if (groupId !== 669751957) {
-		// 	throw new Error("🚧施工中");
-		// }
+		if (groupId !== 669751957) {
+			throw new Error("🚧施工中");
+		}
 
 		// 如果消息无需模型处理，则直接回复
 		const segments = await beforeLLM(e);

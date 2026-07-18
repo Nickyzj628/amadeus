@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { type ChatCompletions, logger, to } from "@nickyzj2023/utils";
+import { type AI, logger, to } from "@nickyzj2023/utils";
 import { checkUrlType, compressImage } from "@/common/util.js";
 import {
 	checkSameFileName,
@@ -23,22 +23,21 @@ import {
 	getRecord,
 } from "@/onebot/utils/http.js";
 import { modelRef } from "@/openai/utils/model.js";
-import type { InputModality } from "../schemas/model.js";
 import { visionToText } from "./generate-content.js";
 
 /** 构造 OpenAI API 消息对象 */
 export const contentToMessage = (
-	content: ChatCompletions.Message["content"],
+	content: AI.Message["content"],
 	options?: {
 		/**
 		 * 指定消息对应的角色
 		 * @default "user"
 		 */
-		role?: ChatCompletions.Message["role"];
+		role?: AI.Message["role"];
 		/** 指定消息对应的工具调用 ID */
 		tool_call_id?: string;
 	},
-): ChatCompletions.Message => {
+): AI.Message => {
 	const { role = "user", ...restOptions } = options ?? {};
 
 	return {
@@ -57,7 +56,7 @@ export const contentToMessage = (
 export const urlToContentPart = (
 	url: string,
 	options?: {
-		type?: Extract<InputModality, "image" | "video" | "audio">;
+		type?: "image" | "video" | "audio";
 		format?: string;
 	},
 ) => {
@@ -86,7 +85,7 @@ export const urlToContentPart = (
 		}
 	}
 
-	return contentPart as ChatCompletions.ContentPart;
+	return contentPart as AI.ContentPart;
 };
 
 /** 构造标签字符串 */
@@ -117,7 +116,7 @@ export const onebotToOpenaiMessages = async (
 	} = e;
 	const { isQuoted = false } = options ?? {};
 
-	const modelInputModalities = modelRef.current?.inputModalities ?? [];
+	const modelInputs = modelRef.current?.inputs;
 
 	const bodyItems: string[] = [];
 	const imageItems: string[] = [];
@@ -125,7 +124,7 @@ export const onebotToOpenaiMessages = async (
 	const audioItems: string[] = [];
 
 	const mentionedUserIds: string[] = [];
-	const quotedMessages: ChatCompletions.Message[] = [];
+	const quotedMessages: AI.Message[] = [];
 
 	/**
 	 * 解析消息段数组
@@ -149,7 +148,7 @@ export const onebotToOpenaiMessages = async (
 			}
 
 			// 2. 对于多模态，直接使用 base64
-			if (modelInputModalities.includes("image")) {
+			if (modelInputs?.includes("image")) {
 				imageItems.push(base64);
 			}
 			// 对于纯语言模型，使用多模态翻译后的自然语言
@@ -286,32 +285,38 @@ export const onebotToOpenaiMessages = async (
 		...quotedMessages,
 		// 图片消息
 		...imageItems.map((item) => {
-			const content = item.startsWith("http")
-				? [urlToContentPart(item)]
-				: createTagText("image", item, {
-						sender_id: user_id,
-						sender_name: nickname,
-					});
+			const type = checkUrlType(item);
+			const content =
+				type === "base64" || type === "remote"
+					? [urlToContentPart(item)]
+					: createTagText("image", item, {
+							sender_id: user_id,
+							sender_name: nickname,
+						});
 			return contentToMessage(content);
 		}),
 		// 视频消息
 		...videoItems.map((item) => {
-			const content = item.startsWith("http")
-				? [urlToContentPart(item, { type: "video" })]
-				: createTagText("video", item, {
-						sender_id: user_id,
-						sender_name: nickname,
-					});
+			const type = checkUrlType(item);
+			const content =
+				type === "base64" || type === "remote"
+					? [urlToContentPart(item, { type: "video" })]
+					: createTagText("video", item, {
+							sender_id: user_id,
+							sender_name: nickname,
+						});
 			return contentToMessage(content);
 		}),
 		// 音频消息
 		...audioItems.map((item) => {
-			const content = item.startsWith("data:audio")
-				? [urlToContentPart(item, { type: "audio", format: "wav" })]
-				: createTagText("audio", item, {
-						sender_id: user_id,
-						sender_name: nickname,
-					});
+			const type = checkUrlType(item);
+			const content =
+				type === "base64" || type === "remote"
+					? [urlToContentPart(item, { type: "audio", format: "wav" })]
+					: createTagText("audio", item, {
+							sender_id: user_id,
+							sender_name: nickname,
+						});
 			return contentToMessage(content);
 		}),
 		// 文本消息
@@ -328,5 +333,5 @@ export const onebotToOpenaiMessages = async (
 				`.replace(/\t+/g, ""),
 				),
 			),
-	].filter(Boolean) as ChatCompletions.Message[];
+	].filter(Boolean) as AI.Message[];
 };

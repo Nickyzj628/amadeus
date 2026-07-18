@@ -132,7 +132,6 @@ export const compressImage = async (
 
 	const metadata = await sharp(sharpInput).metadata();
 	const isAnimated = (metadata.pages ?? 1) > 1;
-	const isAnimatedGif = metadata.format === "gif" && isAnimated;
 	let image = sharp(sharpInput, { animated: isAnimated });
 
 	/**
@@ -150,37 +149,20 @@ export const compressImage = async (
 	 * 压缩到 maxSize 以内
 	 */
 	let outputBuffer: Buffer | null = null;
-	// GIF 动图：保持格式，通过 interFrameMaxError + effort 进行有损压缩
-	if (isAnimatedGif) {
-		for (let level = 1; level <= 5; level++) {
-			outputBuffer = await image
-				.gif({
-					interFrameMaxError: Math.min(level * 6, 32),
-					effort: Math.min(6 + level, 10),
-					loop: 0,
-				})
-				.toBuffer();
-			if (outputBuffer.length <= maxSize) {
-				break;
-			}
-		}
-	}
-	// 其他图片：转为 webp
-	else {
-		for (let quality = 80; quality >= 40; quality -= 10) {
-			outputBuffer = await image
-				.webp({ quality, loop: isAnimated ? 0 : undefined })
-				.toBuffer();
-			if (outputBuffer.length <= maxSize) {
-				break;
-			}
+	// 统一转为 webp（动图 → animated webp，静态图 → 静态 webp）
+	for (let quality = 80; quality >= 40; quality -= 10) {
+		outputBuffer = await image
+			.webp({ quality, loop: isAnimated ? 0 : undefined })
+			.toBuffer();
+		if (outputBuffer.length <= maxSize) {
+			break;
 		}
 	}
 	if (!outputBuffer || outputBuffer.length > maxSize) {
 		throw new Error(`图片无法压缩到 ${formatBytes(maxSize)} 以内`);
 	}
 
-	const mime = isAnimatedGif ? "image/gif" : "image/webp";
+	const mime = "image/webp";
 	logger(
 		`压缩了一张${mime}图片：${formatBytes(metadata.size ?? 0)} => ${formatBytes(outputBuffer.length)}`,
 	);

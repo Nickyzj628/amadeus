@@ -1,9 +1,9 @@
-import type { InputModality, Model } from "@/openai/schemas/model.js";
+import type { AI } from "@nickyzj2023/utils";
 import { MODELS } from "./constants.js";
 
 /** 当前使用的模型 */
 export const modelRef = {
-	current: MODELS[0] as Model,
+	current: MODELS[0] as AI.Model,
 };
 
 /**
@@ -35,8 +35,10 @@ export const findModelByName = (keyword: string) => {
  * 按照多模态能力查找模型
  * @remarks 如果当前使用的模型具有对应能力，则优先使用
  */
-export const findModelByModality = (modality: InputModality) => {
-	if (modelRef.current.inputModalities?.includes(modality)) {
+export const findModelByModality = (
+	modality: NonNullable<AI.Model["inputs"]>[number],
+) => {
+	if (modelRef.current.inputs?.includes(modality)) {
 		return modelRef.current;
 	}
 	return MODELS.find((model) => model.inputModalities?.includes(modality));

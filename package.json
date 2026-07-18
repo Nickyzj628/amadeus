@@ -10,16 +10,17 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@nickyzj2023/utils": "^1.0.75",
-    "@whatwg-node/server": "^0.10.18",
+    "@nickyzj2023/utils": "^1.0.76",
+    "@whatwg-node/server": "^0.11.0",
+    "gifsicle": "^7.0.1",
     "itty-router": "^5.0.24",
-    "sharp": "^0.34.5",
-    "undici": "^8.4.1",
-    "valibot": "^1.4.1"
+    "sharp": "^0.35.3",
+    "valibot": "^1.4.2"
   },
   "devDependencies": {
-    "@types/node": "^25.9.3",
-    "tsdown": "^0.22.2",
-    "typescript": "^6.0.3"
+    "@types/node": "^26.1.1",
+    "tsdown": "^0.22.9",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
   }
 }

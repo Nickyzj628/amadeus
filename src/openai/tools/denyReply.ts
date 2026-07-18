@@ -1,21 +1,17 @@
-import { defineFunctionTool } from "@/openai/utils/tool.js";
+import { defineTool } from "@nickyzj2023/utils";
 import { contentToMessage } from "../utils/convert.js";
 
-export default defineFunctionTool({
-	name: "denyReply",
-	description:
-		"不回复消息，调用后不会向用户输出任何内容。你应该在什么时候调用：\n- 用户主动要求终止对话时",
-	parameters: {
-		type: "object",
-		properties: {
-			reason: {
-				type: "string",
-				description: "拒绝回复的理由。",
-			},
+export default defineTool(
+	"denyReply",
+	"不回复消息，调用后不会向用户输出任何内容。你应该在什么时候调用：\n- 用户主动要求终止对话时",
+	{
+		reason: {
+			type: "string",
+			description: "拒绝回复的理由。",
+			required: true,
 		},
-		required: ["reason"],
 	},
-	_handler: async function ({ reason }, extraArgs) {
+	({ reason }, extraArgs) => {
 		// 手动推入一条工具调用结果
 		if (extraArgs?.messages) {
 			const toolCallId = extraArgs.messages.at(-1)?.tool_calls?.[0]?.id;
@@ -32,7 +28,7 @@ export default defineFunctionTool({
 
 		// 向上抛出 chatCompletions 异常，预期被 src\index.ts 接收
 		const error = new Error(`模型拒绝回复消息，理由：${reason}`);
-		error.name = this.name;
+		error.name = "denyReply";
 		throw error;
 	},
-});
+);
