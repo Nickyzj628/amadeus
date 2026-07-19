@@ -1,3 +1,4 @@
+import { logger } from "@nickyzj2023/utils";
 import type { GroupMessageEvent, Segment } from "@/onebot/schemas/http-post.js";
 import {
 	resolveBiliLink,
@@ -18,11 +19,18 @@ export const beforeLLM = async (e: GroupMessageEvent): Promise<Segment[]> => {
 		// 解析B站链接
 		const { videoDetail, roomInfo } = await resolveBiliLink(dataString);
 		const allowOutput = Date.now() - lastHandleDate > 5000;
-		if (videoDetail && allowOutput) {
-			return videoDetailToSegments(videoDetail);
+		if (!allowOutput && (videoDetail || roomInfo)) {
+			logger(
+				`触发节流：${Date.now()} - ${lastHandleDate} = ${Date.now() - lastHandleDate}`,
+			);
 		}
-		if (roomInfo && allowOutput) {
-			return roomInfoToSegments(roomInfo);
+		if (allowOutput) {
+			if (videoDetail) {
+				return videoDetailToSegments(videoDetail);
+			}
+			if (roomInfo) {
+				return roomInfoToSegments(roomInfo);
+			}
 		}
 
 		// ...扩展出更多功能

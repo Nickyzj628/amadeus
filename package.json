@@ -9,11 +9,10 @@
     "check": "biome check --diagnostic-level=error --write src/"
   },
   "dependencies": {
+    "@hono/node-server": "^2.0.10",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@nickyzj2023/utils": "^1.0.76",
-    "@whatwg-node/server": "^0.11.0",
-    "gifsicle": "^7.0.1",
-    "itty-router": "^5.0.24",
+    "hono": "^4.12.30",
     "sharp": "^0.35.3",
     "valibot": "^1.4.2"
   },

@@ -38,7 +38,7 @@ export const replyLikeHuman = async (
 		const paragraph = paragraphs[i]!;
 		const segments: Segment[] = [textToSegment(paragraph)];
 
-		// 如果是第一段话，且传递 at 参数，则 @ 发送人
+		// 如果是第一段话，且传了at参数，则@发送人
 		if (i === 0 && options?.at) {
 			segments.unshift(userIdToAtSegment(options.at));
 			if (isTextSegment(segments[1])) {

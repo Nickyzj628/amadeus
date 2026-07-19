@@ -20,17 +20,16 @@ export const loadMessages = async (groupId: number) => {
 	const messages = await loadJSON<AI.Message[]>(`/data/${groupId}.json`, {
 		fallbackData: [],
 	});
-	// 读取群聊排队锁
-	const queue = groupQueueMap.getOrInsert(groupId, new LockQueue());
-
 	// 刷新系统提示词
 	messages[0] = {
 		role: "system",
 		content: SYSTEM_PROMPT,
 	};
-
 	// 常驻内存
 	groupMessagesMap.set(groupId, messages);
+
+	// 读取群聊排队锁
+	const queue = groupQueueMap.getOrInsert(groupId, new LockQueue());
 
 	// 释放内存中不活跃的群消息
 	if (groupMessagesMap.size > config.etc.maxActiveGroupCount) {

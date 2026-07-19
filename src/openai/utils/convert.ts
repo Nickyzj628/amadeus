@@ -104,7 +104,7 @@ const createTagText = (
  * 把消息格式从 OneBot 转成 OpenAI API
  * @remarks 保证安全返回消息对象
  */
-export const onebotToOpenaiMessages = async (
+export const onebotToOpenAi = async (
 	e: MinimalMessageEvent,
 	options?: {
 		/** 是否为被引用的上下文消息 */
@@ -255,7 +255,7 @@ export const onebotToOpenaiMessages = async (
 						await preorderTraverse(e);
 					}
 				} else {
-					const messages = await onebotToOpenaiMessages(e);
+					const messages = await onebotToOpenAi(e);
 					quotedMessages.push(...messages);
 				}
 			};
@@ -268,7 +268,7 @@ export const onebotToOpenaiMessages = async (
 		else if (isReplySegment(segment)) {
 			const e = await getMessage(segment.data.id);
 			if (e) {
-				const repliedMessages = await onebotToOpenaiMessages(e, {
+				const repliedMessages = await onebotToOpenAi(e, {
 					...options,
 					isQuoted: true,
 				});

@@ -20,7 +20,7 @@ export const loadJSON = async <T>(
 	try {
 		await access(fullPath, constants.F_OK);
 		const content = await readFile(fullPath, "utf-8");
-		return JSON.parse(content) satisfies T;
+		return JSON.parse(content) as T;
 	} catch {
 		if (!fallbackData) {
 			throw new Error(`文件${fullPath}不存在`);
