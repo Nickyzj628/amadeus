@@ -21,20 +21,27 @@ const api = fetcher("https://api.bilibili.com/x/web-interface");
 const regexp =
 	/http[s]?:\/\/\w+\.bilibili\.com\/[A-Za-z0-9?_=&/.]+|https:\/\/b23\.tv\/[A-Za-z0-9]+/;
 
+let prevUrl = new URL("https://example.com");
+
 /**
  * 解析 bilibili 链接，支持视频（BV号长链接、小程序短链接）、直播
- * @remarks 解析失败会抛出异常
+ * @remarks 不抛异常
  * @returns 解析后的干净链接 + 视频详情或直播详情 组成的对象
  * @remarks 为防群内多个支持解析B站链接的机器人循环发消息，故设定5秒节流
  */
 export const resolveBiliLink = async (text: string) => {
 	const link = text.match(regexp)?.[0];
 	if (!link) {
-		throw new Error(`链接格式解析失败：${link}`);
+		return {};
 	}
 
-	// 还原短链接
+	// 还原链接
 	const url = new URL(link.includes("b23.tv") ? await getRealURL(link) : link);
+	if (prevUrl === url) {
+		logger(`跳过了对链接“${url}”的解析`);
+		return {};
+	}
+	prevUrl = url;
 
 	// 识别链接类型
 	const type = url.pathname.includes("/video/BV")
