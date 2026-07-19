@@ -1,5 +1,6 @@
 import type { AI, ChatCompletions } from "@nickyzj2023/utils";
 import { logger, to } from "@nickyzj2023/utils";
+import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "./constants.js";
 import { contentToMessage } from "./convert.js";
 import { generateContent } from "./generate-content.js";
@@ -7,115 +8,180 @@ import { estimateTokens } from "./messages.js";
 import { modelRef } from "./model.js";
 
 /**
- * 软删除旧消息中的图片、音频和视频消息
- * @remarks 不会处理最新一条消息
+ * 判断消息是否为带有工具调用的 assistant 消息
  */
-const softDeleteOldMediaMessages = (messages: AI.Message[]) => {
-	const mediaTypes = new Set(["image_url", "input_audio", "video_url"]);
-	let deletedCount = 0;
+const hasToolCalls = (message: AI.Message | undefined) =>
+	message?.role === "assistant" && Array.isArray(message.tool_calls);
 
-	for (const message of messages.slice(0, -1)) {
-		if (
-			Array.isArray(message.content) &&
-			message.content.some((part) => mediaTypes.has(part.type))
-		) {
-			message.content = "资源已过期";
-			deletedCount++;
-		}
+/**
+ * 调整切点 endIndex，确保它不会落在 assistant(tool_calls) + tool 配对组中间
+ * @param messages 完整消息数组
+ * @param endIndex 初始切点，会把消息分为 [, endIndex) 和 [endIndex, ) 两段
+ * @returns 调整后的 endIndex，保证切点两侧都不出现孤立的 assistant(tool_calls) 或 tool 消息
+ * @remarks OpenAI API 要求 assistant(tool_calls) 和 tool 消息通过 tool_call_id 一一配对。
+ * 如果切点落在配对组中间，两段消息都会出现孤立消息，导致 API 返回 400
+ */
+const alignToolGroupBoundary = (messages: AI.Message[], endIndex: number) => {
+	// 确保 endIndex 不超出消息范围
+	endIndex = Math.min(endIndex, messages.length);
+
+	// 情况 1：被切掉部分的最后一条是带 tool_calls 的 assistant，
+	// 但紧接着保留部分的开头不是对应的 tool 消息 —— assistant 被孤立
+	if (
+		hasToolCalls(messages[endIndex - 1]) &&
+		messages[endIndex]?.role !== "tool"
+	) {
+		// 把这条 assistant 也纳入保留部分
+		endIndex--;
 	}
 
+	// 情况 2：保留部分的第一条是 tool 消息，
+	// 但被切掉部分的最后一条不是对应的 assistant(tool_calls) —— tool 被孤立
+	if (
+		messages[endIndex]?.role === "tool" &&
+		!hasToolCalls(messages[endIndex - 1])
+	) {
+		// 把这条 tool 也纳入保留部分
+		endIndex++;
+	}
+
+	return endIndex;
+};
+
+const softDeleteToolResults = (messages: AI.Message[]) => {
+	const deletedCount = messages.reduce((result, message) => {
+		if (message.role === "tool") {
+			message.content = "（工具调用结果被压缩）";
+			result++;
+		}
+		return result;
+	}, 0);
+
 	if (deletedCount > 0) {
-		logger(`软删除了${deletedCount}条旧媒体消息`);
+		logger(`软删除了${deletedCount}条工具调用结果消息`);
 	}
 };
 
-/**
- * 从前往后总结消息，同时保留系统消息
- * @param messages 原始消息数组，会被本函数修改
- * @remarks 如果总结失败，则不改变原始数组
- */
-export const summarizeMessages = async (messages: AI.Message[]) => {
+const softDeleteOldMediaMessages = (messages: AI.Message[]) => {
+	const mediaTypes = ["image_url", "input_audio", "video_url"];
+
+	const deletedCount = messages.reduce((result, message) => {
+		if (
+			Array.isArray(message.content) &&
+			message.content.some((part) => mediaTypes.includes(part.type))
+		) {
+			message.content = "（多模态消息被压缩）";
+			result++;
+		}
+		return result;
+	}, 0);
+
+	if (deletedCount > 0) {
+		logger(`软删除了${deletedCount}条旧图片/音频/视频消息`);
+	}
+};
+
+const summarizeMessages = async (messages: AI.Message[]) => {
 	// 从第一条用户消息开始总结
 	const startIndex = messages.findIndex((message) => message.role === "user");
+	// 保留最近的消息
+	const keepRecentCount = Math.ceil(messages.length * 0.1);
+	let endIndex = messages.length - keepRecentCount;
 
-	// 粗略计算需要总结的消息条数
-	const count = Math.floor(messages.length * 0.8);
-	const endIndex = startIndex + count;
-	const summarizingMessages = messages.slice(startIndex, endIndex);
-
-	// 切片总结，防止一次性喂给模型的消息超过上下文窗口
-	const countPerChunk = Math.min(count, 100);
-	const summarizingMessagesChunks = Array.from(
-		{
-			length: Math.ceil(summarizingMessages.length / countPerChunk),
-		},
-		(_, i) => {
-			return summarizingMessages.slice(
-				i * countPerChunk,
-				i * countPerChunk + countPerChunk,
-			);
-		},
-	);
-	logger(
-		`准备总结前${count}条消息，分${summarizingMessagesChunks.length}次进行`,
-	);
-
-	// 开始总结
-	// 使用 for 循环依次请求，而不是用 Promise.all，原因是部分模型对并发请求有严格限制
-	const summarizedMessages: AI.Message[] = [];
-	for (const chunk of summarizingMessagesChunks) {
-		chunk.push(
-			contentToMessage(SUMMARIZE_PROMPT, { role: "system" }),
-			contentToMessage("开始总结聊天摘要", { role: "user" }),
-		);
-
-		const [error, summarized] = await to(
-			generateContent(chunk, {
-				extraBody: {
-					tools: [],
-					toolHandlers: [],
-				},
-			}),
-		);
-		if (error) {
-			logger(`总结失败：${error.message}`);
-			return false;
-		}
-
-		summarizedMessages.push(
-			contentToMessage(`# 消息摘要\n${summarized.content}`),
-		);
+	// 消息太少时不需要总结
+	if (endIndex <= startIndex) {
+		logger("消息太少，无需总结");
+		return false;
 	}
 
-	// 修改原始消息数组
-	messages.splice(startIndex, count, ...summarizedMessages);
+	// 对齐配对组边界，避免拆散 assistant(tool_calls) + tool
+	endIndex = alignToolGroupBoundary(messages, endIndex);
+
+	const summarizingMessages = messages.slice(startIndex, endIndex);
+	summarizingMessages.push(
+		contentToMessage(SUMMARIZE_PROMPT, { role: "system" }),
+		contentToMessage("开始总结聊天摘要", { role: "user" }),
+	);
+
+	const [error, summarized] = await to(
+		generateContent(summarizingMessages, {
+			// 如果有工具，则临时移除，让模型专注于总结消息
+			extraBody: { tools: [] },
+		}),
+	);
+	if (error) {
+		logger(`总结失败：${error.message}`);
+		return false;
+	}
+
+	// 替换原始消息数组中被总结的消息
+	messages.splice(
+		startIndex,
+		endIndex - startIndex,
+		contentToMessage(`# 消息摘要\n${summarized.content}`),
+	);
+};
+
+const hardDeleteOldMessages = (messages: AI.Message[]) => {
+	// 从第一条user消息开始
+	const startIndex = messages.findIndex((message) => message.role === "user");
+	// 保留最近的消息
+	const keepRecentCount = Math.ceil(messages.length * 0.1);
+	let endIndex = messages.length - keepRecentCount;
+
+	// 消息太少，没有可删除的余量
+	if (endIndex <= startIndex) {
+		logger("消息太少，无需硬删除");
+		return;
+	}
+
+	// 对齐配对组边界，避免拆散assistant(tool_calls) + tool
+	endIndex = alignToolGroupBoundary(messages, endIndex);
+
+	const deletedCount = endIndex - startIndex;
+	messages.splice(startIndex, deletedCount);
+	logger(`硬删除了${deletedCount}条较早的消息`);
 };
 
 /**
  * 自动优化上下文，类似AI Coding Agent的/compact命令
  */
-const autoCompactMessages = async (
+const compactMessages = async (
 	messages: AI.Message[],
 	options?: {
-		/** 提供token消耗情况时，能更准确地判断上下文是否达到阈值（80%） */
+		/** 提供token消耗情况时，能更准确地判断上下文是否达到阈值 */
 		usage?: ChatCompletions.Usage;
 	},
 ) => {
 	const { usage } = options ?? {};
+	const context = modelRef.current.context ?? 128000;
 
-	const thresholdTokens = (modelRef.current.context ?? 128000) * 0.8;
-	const isTokenNearLimit = usage
-		? usage.total_tokens > thresholdTokens
-		: estimateTokens(messages) > thresholdTokens;
-	if (!isTokenNearLimit) {
-		return;
+	// 上下文 > 总上下文*60% => 压缩工具调用结果
+	let tokens = usage?.total_tokens ?? estimateTokens(messages);
+	if (tokens > context * config.etc.compactToolResultRatio) {
+		softDeleteToolResults(messages);
+		tokens = estimateTokens(messages);
 	}
 
-	// 移除多模态消息
-	softDeleteOldMediaMessages(messages);
+	// 上下文 > 总上下文*70% => 压缩图片/音频/视频消息
+	if (tokens > context * config.etc.compactAssetRatio) {
+		softDeleteOldMediaMessages(messages);
+		tokens = estimateTokens(messages);
+	}
 
-	// 总结剩下的消息
-	await summarizeMessages(messages);
+	// 上下文 > 总上下文*80% => 总结消息
+	if (tokens > context * config.etc.compactRatio) {
+		const [error] = await to(summarizeMessages(messages));
+		if (!error) {
+			tokens = estimateTokens(messages);
+		}
+	}
+
+	// 上下文 > 总上下文*90% => 丢弃较早的消息
+	// 通常不会走到这一步，除非summarizeMessages失败
+	if (tokens > context * config.etc.discardRatio) {
+		hardDeleteOldMessages(messages);
+	}
 };
 
-export default autoCompactMessages;
+export default compactMessages;

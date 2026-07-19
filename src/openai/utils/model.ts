@@ -1,33 +1,25 @@
 import type { AI } from "@nickyzj2023/utils";
-import { MODELS } from "./constants.js";
+import config from "@/config.js";
 
 /** 当前使用的模型 */
 export const modelRef = {
-	current: MODELS[0] as AI.Model,
+	current: config.models[0] as AI.Model,
 };
 
 /**
- * 按照名称/供应商查找模型
+ * 按照模型名称查找模型
  */
 export const findModelByName = (keyword: string) => {
-	// 按供应商精准匹配
-	const byProvider = MODELS.find((model) => model.provider === keyword);
-	if (byProvider) {
-		return byProvider;
-	}
-
-	// 按模型名精准匹配
-	const byModel = MODELS.find((model) => model.model === keyword);
-	if (byModel) {
-		return byModel;
+	// 精准匹配
+	const exact = config.models.find((model) => model.model === keyword);
+	if (exact) {
+		return exact;
 	}
 
 	// 模糊匹配
 	const normalizedInput = keyword.toLowerCase().trim();
-	return MODELS.find(
-		({ model, provider }) =>
-			model.toLowerCase().includes(normalizedInput) ||
-			provider.toLowerCase().includes(normalizedInput),
+	return config.models.find((model) =>
+		model.model?.toLowerCase().includes(normalizedInput),
 	);
 };
 
@@ -41,5 +33,5 @@ export const findModelByModality = (
 	if (modelRef.current.inputs?.includes(modality)) {
 		return modelRef.current;
 	}
-	return MODELS.find((model) => model.inputModalities?.includes(modality));
+	return config.models.find((model) => model.inputs?.includes(modality));
 };

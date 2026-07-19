@@ -11,7 +11,7 @@ import {
 } from "./onebot/schemas/http-post.js";
 import { makeReplyBody, replyLikeHuman } from "./onebot/utils/action.js";
 import { sendGroupMessage } from "./onebot/utils/http.js";
-import autoCompactMessages from "./openai/utils/compact.js";
+import compactMessages from "./openai/utils/compact.js";
 import { onebotToOpenAi } from "./openai/utils/convert.js";
 import { generateContent } from "./openai/utils/generate-content.js";
 import { loadMessages, saveMessages } from "./openai/utils/messages.js";
@@ -93,7 +93,7 @@ app.post("/", async (c) => {
 		});
 
 		// 自动优化上下文
-		await autoCompactMessages(messages, {
+		await compactMessages(messages, {
 			usage,
 		});
 		// 保存到本地
@@ -126,7 +126,7 @@ app.post("/", async (c) => {
 		// 进到这里说明没回复，但还是要做些收尾工作
 		if (!hasReleased) {
 			// 自动优化上下文
-			await to(autoCompactMessages(messages));
+			await to(compactMessages(messages));
 
 			// 释放消息队列
 			release();

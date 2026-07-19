@@ -55,7 +55,6 @@ export const generateContent = async (
 		tools: openaiTools,
 		...model.customBody,
 		...extraBody,
-		stream: false,
 	});
 
 	// 打印对话数据
