@@ -36,12 +36,14 @@ const alignToolGroupBoundary = (messages: AI.Message[], endIndex: number) => {
 	}
 
 	// 情况 2：保留部分的第一条是 tool 消息，
-	// 但被切掉部分的最后一条不是对应的 assistant(tool_calls) —— tool 被孤立
-	if (
+	// 但被切掉部分的最后一条不是对应的 assistant(tool_calls) -- tool 被孤立
+	// 注意：assistant 一次发起多个 tool_calls 时会连续产生多条 tool 响应，
+	// 若切点落在这一组中间，会同时孤立多条 tool，单次 if 无法处理，必须用 while
+	while (
 		messages[endIndex]?.role === "tool" &&
 		!hasToolCalls(messages[endIndex - 1])
 	) {
-		// 把这条 tool 也纳入保留部分
+		// 把切点后移，使这条 tool 推入被切掉一侧，与前序消息一起被总结/删除
 		endIndex++;
 	}
 
@@ -154,32 +156,28 @@ const compactMessages = async (
 	},
 ) => {
 	const { usage } = options ?? {};
+	const tokens = usage?.total_tokens ?? estimateTokens(messages);
 	const context = modelRef.current.context ?? 128000;
 
 	// 上下文 > 总上下文*60% => 压缩工具调用结果
-	let tokens = usage?.total_tokens ?? estimateTokens(messages);
 	if (tokens > context * config.etc.compactToolResultRatio) {
 		softDeleteToolResults(messages);
-		tokens = estimateTokens(messages);
 	}
 
 	// 上下文 > 总上下文*70% => 压缩图片/音频/视频消息
 	if (tokens > context * config.etc.compactAssetRatio) {
 		softDeleteOldMediaMessages(messages);
-		tokens = estimateTokens(messages);
 	}
 
 	// 上下文 > 总上下文*80% => 总结消息
 	if (tokens > context * config.etc.compactRatio) {
 		const [error] = await to(summarizeMessages(messages));
 		if (!error) {
-			tokens = estimateTokens(messages);
+			// summarize已经总结足够多的消息，无需兜底
+			return;
 		}
-	}
 
-	// 上下文 > 总上下文*90% => 丢弃较早的消息
-	// 通常不会走到这一步，除非summarizeMessages失败
-	if (tokens > context * config.etc.discardRatio) {
+		// 作为兜底，硬删除较早的消息
 		hardDeleteOldMessages(messages);
 	}
 };

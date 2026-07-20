@@ -103,7 +103,7 @@ export const estimateTokens = (messages?: AI.Message[]) => {
 					tokens += estimateTextTokens(part.text);
 				} else {
 					// 不计算 URL/base64 数据：其大小与视觉上下文的 token 消耗无关。
-					tokens += 1024;
+					tokens += 10000;
 				}
 			}
 		}

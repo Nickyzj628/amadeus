@@ -97,7 +97,5 @@ export default {
 		compactAssetRatio: 0.7,
 		/** 上下文>总上下文*ratio时总结消息 */
 		compactRatio: 0.8,
-		/** 上下文>总上下文*ratio时丢弃较早的消息 */
-		discardRatio: 0.9,
 	},
 };
