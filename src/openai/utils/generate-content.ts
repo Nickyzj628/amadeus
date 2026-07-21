@@ -53,6 +53,7 @@ export const generateContent = async (
 
 	const { reasoning, content, usage } = await chatCompletions(model, messages, {
 		tools: openaiTools,
+		onToolHandled: logger,
 		...model.customBody,
 		...extraBody,
 	});
