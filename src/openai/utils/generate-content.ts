@@ -2,6 +2,7 @@ import {
 	type AI,
 	chatCompletions,
 	compactStr,
+	createXMLTag,
 	logger,
 } from "@nickyzj2023/utils";
 import { checkUrlType, normalizeText } from "@/common/util.js";
@@ -45,7 +46,7 @@ export const generateContent = async (
 	) {
 		messages.splice(lastUserMessageIndex, 0, {
 			role: "system",
-			content: IDENTITY_ANCHOR,
+			content: createXMLTag("role-anchor", IDENTITY_ANCHOR),
 		});
 		lastUserMessageIndex++;
 	}

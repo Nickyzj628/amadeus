@@ -11,7 +11,7 @@
   "dependencies": {
     "@hono/node-server": "^2.0.11",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@nickyzj2023/utils": "^1.0.79",
+    "@nickyzj2023/utils": "^1.0.80",
     "hono": "^4.12.32",
     "sharp": "^0.35.3",
     "valibot": "^1.4.2"
