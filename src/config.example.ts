@@ -92,10 +92,10 @@ export default {
 		/** 安全词，在消息中检测到时添加人设锚点，修正人设 */
 		safeWord: "myfork",
 		/** 上下文>总上下文*ratio时压缩工具调用结果 */
-		compactToolResultRatio: 0.6,
+		ratioOfCompactToolResult: 0.6,
 		/** 上下文>总上下文*ratio时压缩图片/音频/视频消息 */
-		compactAssetRatio: 0.7,
+		ratioOfCompactMedia: 0.7,
 		/** 上下文>总上下文*ratio时总结消息 */
-		compactRatio: 0.8,
+		ratioOfSummarize: 0.8,
 	},
 };
