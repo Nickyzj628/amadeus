@@ -39,7 +39,10 @@ export const generateContent = async (
 	);
 
 	const lastUserMessage = messages[lastUserMessageIndex];
-	if (lastUserMessage?.content.toString().includes(config.etc.safeWord)) {
+	if (
+		typeof lastUserMessage?.content === "string" &&
+		lastUserMessage.content.includes(config.etc.safeWord)
+	) {
 		messages.splice(lastUserMessageIndex, 0, {
 			role: "system",
 			content: IDENTITY_ANCHOR,
@@ -84,8 +87,8 @@ export const visionToText = async (
 		throw new Error(`不支持的URL：${url}`);
 	}
 
-	const multiModel = findModelByModality(type);
-	if (!multiModel) {
+	const visionModel = findModelByModality(type);
+	if (!visionModel) {
 		throw new Error(`未配置支持${type}的多模态模型，请完善/src/config.ts`);
 	}
 
@@ -96,7 +99,7 @@ export const visionToText = async (
 				{ type: "text", text: VISION_UNDERSTANDING_PROMPT },
 			]),
 		],
-		{ model: multiModel },
+		{ model: visionModel },
 	);
 	return content;
 };

@@ -87,7 +87,7 @@ const summarizeMessages = async (messages: AI.Message[]) => {
 	// 从第一条用户消息开始总结
 	const startIndex = messages.findIndex((message) => message.role === "user");
 	// 保留最近的消息
-	const keepRecentCount = Math.ceil(messages.length * 0.1);
+	const keepRecentCount = Math.ceil(messages.length * 0.2);
 	let endIndex = messages.length - keepRecentCount;
 
 	// 消息太少时不需要总结
@@ -102,7 +102,7 @@ const summarizeMessages = async (messages: AI.Message[]) => {
 	const summarizingMessages = messages.slice(startIndex, endIndex);
 	summarizingMessages.push(
 		contentToMessage(SUMMARIZE_PROMPT, { role: "system" }),
-		contentToMessage("开始总结聊天摘要", { role: "user" }),
+		contentToMessage("开始总结上下文", { role: "user" }),
 	);
 
 	const [error, summarized] = await to(
