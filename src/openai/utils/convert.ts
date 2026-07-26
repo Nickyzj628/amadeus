@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { type AI, logger, to } from "@nickyzj2023/utils";
+import { type AI, createXMLText, logger, to } from "@nickyzj2023/utils";
 import { checkUrlType, compressImage } from "@/common/util.js";
 import {
 	checkSameFileName,
@@ -86,18 +86,6 @@ export const urlToContentPart = (
 	}
 
 	return contentPart as AI.ContentPart;
-};
-
-/** 构造标签字符串 */
-const createTagText = (
-	tagName: string,
-	text: any,
-	props: Record<string, any> = {},
-) => {
-	const propStrs = Object.entries(props).map(
-		([key, value]) => `${key}="${value}"`,
-	);
-	return `<${tagName}${propStrs.length > 0 ? ` ${propStrs.join(" ")}` : ""}>${String(text)}</${tagName}>`;
 };
 
 /**
@@ -289,7 +277,7 @@ export const onebotToOpenAi = async (
 			const content =
 				type === "base64" || type === "remote"
 					? [urlToContentPart(item)]
-					: createTagText("image", item, {
+					: createXMLText("image", item, {
 							sender_id: user_id,
 							sender_name: nickname,
 						});
@@ -301,7 +289,7 @@ export const onebotToOpenAi = async (
 			const content =
 				type === "base64" || type === "remote"
 					? [urlToContentPart(item, { type: "video" })]
-					: createTagText("video", item, {
+					: createXMLText("video", item, {
 							sender_id: user_id,
 							sender_name: nickname,
 						});
@@ -313,7 +301,7 @@ export const onebotToOpenAi = async (
 			const content =
 				type === "base64" || type === "remote"
 					? [urlToContentPart(item, { type: "audio", format: "wav" })]
-					: createTagText("audio", item, {
+					: createXMLText("audio", item, {
 							sender_id: user_id,
 							sender_name: nickname,
 						});
@@ -322,14 +310,14 @@ export const onebotToOpenAi = async (
 		// 文本消息
 		bodyItems.length > 0 &&
 			contentToMessage(
-				createTagText(
+				createXMLText(
 					"message",
-					`${isQuoted ? createTagText("is_quoted", isQuoted) : ""}
-				${createTagText("user_id", user_id)}
-				${createTagText("user_name", nickname)}
-				${createTagText("body", bodyItems.join("\n").trim())}
-				${mentionedUserIds.length > 0 ? createTagText("mentioned_user_ids", mentionedUserIds.join(",")) : ""}
-				${createTagText("time", new Date().toLocaleString())}
+					`${isQuoted ? createXMLText("is_quoted", isQuoted) : ""}
+				${createXMLText("user_id", user_id)}
+				${createXMLText("user_name", nickname)}
+				${createXMLText("body", bodyItems.join("\n").trim())}
+				${mentionedUserIds.length > 0 ? createXMLText("mentioned_user_ids", mentionedUserIds.join(",")) : ""}
+				${createXMLText("time", new Date().toLocaleString())}
 				`.replace(/\t+/g, ""),
 				),
 			),
