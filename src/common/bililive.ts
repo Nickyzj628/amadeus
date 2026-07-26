@@ -12,7 +12,7 @@ import {
 
 const GROUP_IDS = config.brec?.groupIds ?? [];
 const UIDS = config.brec?.uids ?? [];
-const INTERVAL_MS = 60_000;
+const INTERVAL_MS = 90_000;
 
 const roomIdStatusMap = new Map<number, RoomStatus>();
 
@@ -89,7 +89,7 @@ const checkAndSend = async () => {
 
 			// 初始化直播间状态，不推送通知
 			if (!prevRoomStatus) {
-				logger(`载入直播间：${roomId}（${room.uname}）`);
+				logger(`监听直播间：${roomId}（${room.uname}）`);
 				return result;
 			}
 
@@ -104,6 +104,7 @@ const checkAndSend = async () => {
 			}
 
 			result.push({ ...room, changedField });
+			logger(`${room.uname}直播间${changedField}发生变化`);
 			return result;
 		},
 		[] as (RoomStatus & { changedField: string })[],
