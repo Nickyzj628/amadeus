@@ -9,9 +9,9 @@
     "check": "biome check --diagnostic-level=error --write src/"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.11",
+    "@hono/node-server": "^2.0.12",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@nickyzj2023/utils": "^1.0.81",
+    "@nickyzj2023/utils": "^1.0.82",
     "hono": "^4.12.32",
     "sharp": "^0.35.3",
     "valibot": "^1.4.2"

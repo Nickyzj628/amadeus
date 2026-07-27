@@ -28,6 +28,7 @@ export default {
 			model: "deepseek-v4-flash",
 			baseUrl: "https://api.deepseek.com",
 			apiKey: "xxxxx",
+			// 填写最大上下文窗口，有助于自动优化上下文（具体优化逻辑见下方etc配置）
 			context: 1000000,
 			inputs: ["text"],
 		},
@@ -36,7 +37,6 @@ export default {
 			model: "gemini-3.1-flash-lite",
 			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
 			apiKey: "xxxxx",
-			context: 1000000,
 			inputs: ["text", "image", "audio", "video"],
 		},
 	] as AI.Model[],
