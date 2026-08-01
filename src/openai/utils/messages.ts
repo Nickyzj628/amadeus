@@ -1,19 +1,15 @@
-import { type AI, LockQueue, logger } from "@nickyzj2023/utils";
+import { type AI, logger } from "@nickyzj2023/utils";
 import { loadJSON, saveJSON } from "@/common/db.js";
 import config from "@/config.js";
 import { SYSTEM_PROMPT } from "./constants.js";
 
 const groupMessagesMap = new Map<number, AI.Message[]>();
-const groupQueueMap = new Map<number, LockQueue>();
 
 /** 根据群号读取消息数组 */
 export const loadMessages = async (groupId: number) => {
 	// 如果在内存里，则直接返回
 	if (groupMessagesMap.has(groupId)) {
-		return {
-			messages: groupMessagesMap.get(groupId)!,
-			queue: groupQueueMap.get(groupId)!,
-		};
+		return groupMessagesMap.get(groupId)!;
 	}
 
 	// 从本地读取群消息
@@ -28,19 +24,28 @@ export const loadMessages = async (groupId: number) => {
 	// 常驻内存
 	groupMessagesMap.set(groupId, messages);
 
-	// 读取群聊排队锁
-	const queue = groupQueueMap.getOrInsert(groupId, new LockQueue());
-
 	// 释放内存中不活跃的群消息
 	if (groupMessagesMap.size > config.etc.maxActiveGroupCount) {
-		for (const [groupId, messages] of groupMessagesMap) {
-			if (groupQueueMap.has(groupId)) {
+		for (const [otherGroupId, messages] of groupMessagesMap) {
+			// 当前群刚加载进内存、马上要处理消息，跳过不释放
+			if (otherGroupId === groupId) {
 				continue;
 			}
-			saveJSON(`/data/${groupId}.json`, messages)
+			// 用 Web Locks 的 ifAvailable 探测该群是否空闲（没有排队/正在处理的消息请求）：
+			// 能立即拿到锁说明空闲，空闲且超量的群才释放。
+			// 锁名格式必须与 index.ts 请求锁时保持一致（`group-${groupId}`）
+			const isIdle = await navigator.locks.request(
+				`group-${otherGroupId}`,
+				{ ifAvailable: true },
+				(lock) => lock !== null,
+			);
+			if (!isIdle) {
+				continue;
+			}
+			saveJSON(`/data/${otherGroupId}.json`, messages)
 				.then(() => {
-					groupMessagesMap.delete(groupId);
-					logger(`已释放内存中不活跃的群消息：${groupId}`);
+					groupMessagesMap.delete(otherGroupId);
+					logger(`已释放内存中不活跃的群消息：${otherGroupId}`);
 				})
 				.catch((e) => {
 					logger(`未能释放内存中的群消息：${e.message}`);
@@ -48,7 +53,7 @@ export const loadMessages = async (groupId: number) => {
 		}
 	}
 
-	return { messages, queue };
+	return messages;
 };
 
 /**

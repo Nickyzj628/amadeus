@@ -8,6 +8,9 @@
     "start": "node dist/index.mjs",
     "check": "biome check --diagnostic-level=error --write src/"
   },
+  "engines": {
+    "node": ">=24.5.0"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@nickyzj2023/utils": "^1.0.82",

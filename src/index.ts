@@ -48,7 +48,7 @@ app.post("/", async (c) => {
 
 	// 读取群聊消息
 	const { group_id: groupId, user_id: userId } = e;
-	const { messages, queue } = await loadMessages(groupId);
+	const messages = await loadMessages(groupId);
 	const isAtSelf = e.message.some(isAtSelfSegment);
 
 	// 无需模型处理的消息，直接回复
@@ -61,73 +61,71 @@ app.post("/", async (c) => {
 		return c.body(null, 204);
 	}
 
-	// 等待当前群聊前面的消息释放队列
-	const release = await queue.waitInQueue();
-	let hasReleased = false;
+	// 请求该群的专属锁：助手处理消息时依序响应
+	// 锁名按group-{groupId}区分，不同群互不影响；回调结束自动释放锁，异常也不会卡死队列
+	// 模型处理失败时通过回调返回值带出错误（而不是抛出），所以下方只需 if 分类，无需再包一层 try
+	const modelError = await navigator.locks.request(
+		`group-${groupId}`,
+		async () => {
+			// 模型处理消息
+			try {
+				// 调试模式
+				// if (groupId !== 669751957) {
+				// 	throw new Error("🚧施工中");
+				// }
 
-	// 模型处理消息
-	try {
-		// 调试模式
-		// if (groupId !== 669751957) {
-		// 	throw new Error("🚧施工中");
-		// }
+				// 转换消息到OpenAI API格式
+				const currentMessages = await onebotToOpenAi(e);
+				messages.push(...currentMessages);
 
-		// 转换消息到OpenAI API格式
-		const currentMessages = await onebotToOpenAi(e);
-		messages.push(...currentMessages);
+				// 拦截不是@自己的消息，但有极小概率放行
+				if (!isAtSelf && Math.random() > config.etc.replyProbabilityNotAt) {
+					throw new Error();
+				}
 
-		// 拦截不是@自己的消息，但有极小概率放行
-		if (!isAtSelf && Math.random() > config.etc.replyProbabilityNotAt) {
-			throw new Error();
-		}
+				// 模型生成回复内容
+				const { content, usage } = await generateContent(messages);
+				if (!content) {
+					throw new Error("模型生成了空消息，可能是故障或无语了");
+				}
+				// 分段回复消息
+				await replyLikeHuman(content, groupId, {
+					at: isAtSelf ? userId : undefined,
+				});
 
-		// 模型生成回复内容
-		const { content, usage } = await generateContent(messages);
-		if (!content) {
-			throw new Error("模型生成了空消息，可能是故障或无语了");
-		}
-		// 分段回复消息
-		await replyLikeHuman(content, groupId, {
-			at: isAtSelf ? userId : undefined,
-		});
+				// 自动优化上下文
+				await autoCompact(messages, usage);
+				// 保存到本地
+				await saveMessages(groupId, messages);
+			} catch (error) {
+				// 模型处理失败：先尝试压缩上下文，再把错误作为返回值带出，让锁正常释放
+				await to(autoCompact(messages));
+				return error;
+			}
+		},
+	);
 
-		// 自动优化上下文
-		await autoCompact(messages, usage);
-		// 保存到本地
-		await saveMessages(groupId, messages);
-		// 释放消息队列
-		release();
-		hasReleased = true;
-	} catch (error) {
+	// 模型处理失败时统一分类（此时锁已释放，安全）
+	if (modelError) {
 		// 无需处理的异常
 		if (
-			!(error instanceof Error) ||
+			!(modelError instanceof Error) ||
 			// 不用上报的异常信息
-			error.message === "" ||
+			modelError.message === "" ||
 			// 模型拒绝回复
-			error.name === "denyReply"
+			modelError.name === "denyReply"
 		) {
 			return c.body(null, 204);
 		}
 
 		// 主动回复报错信息
-		const message = extractErrorMessage(error);
+		const message = extractErrorMessage(modelError);
 		if (isAtSelf) {
 			return c.json(makeReplyBody(message));
 		}
 
 		// 被动打印报错信息
 		logger(`抛出了一个异常：${message}`);
-	} finally {
-		// 如果模型正常回复，队列应该被正常释放
-		// 进到这里说明没回复，但还是要做些收尾工作
-		if (!hasReleased) {
-			// 自动优化上下文
-			await to(autoCompact(messages));
-
-			// 释放消息队列
-			release();
-		}
 	}
 
 	return c.body(null, 204);
