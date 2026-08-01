@@ -1,8 +1,7 @@
-import { serve } from "@hono/node-server";
 import { extractErrorMessage, logger, to } from "@nickyzj2023/utils";
-import { Hono } from "hono";
 import { safeParse } from "valibot";
 import { startBiliLiveTimer } from "./common/bililive.js";
+import { createApp, serve } from "./common/http-server.js";
 import config from "./config.js";
 import { beforeLLM } from "./onebot/before-llm/index.js";
 import {
@@ -29,7 +28,7 @@ const checkRequiredConfig = () => {
 checkRequiredConfig();
 
 // LLBot（OneBot协议端）发送消息到此路由
-const app = new Hono();
+const app = createApp();
 app.post("/", async (c) => {
 	// 验证请求体格式（无法处理的消息类型会丢弃）
 	const body = await c.req.json();
@@ -138,11 +137,12 @@ app.post("/", async (c) => {
 const stopBiliLiveTimer = startBiliLiveTimer();
 
 // 启动HTTP服务器
-const server = serve({
-	fetch: app.fetch,
-	port: config.bot.onebotHttpPostPort,
+const server = serve(app, config.bot.onebotHttpPostPort);
+
+// server.listen() 是异步的，等 listening 事件后再取端口，避免 address() 为 null
+server.on("listening", () => {
+	logger("服务器已启动", server.address());
 });
-logger("服务器已启动", server.address());
 
 // 退出程序
 const onShutdown = async (signal: string) => {
