@@ -97,5 +97,7 @@ export default {
 		ratioOfCompactMedia: 0.7,
 		/** 上下文>总上下文*ratio时总结消息 */
 		ratioOfSummarize: 0.8,
+		/** 总结后的消息最长字数，超过会被打回重新总结 */
+		limitOfSummary: 2200,
 	},
 };

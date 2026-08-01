@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@nickyzj2023/utils": "^1.0.82",
+    "@nickyzj2023/utils": "^1.0.84",
     "sharp": "^0.35.3",
     "valibot": "^1.4.2"
   },

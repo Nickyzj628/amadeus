@@ -12,8 +12,8 @@ importers:
         specifier: ^1.29.0
         version: 1.29.0(zod@4.3.6)
       '@nickyzj2023/utils':
-        specifier: ^1.0.82
-        version: 1.0.82
+        specifier: ^1.0.84
+        version: 1.0.84
       sharp:
         specifier: ^0.35.3
         version: 0.35.3(@types/node@26.1.1)
@@ -388,8 +388,8 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@nickyzj2023/utils@1.0.82':
-    resolution: {integrity: sha512-yqtpLHmwBIsPxsixWfHJgzyRTyDuYmFfcV8UOs379wcZrfW4IB64hUdOu+FKtj9W+mzkT0hwkycHiX7Qev9tSQ==}
+  '@nickyzj2023/utils@1.0.84':
+    resolution: {integrity: sha512-VH/dPLfKhyiA68QPfROKOy2U19XocPLTtuww82JxUdApwnKW4QZewNyZRFgyLxd1/gbwpDFKAOVUxaJDh9rqAA==}
 
   '@oxc-project/types@0.140.0':
     resolution: {integrity: sha512-h5LUOzGArYemnW1NMz/DuuQhBi96J6JL2Bk8zE4kvqxB5Sg3jxmCiH4uyOWHDkiKSt5vWlG4FIwCR/DbstcNRQ==}
@@ -1536,7 +1536,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
-  '@nickyzj2023/utils@1.0.82': {}
+  '@nickyzj2023/utils@1.0.84': {}
 
   '@oxc-project/types@0.140.0': {}
 
