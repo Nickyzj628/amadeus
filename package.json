@@ -12,13 +12,13 @@
     "node": ">=24.5.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "@nickyzj2023/utils": "^1.0.84",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@nickyzj2023/utils": "^1.0.85",
     "sharp": "^0.35.3",
     "valibot": "^1.4.2"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1",
+    "@types/node": "^26.1.2",
     "tsdown": "^0.22.14",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2"

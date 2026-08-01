@@ -5,28 +5,6 @@ import { SUMMARIZE_PROMPT } from "./constants.js";
 import { modelRef } from "./model.js";
 
 /**
- * 解析日期行（格式：2026年7月18日），返回毫秒时间戳。
- * 解析失败（格式异常）时返回 null，调用方应跳过该段，
- * 避免误删无法确认时间先后的摘要。
- */
-const parseSummaryDate = (text: string): number | null => {
-	// split 结果必非空，这里防御性兜底为空字符串即可（match 会失败并返回 null）
-	const firstLine = text.trim().split("\n")[0] ?? "";
-	const matched = firstLine.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
-	if (!matched) return null;
-	const [, year, month, day] = matched;
-	// 用年月日显式构造 Date，避免字符串解析在不同运行时下的歧义
-	return new Date(Number(year), Number(month) - 1, Number(day)).getTime();
-};
-
-/**
- * 匹配顶格的日期行（如 "2026年7月18日"），作为各日期段的分隔标记。
- * 生产环境的总结消息是一个<summary>块内合并多天内容，各天用日期行分隔，
- * 详见 removeOldSummaries 中的格式说明。
- */
-const DATE_LINE_REGEX = /^(\d{4}年\d{1,2}月\d{1,2}日)$/gm;
-
-/**
  * 如果总结消息的字数>limitOfSummary，则移除日期较早的日期段，直到字数达标。
  * 总结消息只要存在，其 content 格式见 src\openai\prompts\summarize.md
  *
@@ -36,6 +14,32 @@ const DATE_LINE_REGEX = /^(\d{4}年\d{1,2}月\d{1,2}日)$/gm;
  * @param messages 完整消息数组，会原地修改其中超长的总结消息
  */
 const removeOldSummaries = (messages: AI.Message[]) => {
+	// ---- 私有 helper：只在本函数内使用，故定义在函数内部 ----
+
+	/**
+	 * 解析日期行（格式：2026年7月18日），返回毫秒时间戳。
+	 * 解析失败（格式异常）时返回 null，调用方应跳过该段，
+	 * 避免误删无法确认时间先后的摘要。
+	 */
+	const parseSummaryDate = (text: string): number | null => {
+		// split 结果必非空，这里防御性兜底为空字符串即可（match 会失败并返回 null）
+		const firstLine = text.trim().split("\n")[0] ?? "";
+		const matched = firstLine.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+		if (!matched) return null;
+		const [, year, month, day] = matched;
+		// 用年月日显式构造 Date，避免字符串解析在不同运行时下的歧义
+		return new Date(Number(year), Number(month) - 1, Number(day)).getTime();
+	};
+
+	/**
+	 * 匹配顶格的日期行（如 "2026年7月18日"），作为各日期段的分隔标记。
+	 * 生产环境的总结消息是一个<summary>块内合并多天内容，各天用日期行分隔，
+	 * 格式说明见本函数上方注释。
+	 * 注意：带 g 标志的正则实例有状态（lastIndex），定义在函数内部可保证
+	 * 每次调用都创建新实例，杜绝跨调用状态残留。
+	 */
+	const DATE_LINE_REGEX = /^(\d{4}年\d{1,2}月\d{1,2}日)$/gm;
+
 	const summaryMessage = messages.find(
 		(message) =>
 			typeof message.content === "string" &&
@@ -78,7 +82,7 @@ const autoCompact = async (
 	/** 提供token消耗情况时，能更准确地判断上下文是否达到阈值 */
 	usage?: ChatCompletions.Usage,
 ) => {
-	await compactMessages(messages, modelRef.current, {
+	const result = await compactMessages(messages, modelRef.current, {
 		usage,
 		...config.etc,
 		summarizeOptions: {
@@ -86,8 +90,10 @@ const autoCompact = async (
 		},
 	});
 
-	// 总结出的消息可能超长，去掉日期较早的摘要
-	removeOldSummaries(messages);
+	// 多次总结后的消息可能很长，自动去掉日期较早的摘要
+	if (result.hasSummarized) {
+		removeOldSummaries(messages);
+	}
 };
 
 export default autoCompact;
