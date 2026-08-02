@@ -11,8 +11,9 @@ import {
 import { makeReplyBody, replyLikeHuman } from "./onebot/utils/action.js";
 import { sendGroupMessage } from "./onebot/utils/http.js";
 import autoCompact from "./openai/utils/compact.js";
-import { onebotToOpenAi } from "./openai/utils/convert.js";
+import { onebotToOpenAI } from "./openai/utils/convert.js";
 import { generateContent } from "./openai/utils/generate-content.js";
+import { injectMemory, removeInjectedMemory } from "./openai/utils/memory.js";
 import { loadMessages, saveMessages } from "./openai/utils/messages.js";
 
 const checkRequiredConfig = () => {
@@ -75,12 +76,19 @@ app.post("/", async (c) => {
 				// }
 
 				// 转换消息到OpenAI API格式
-				const currentMessages = await onebotToOpenAi(e);
+				const currentMessages = await onebotToOpenAI(e);
 				messages.push(...currentMessages);
 
 				// 拦截不是@自己的消息，但有极小概率放行
 				if (!isAtSelf && Math.random() > config.etc.replyProbabilityNotAt) {
 					throw new Error();
+				}
+
+				// 注入临时记忆
+				// 只用消息正文来搜索记忆，onebotToOpenAI返回的消息正文始终在最后（-1）
+				const bodyMessage = currentMessages?.at(-1);
+				if (typeof bodyMessage?.content === "string") {
+					await injectMemory(messages, bodyMessage.content, userId);
 				}
 
 				// 模型生成回复内容
@@ -95,13 +103,17 @@ app.post("/", async (c) => {
 
 				// 自动优化上下文
 				await autoCompact(messages, usage);
-				// 保存到本地
-				await saveMessages(groupId, messages);
 			} catch (error) {
 				// 模型处理失败：先尝试压缩上下文，再把错误作为返回值带出，让锁正常释放
 				await to(autoCompact(messages));
 				return error;
+			} finally {
+				// 无论成败都收回本轮临时注入的<memory>消息：
+				// 它是每轮临时注入的参考，不应随历史持久化；
+				removeInjectedMemory(messages);
 			}
+			// 保存历史（成功路径才会走到这里，catch 里已 return）
+			await to(saveMessages(groupId, messages));
 		},
 	);
 

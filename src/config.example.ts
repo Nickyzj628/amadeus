@@ -49,6 +49,11 @@ export default {
 		 * @remarks 控制台 - 我的产品 - 免费版 - API 密钥 - 私钥
 		 */
 		seniversePrivateKey: "xxxxx",
+		/**
+		 * Mem0密钥，用于记录用户的习惯偏好
+		 * @see https://app.mem0.ai/dashboard/api-keys
+		 */
+		mem0ApiKey: "m0-xxxxx",
 	},
 
 	/**

@@ -1,8 +1,8 @@
-import { type InferOutput, number, object, record, string } from "valibot";
-
 // ================================
 // B站直播通知相关接口
 // ================================
+
+import { type InferOutput, number, object, record, string } from "valibot";
 
 // --- 批量查询直播间状态 ---
 

@@ -92,7 +92,7 @@ export const urlToContentPart = (
  * 把消息格式从 OneBot 转成 OpenAI API
  * @remarks 保证安全返回消息对象
  */
-export const onebotToOpenAi = async (
+export const onebotToOpenAI = async (
 	e: MinimalMessageEvent,
 	options?: {
 		/** 是否为被引用的上下文消息 */
@@ -243,7 +243,7 @@ export const onebotToOpenAi = async (
 						await preorderTraverse(e);
 					}
 				} else {
-					const messages = await onebotToOpenAi(e);
+					const messages = await onebotToOpenAI(e);
 					quotedMessages.push(...messages);
 				}
 			};
@@ -256,7 +256,7 @@ export const onebotToOpenAi = async (
 		else if (isReplySegment(segment)) {
 			const e = await getMessage(segment.data.id);
 			if (e) {
-				const repliedMessages = await onebotToOpenAi(e, {
+				const repliedMessages = await onebotToOpenAI(e, {
 					...options,
 					isQuoted: true,
 				});

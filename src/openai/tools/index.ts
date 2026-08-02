@@ -4,9 +4,19 @@ import { MCPRouter } from "@/openai/utils/mcp.js";
 import changeModel from "./changeModel.js";
 import decodeAbbr from "./decodeAbbr.js";
 import denyReply from "./denyReply.js";
+import forgetMemory from "./forgetMemory.js";
 import getWeather from "./getWeather.js";
+import saveMemory from "./saveMemory.js";
 
-const functionTools = [changeModel, getWeather, decodeAbbr, denyReply];
+// 记忆相关工具（saveMemory/forgetMemory）依赖 mem0 API，
+// 未配置 mem0ApiKey 时不注册，避免模型调用注定无效的工具
+const functionTools = [
+	changeModel,
+	getWeather,
+	decodeAbbr,
+	denyReply,
+	...(config.apiKeys.mem0ApiKey ? [saveMemory, forgetMemory] : []),
+];
 
 const mcpRouter = new MCPRouter();
 for (const [name, server] of Object.entries(config.mcpServers)) {
