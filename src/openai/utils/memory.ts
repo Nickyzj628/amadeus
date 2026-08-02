@@ -95,7 +95,6 @@ export const injectMemory = async (
 					.join("\n")}`,
 		)
 		.join("\n");
-	console.log(serialized)
 	pushMemoryMessage(messages, serialized);
 };
 
