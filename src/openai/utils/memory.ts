@@ -110,6 +110,7 @@ export const removeInjectedMemory = (messages: AI.Message[]) => {
 	// 所以从后往前查找只会命中本轮这条，不会误删历史记忆
 	const index = messages.findLastIndex(
 		(message) =>
+			message.role === "user" &&
 			typeof message.content === "string" &&
 			message.content.includes("<memory>"),
 	);
