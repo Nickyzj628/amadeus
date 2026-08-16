@@ -26,7 +26,7 @@ pnpm install
 pnpm dev
 
 # 或者
-pnpm build:prod && pnpm start:prod
+pnpm build && pnpm start
 ```
 
 ### LLBot连不上的备用方案（SnowLuma）

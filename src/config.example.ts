@@ -1,6 +1,6 @@
 /**
  * 配置文件
- * 重命名为config.ts后填入你的实际配置
+ * 复制此文件为 config.ts 后填入你的实际配置
  */
 
 import type { AI } from "@nickyzj2023/utils";
@@ -9,32 +9,35 @@ import type { McpServer } from "./openai/utils/mcp.js";
 export default {
 	/** 机器人核心配置 */
 	bot: {
-		/** 机器人QQ号 */
+		/** 机器人 QQ 号 */
 		selfId: "12345678",
-		/** OneBotHTTP服务端口号（用于机器人主动发送请求） */
+		/** OneBot HTTP 服务端口号（用于机器人主动发送请求） */
 		onebotHttpPort: 7280,
-		/** OneBot HTTP POST服务端口号（用于机器人接收消息） */
+		/** OneBot HTTP POST 服务端口号（用于机器人接收消息） */
 		onebotHttpPostPort: 8210,
 	},
 
 	/** 模型列表，需满足以下条件：
-	 * 1. 必须支持OpenAI API Compatible请求格式
+	 * 1. 必须兼容 OpenAI API 请求格式
 	 * 2. 至少提供一个能理解图片的模型
-	 * 3. 最好支持工具调用，否则无法调用Function Calling/MCP工具
+	 * 3. 最好支持工具调用，否则无法调用 Function Calling / MCP 工具
 	 */
 	models: [
-		// 主力模型
 		{
 			model: "deepseek-v4-flash",
 			baseUrl: "https://api.deepseek.com",
-			apiKey: "xxxxx",
-			// 填写最大上下文窗口，有助于自动优化上下文（具体优化逻辑见下方etc配置）
-			context: 1000000,
+			apiKey: "sk-xxxxx",
 			inputs: ["text"],
 		},
-		// 辅助模型，用于翻译图片/音频/视频等内容
 		{
-			model: "gemini-3.1-flash-lite",
+			model: "google/gemini-3.5-flash-lite",
+			baseUrl: "https://openrouter.ai/api/v1",
+			apiKey:
+				"sk-or-v1-xxxxx",
+			inputs: ["text", "image", "audio", "video"],
+		},
+		{
+			model: "gemma-4-31b-it",
 			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
 			apiKey: "xxxxx",
 			inputs: ["text", "image", "audio", "video"],
@@ -57,11 +60,11 @@ export default {
 	},
 
 	/**
-	 * 远程MCP工具（可选）
+	 * 远程 MCP 工具（可选）
 	 */
 	mcpServers: {
 		/**
-		 * exa联网搜索
+		 * exa 联网搜索
 		 * @see https://exa.ai/docs/reference/exa-mcp
 		 */
 		exa: {
@@ -87,7 +90,7 @@ export default {
 	},
 
 	/**
-	 * 一些优化体验的配置（建议不动）
+	 * 一些优化体验的杂项（建议默认）
 	 */
 	etc: {
 		/** 未被@时的回复概率 */
@@ -97,12 +100,14 @@ export default {
 		/** 安全词，在消息中检测到时添加人设锚点，修正人设 */
 		safeWord: "myfork",
 		/** 上下文>总上下文*ratio时压缩工具调用结果 */
-		ratioOfCompactToolResult: 0.6,
+		ratioToCompactToolResult: 0.5,
 		/** 上下文>总上下文*ratio时压缩图片/音频/视频消息 */
-		ratioOfCompactMedia: 0.7,
+		ratioToCompactMedia: 0.6,
+		/** 上下文>总上下文*ratio时清理软删除残留的占位消息 */
+		ratioToClearSoftDeletedMessages: 0.7,
 		/** 上下文>总上下文*ratio时总结消息 */
-		ratioOfSummarize: 0.8,
-		/** 总结后的消息最长字数，超过会被打回重新总结 */
+		ratioToSummarize: 0.8,
+		/** 总结消息最长字数，超过时将删除日期最早的一段 */
 		limitOfSummary: 2200,
 	},
 };

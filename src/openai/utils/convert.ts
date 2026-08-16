@@ -312,14 +312,15 @@ export const onebotToOpenAI = async (
 			contentToMessage(
 				createXMLText(
 					"message",
-					`${isQuoted ? createXMLText("is_quoted", isQuoted) : ""}
-				${createXMLText("user_id", user_id)}
-				${createXMLText("user_name", nickname)}
-				${createXMLText("body", bodyItems.join("\n").trim())}
-				${mentionedUserIds.length > 0 ? createXMLText("mentioned_user_ids", mentionedUserIds.join(",")) : ""}
-				${createXMLText("time", new Date().toLocaleString())}
-				`.replace(/\t+/g, ""),
-				),
+					`
+					${isQuoted ? createXMLText("is_quoted", isQuoted) : ""}
+					${createXMLText("user_id", user_id)}
+					${createXMLText("user_name", nickname)}
+					${createXMLText("body", bodyItems.join("\n").trim())}
+					${mentionedUserIds.length > 0 ? createXMLText("mentioned_user_ids", mentionedUserIds.join(",")) : ""}
+					${createXMLText("time", new Date().toLocaleString())}
+					`,
+				).replace(/\t+|\n{2,}/g, ""),
 			),
 	].filter(Boolean) as AI.Message[];
 };

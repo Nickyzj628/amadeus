@@ -13,14 +13,15 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@nickyzj2023/utils": "^1.0.86",
+    "@nickyzj2023/utils": "^1.0.91",
     "sharp": "^0.35.3",
     "valibot": "^1.4.2"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
+    "@biomejs/biome": "^2.5.8",
+    "@types/node": "^26.2.0",
     "tsdown": "^0.22.14",
-    "tsx": "^4.23.9",
+    "tsx": "^4.23.12",
     "typescript": "^7.0.2"
   }
 }
