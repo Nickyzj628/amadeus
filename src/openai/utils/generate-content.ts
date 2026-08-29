@@ -42,7 +42,7 @@ export const generateContent = async (
 	) {
 		messages.splice(lastUserMessageIndex, 0, {
 			role: "system",
-			content: createXMLText("role-anchor", IDENTITY_ANCHOR),
+			content: createXMLText("system-reminder", IDENTITY_ANCHOR),
 		});
 		lastUserMessageIndex++;
 	}
