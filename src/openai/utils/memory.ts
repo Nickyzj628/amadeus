@@ -89,12 +89,13 @@ export const injectMemory = async (
 	// "A:\nuuid1: 24岁\nuuid2: 是学生\n\nB:\n..."
 	const serialized = Object.entries(memoriesByUserId)
 		.map(
-			([key, value]) =>
-				`${key}:\n${Object.entries(value)
+			([userId, value]) =>
+				`${userId}:\n${Object.entries(value)
 					.map(([uuid, memory]) => `${uuid}: ${memory}`)
 					.join("\n")}`,
 		)
 		.join("\n");
+	serialized && logger("注入记忆", serialized);
 	pushMemoryMessage(messages, serialized);
 };
 

@@ -8,15 +8,10 @@ import forgetMemory from "./forgetMemory.js";
 import getWeather from "./getWeather.js";
 import saveMemory from "./saveMemory.js";
 
-// 记忆相关工具（saveMemory/forgetMemory）依赖 mem0 API，
-// 未配置 mem0ApiKey 时不注册，避免模型调用注定无效的工具
-const functionTools = [
-	changeModel,
-	getWeather,
-	decodeAbbr,
-	denyReply,
-	...(config.apiKeys.mem0ApiKey ? [saveMemory, forgetMemory] : []),
-];
+const functionTools = [changeModel, getWeather, decodeAbbr, denyReply];
+if (config.apiKeys.mem0ApiKey) {
+	functionTools.push(saveMemory, forgetMemory);
+}
 
 const mcpRouter = new MCPRouter();
 for (const [name, server] of Object.entries(config.mcpServers)) {

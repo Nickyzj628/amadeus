@@ -103,6 +103,7 @@ app.post("/", async (c) => {
 			if (!content) {
 				throw new Error("模型生成了空消息，可能是故障或无语了");
 			}
+
 			// 分段回复消息
 			await replyLikeHuman(content, groupId, {
 				at: isAtSelf ? userId : undefined,
@@ -118,6 +119,7 @@ app.post("/", async (c) => {
 			// 自动优化上下文
 			await to(autoCompact(messages, usage));
 		}
+
 		// 保存消息（try成功+finally走完才能到这）
 		await to(saveMessages(groupId, messages));
 	});
@@ -149,8 +151,6 @@ const stopBiliLiveTimer = startBiliLiveTimer();
 
 // 启动HTTP服务器
 const server = serve(app, config.bot.onebotHttpPostPort);
-
-// server.listen() 是异步的，等 listening 事件后再取端口，避免 address() 为 null
 server.on("listening", () => {
 	logger("服务器已启动", server.address());
 });
