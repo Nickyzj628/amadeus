@@ -1,5 +1,5 @@
-import type { Message, Usage } from "@nickyzj2023/ai";
-import { compactMessages, extractXmlTags } from "@nickyzj2023/utils";
+import { compact, type Message, type Usage } from "@nickyzj2023/ai";
+import { extractXmlTags } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "./constants.js";
 import { modelRef } from "./model.js";
@@ -82,7 +82,7 @@ const autoCompact = async (
 	/** 提供token消耗情况时，能更准确地判断上下文是否达到阈值 */
 	usage?: Usage,
 ) => {
-	const result = await compactMessages(messages, modelRef.current, {
+	const result = await compact(messages, modelRef.current, {
 		usage,
 		...config.etc,
 		summarizeOptions: {
