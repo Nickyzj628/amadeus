@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@nickyzj2023/ai": "link:..\\ai",
-    "@nickyzj2023/utils": "^1.0.92",
+    "@nickyzj2023/ai": "link:../ai",
+    "@nickyzj2023/utils": "link:../utils",
     "sharp": "^0.35.4",
     "valibot": "^1.4.2"
   },

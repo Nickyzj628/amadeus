@@ -6,6 +6,7 @@ settings:
 
 overrides:
   '@nickyzj2023/ai': link:../ai
+  '@nickyzj2023/utils': link:../utils
 
 importers:
 
@@ -15,11 +16,11 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(supports-color@7.2.0)(zod@4.3.6)
       '@nickyzj2023/ai':
-        specifier: link:..\ai
+        specifier: link:../ai
         version: link:../ai
       '@nickyzj2023/utils':
-        specifier: ^1.0.92
-        version: 1.0.92
+        specifier: link:../utils
+        version: link:../utils
       sharp:
         specifier: ^0.35.4
         version: 0.35.4(@types/node@26.4.0)
@@ -438,9 +439,6 @@ packages:
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
-
-  '@nickyzj2023/utils@1.0.92':
-    resolution: {integrity: sha512-QBvQ1uVeAu+1X1+ccrjeNrAiMSdnOH6pHzm4GLY1YZ0dvKEaVxHdxAnScbXnm0iFce7HHbfstzA7ISCInQZrnQ==}
 
   '@oxc-project/types@0.147.0':
     resolution: {integrity: sha512-IJ3s6ltHLp45S0bh7phkX+gJO7A1Wuz2EaqpAhb8WjqDwbzMiWKHhyyT42tskaWjEYXtHtVCPpnBJVT9+dcRLg==}
@@ -1614,8 +1612,6 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@4.3.6)
     transitivePeerDependencies:
       - supports-color
-
-  '@nickyzj2023/utils@1.0.92': {}
 
   '@oxc-project/types@0.147.0': {}
 
