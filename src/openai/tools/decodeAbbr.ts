@@ -1,4 +1,5 @@
-import { defineTool, fetcher, to } from "@nickyzj2023/utils";
+import { defineTool } from "@nickyzj2023/ai";
+import { fetcher, to } from "@nickyzj2023/utils";
 import { array, object, optional, safeParse, string } from "valibot";
 
 const DecodeResponseSchema = array(

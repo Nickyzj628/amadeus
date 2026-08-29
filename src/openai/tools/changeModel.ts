@@ -1,4 +1,4 @@
-import { defineTool } from "@nickyzj2023/utils";
+import { defineTool } from "@nickyzj2023/ai";
 import config from "@/config.js";
 import { findModelByName, modelRef } from "@/openai/utils/model.js";
 

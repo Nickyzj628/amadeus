@@ -1,10 +1,10 @@
 import {
-	type AI,
-	chatCompletions,
-	compactStr,
-	createXMLText,
-	logger,
-} from "@nickyzj2023/utils";
+	type Message,
+	type Model,
+	runAgent,
+	type Usage,
+} from "@nickyzj2023/ai";
+import { compactStr, createXMLText, logger } from "@nickyzj2023/utils";
 import { checkUrlType, normalizeText } from "@/common/util.js";
 import config from "@/config.js";
 import { openaiTools } from "@/openai/tools/index.js";
@@ -17,16 +17,12 @@ import { contentToMessage, urlToContentPart } from "./convert.js";
  * @remarks 没有可用的模型/请求失败时会抛出异常
  */
 export const generateContent = async (
-	messages: AI.Message[],
-	options?: {
-		/** 默认使用当前模型发请求，可临时更改 */
-		model?: AI.Model;
-		/** 自定义请求体，会覆盖原先存在的同名字段 */
-		extraBody?: Record<string, any>;
-	},
+	messages: Message[],
+	/** 默认使用当前模型发请求，可临时更改 */
+	model?: Model,
 ) => {
-	const { model = modelRef.current, extraBody } = options ?? {};
-	if (!model) {
+	const _model = model ?? modelRef.current;
+	if (!_model) {
 		throw new Error("当前没有可用的模型，请完善配置文件");
 	}
 
@@ -54,13 +50,31 @@ export const generateContent = async (
 	/**
 	 * 发出请求
 	 */
-
-	const { reasoning, content, usage } = await chatCompletions(model, messages, {
-		tools: openaiTools,
-		onToolHandled: logger,
-		...model.customBody,
-		...extraBody,
-	});
+	let reasoning = "";
+	let content = "";
+	let usage: Usage | undefined;
+	for await (const e of runAgent(_model, messages, openaiTools)) {
+		switch (e.type) {
+			case "content_delta":
+				content += e.delta;
+				break;
+			case "reasoning_delta":
+				reasoning += e.delta;
+				break;
+			case "tool_call":
+				logger(`调用工具：${e.name}`, e.args);
+				break;
+			case "tool_result":
+				logger(`工具结果：${e.name}`, e.result);
+				break;
+			case "done":
+				usage = e.usage;
+				break;
+			case "error":
+				content = `模型处理异常：${e.message}`;
+				break;
+		}
+	}
 
 	// 打印对话数据
 	reasoning && logger("思考内容：", compactStr(reasoning));
@@ -100,7 +114,7 @@ export const visionToText = async (
 				{ type: "text", text: VISION_UNDERSTANDING_PROMPT },
 			]),
 		],
-		{ model: visionModel },
+		visionModel,
 	);
 	return content;
 };

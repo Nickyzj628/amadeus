@@ -1,4 +1,4 @@
-import type { AI, ChatCompletions } from "@nickyzj2023/utils";
+import type { Message, Usage } from "@nickyzj2023/ai";
 import { compactMessages, extractXmlTags } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "./constants.js";
@@ -13,7 +13,7 @@ import { modelRef } from "./model.js";
  * 日期行本身也是"日期段"的起始标记，见 DATE_LINE_REGEX
  * @param messages 完整消息数组，会原地修改其中超长的总结消息
  */
-const removeOldSummaries = (messages: AI.Message[]) => {
+const removeOldSummaries = (messages: Message[]) => {
 	// ---- 私有 helper：只在本函数内使用，故定义在函数内部 ----
 
 	/**
@@ -78,9 +78,9 @@ const removeOldSummaries = (messages: AI.Message[]) => {
  * 自动优化上下文，类似AI Coding Agent的/compact命令
  */
 const autoCompact = async (
-	messages: AI.Message[],
+	messages: Message[],
 	/** 提供token消耗情况时，能更准确地判断上下文是否达到阈值 */
-	usage?: ChatCompletions.Usage,
+	usage?: Usage,
 ) => {
 	const result = await compactMessages(messages, modelRef.current, {
 		usage,

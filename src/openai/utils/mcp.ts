@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { type AI, defineTool, isObject } from "@nickyzj2023/utils";
+import { defineTool, type ToolDefinition } from "@nickyzj2023/ai";
+import { isObject } from "@nickyzj2023/utils";
 
 export type McpServer = {
 	type: "streamable_http" | "sse";
@@ -52,7 +53,7 @@ export class MCPRouter {
 					.filter((tool) => this.toolClientMap.has(tool.name))
 					.map((tool) => {
 						const _properties = (tool.inputSchema.properties ??
-							{}) as AI.ToolDefinition["function"]["parameters"]["properties"];
+							{}) as ToolDefinition["function"]["parameters"]["properties"];
 						tool.inputSchema.required?.forEach((key) => {
 							if (isObject(_properties[key])) {
 								_properties[key].required = true;

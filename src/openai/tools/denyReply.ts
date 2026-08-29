@@ -1,4 +1,4 @@
-import { defineTool } from "@nickyzj2023/utils";
+import { defineTool } from "@nickyzj2023/ai";
 import { contentToMessage } from "../utils/convert.js";
 
 export default defineTool(
@@ -16,13 +16,10 @@ export default defineTool(
 		if (extraArgs?.messages) {
 			const toolCallId = extraArgs.messages.at(-1)?.tool_calls?.[0]?.id;
 			extraArgs.messages.push(
-				contentToMessage(
-					"已拒绝回复用户，下一条消息将会是用户发起的另一轮对话",
-					{
-						role: "tool",
-						tool_call_id: toolCallId,
-					},
-				),
+				contentToMessage("已拒绝回复用户，下一条消息将会是用户发起的另一轮对话", {
+					role: "tool",
+					tool_call_id: toolCallId,
+				}),
 			);
 		}
 

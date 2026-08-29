@@ -1,9 +1,10 @@
-import { type AI, logger } from "@nickyzj2023/utils";
+import type { Message } from "@nickyzj2023/ai";
+import { logger } from "@nickyzj2023/utils";
 import { loadJSON, saveJSON } from "@/common/db.js";
 import config from "@/config.js";
 import { SYSTEM_PROMPT } from "./constants.js";
 
-const groupMessagesMap = new Map<number, AI.Message[]>();
+const groupMessagesMap = new Map<number, Message[]>();
 
 /** 根据群号读取消息数组 */
 export const loadMessages = async (groupId: number) => {
@@ -13,7 +14,7 @@ export const loadMessages = async (groupId: number) => {
 	}
 
 	// 从本地读取群消息
-	const messages = await loadJSON<AI.Message[]>(`/data/${groupId}.json`, {
+	const messages = await loadJSON<Message[]>(`/data/${groupId}.json`, {
 		fallbackData: [],
 	});
 	// 刷新系统提示词
@@ -60,10 +61,7 @@ export const loadMessages = async (groupId: number) => {
  * 根据群号保存消息数组
  * @remarks 如果传参有缺省，则把内存中的所有消息保存到本地
  */
-export const saveMessages = async (
-	groupId?: number,
-	messages?: AI.Message[],
-) => {
+export const saveMessages = async (groupId?: number, messages?: Message[]) => {
 	// 如果省略 groupId，则视为保存所有群的消息
 	if (!groupId) {
 		for (const [groupId, messages] of groupMessagesMap) {

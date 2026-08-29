@@ -1,5 +1,5 @@
+import type { Message } from "@nickyzj2023/ai";
 import {
-	type AI,
 	createXMLText,
 	extractErrorMessage,
 	fetcher,
@@ -28,7 +28,7 @@ const hasMem0ApiKey = () => Boolean(config.apiKeys.mem0ApiKey);
  * 注入一条<memory>消息：内容为空时用占位文本，
  * 让模型知道记忆系统存在、但当前没有搜到相关内容
  */
-const pushMemoryMessage = (messages: AI.Message[], serialized: string) => {
+const pushMemoryMessage = (messages: Message[], serialized: string) => {
 	// { role: "user", content: "<memory>\n{serialized}\n</memory>" }
 	messages.push(
 		contentToMessage(createXMLText("memory", serialized || "（暂无相关记忆）")),
@@ -43,7 +43,7 @@ const pushMemoryMessage = (messages: AI.Message[], serialized: string) => {
  * @remarks 不抛异常；即使搜索失败也会注入占位记忆，保证模型始终能看到<memory>消息
  */
 export const injectMemory = async (
-	messages: AI.Message[],
+	messages: Message[],
 	query: string,
 	userId?: number | string,
 ) => {
@@ -104,7 +104,7 @@ export const injectMemory = async (
  * 从上下文移除，避免失败轮次的记忆残留并被持久化到本地
  * @param messages 上下文消息数组
  */
-export const removeInjectedMemory = (messages: AI.Message[]) => {
+export const removeInjectedMemory = (messages: Message[]) => {
 	// 本轮注入的<memory>是数组里最后一条内容含<memory>标签的消息：
 	// 历史上成功轮次的<memory>也会留在数组里，但它们位置靠前，
 	// 所以从后往前查找只会命中本轮这条，不会误删历史记忆

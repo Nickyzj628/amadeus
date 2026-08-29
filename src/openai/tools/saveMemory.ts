@@ -1,4 +1,4 @@
-import { defineTool } from "@nickyzj2023/utils";
+import { defineTool } from "@nickyzj2023/ai";
 import { saveMemory } from "../utils/memory.js";
 
 export default defineTool(
@@ -7,7 +7,8 @@ export default defineTool(
 	{
 		text: {
 			type: "string",
-			description: "要记住的信息内容，用自然语言描述，并保留细节。如：用户将于2026.8.3去上海青浦区出差，暂定9.1坐飞机回成都",
+			description:
+				"要记住的信息内容，用自然语言描述，并保留细节。如：用户将于2026.8.3去上海青浦区出差，暂定9.1坐飞机回成都",
 			required: true,
 		},
 		userId: {
@@ -29,8 +30,6 @@ export default defineTool(
 			return "记忆保存失败：无法确定记忆归属用户的QQ号";
 		}
 		await saveMemory(text, userId, memoryId);
-		return memoryId
-			? `已更新记忆 ${memoryId}`
-			: "已记住这些信息，之后我会想起来";
+		return memoryId ? `已更新记忆 ${memoryId}` : "已记住这些信息，之后我会想起来";
 	},
 );

@@ -3,7 +3,7 @@
  * 复制此文件为 config.ts 后填入你的实际配置
  */
 
-import type { AI } from "@nickyzj2023/utils";
+import type { Model } from "@nickyzj2023/ai";
 import type { McpServer } from "./openai/utils/mcp.js";
 
 export default {
@@ -32,8 +32,7 @@ export default {
 		{
 			model: "google/gemini-3.5-flash-lite",
 			baseUrl: "https://openrouter.ai/api/v1",
-			apiKey:
-				"sk-or-v1-xxxxx",
+			apiKey: "sk-or-v1-xxxxx",
 			inputs: ["text", "image", "audio", "video"],
 		},
 		{
@@ -42,7 +41,7 @@ export default {
 			apiKey: "xxxxx",
 			inputs: ["text", "image", "audio", "video"],
 		},
-	] as AI.Model[],
+	] as Model[],
 
 	/** 各种工具需要的API密钥（可选） */
 	apiKeys: {

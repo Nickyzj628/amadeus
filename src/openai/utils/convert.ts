@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { type AI, createXMLText, logger, to } from "@nickyzj2023/utils";
+import type { ContentPart, Message } from "@nickyzj2023/ai";
+import { createXMLText, logger, to } from "@nickyzj2023/utils";
 import { checkUrlType, compressImage } from "@/common/util.js";
 import {
 	checkSameFileName,
@@ -27,17 +28,17 @@ import { visionToText } from "./generate-content.js";
 
 /** 构造 OpenAI API 消息对象 */
 export const contentToMessage = (
-	content: AI.Message["content"],
+	content: Message["content"],
 	options?: {
 		/**
 		 * 指定消息对应的角色
 		 * @default "user"
 		 */
-		role?: AI.Message["role"];
+		role?: Message["role"];
 		/** 指定消息对应的工具调用 ID */
 		tool_call_id?: string;
 	},
-): AI.Message => {
+): Message => {
 	const { role = "user", ...restOptions } = options ?? {};
 
 	return {
@@ -85,7 +86,7 @@ export const urlToContentPart = (
 		}
 	}
 
-	return contentPart as AI.ContentPart;
+	return contentPart as ContentPart;
 };
 
 /**
@@ -104,7 +105,7 @@ export const onebotToOpenAI = async (
 	} = e;
 	const { isQuoted = false } = options ?? {};
 
-	const modelInputs = modelRef.current?.inputs;
+	const { modalities } = modelRef.current;
 
 	const bodyItems: string[] = [];
 	const imageItems: string[] = [];
@@ -112,7 +113,7 @@ export const onebotToOpenAI = async (
 	const audioItems: string[] = [];
 
 	const mentionedUserIds: string[] = [];
-	const quotedMessages: AI.Message[] = [];
+	const quotedMessages: Message[] = [];
 
 	/**
 	 * 解析消息段数组
@@ -136,7 +137,7 @@ export const onebotToOpenAI = async (
 			}
 
 			// 2. 对于多模态，直接使用 base64
-			if (modelInputs?.includes("image")) {
+			if (modalities?.includes("image")) {
 				imageItems.push(base64);
 			}
 			// 对于纯语言模型，使用多模态翻译后的自然语言
@@ -322,5 +323,5 @@ export const onebotToOpenAI = async (
 					`,
 				).replace(/\t+|\n{2,}/g, ""),
 			),
-	].filter(Boolean) as AI.Message[];
+	].filter(Boolean) as Message[];
 };

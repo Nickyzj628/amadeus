@@ -1,9 +1,9 @@
-import type { AI } from "@nickyzj2023/utils";
+import type { Model } from "@nickyzj2023/ai";
 import config from "@/config.js";
 
 /** 当前使用的模型 */
 export const modelRef = {
-	current: config.models[0] as AI.Model,
+	current: config.models[0] as Model,
 };
 
 /**
@@ -28,10 +28,10 @@ export const findModelByName = (keyword: string) => {
  * @remarks 如果当前使用的模型具有对应能力，则优先使用
  */
 export const findModelByModality = (
-	modality: NonNullable<AI.Model["inputs"]>[number],
+	modality: NonNullable<Model["modalities"]>[number],
 ) => {
-	if (modelRef.current.inputs?.includes(modality)) {
+	if (modelRef.current.modalities?.includes(modality)) {
 		return modelRef.current;
 	}
-	return config.models.find((model) => model.inputs?.includes(modality));
+	return config.models.find((model) => model.modalities?.includes(modality));
 };

@@ -1,9 +1,5 @@
-import {
-	type ChatCompletions,
-	extractErrorMessage,
-	logger,
-	to,
-} from "@nickyzj2023/utils";
+import type { Usage } from "@nickyzj2023/ai";
+import { extractErrorMessage, logger, to } from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { startBiliLiveTimer } from "./common/bililive.js";
 import { createApp, serve } from "./common/http-server.js";
@@ -77,7 +73,7 @@ app.post("/", async (c) => {
 	// 消息响应失败时在回调函数里返回错误，先把锁释放，再慢慢处理错误
 	const error = await navigator.locks.request(`group-${groupId}`, async () => {
 		let hasInjectedMemory = false;
-		let usage: ChatCompletions.Usage | undefined;
+		let usage: Usage | undefined;
 		try {
 			// 调试模式
 			// if (groupId !== 669751957) {
