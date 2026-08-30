@@ -11,7 +11,7 @@ import {
 } from "./onebot/schemas/http-post.js";
 import { makeReplyBody, replyLikeHuman } from "./onebot/utils/action.js";
 import { sendGroupMessage } from "./onebot/utils/http.js";
-import autoCompact from "./openai/utils/compact.js";
+import { autoCompact } from "./openai/utils/compact.js";
 import { onebotToOpenAI } from "./openai/utils/convert.js";
 import { generateContent } from "./openai/utils/generate-content.js";
 import { injectMemory, removeInjectedMemory } from "./openai/utils/memory.js";

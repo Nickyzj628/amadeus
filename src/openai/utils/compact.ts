@@ -1,5 +1,5 @@
 import { compact, type Message, type Usage } from "@nickyzj2023/ai";
-import { extractXmlTags } from "@nickyzj2023/utils";
+import { extractXmlTagContent, hasXmlTag, logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "./constants.js";
 import { modelRef } from "./model.js";
@@ -42,8 +42,7 @@ const removeOldSummaries = (messages: Message[]) => {
 
 	const summaryMessage = messages.find(
 		(message) =>
-			typeof message.content === "string" &&
-			extractXmlTags(message.content, ["summary"]).length > 0,
+			typeof message.content === "string" && hasXmlTag(message.content, "summary"),
 	);
 	// 超长时逐个删除日期最早的日期段，直到字数达标或只剩一个日期段（防止死循环）
 	while (
@@ -75,13 +74,58 @@ const removeOldSummaries = (messages: Message[]) => {
 };
 
 /**
+ * 压缩{config.etc.summarizeNDay}天前的消息
+ * @param messages 完整消息数组，会原地修改它
+ */
+const summarizeNDay = async (messages: Message[]) => {
+	// 1. 计算最大日期
+	const maxDate = new Date();
+	maxDate.setDate(maxDate.getDate() - config.etc.summarizeNDay);
+
+	// 2. 找到最后一条早于maxDate的消息
+	const lastCompressibleIndex = messages.findLastIndex((message) => {
+		if (typeof message.content !== "string") {
+			return false;
+		}
+		const date = new Date(extractXmlTagContent(message.content, "time") || "");
+		if (Number.isNaN(date.getTime())) {
+			return false;
+		}
+		if (date <= maxDate) {
+			return true;
+		}
+		return false;
+	});
+	if (lastCompressibleIndex === -1) {
+		return;
+	}
+
+	const compressible = messages.slice(0, lastCompressibleIndex);
+	const reserved = messages.slice(lastCompressibleIndex);
+
+	// 3. 压缩
+	await compact.summarizeMessages(compressible, {
+		model: modelRef.current,
+		systemPrompt: SUMMARIZE_PROMPT,
+	});
+
+	// 4. 整理上下文
+	messages.splice(0, messages.length, ...compressible, ...reserved);
+	logger(`自动压缩了${maxDate.toLocaleDateString()}及之前的消息`);
+};
+
+/**
  * 自动优化上下文，类似AI Coding Agent的/compact命令
  */
-const autoCompact = async (
+export const autoCompact = async (
 	messages: Message[],
 	/** 提供token消耗情况时，能更准确地判断上下文是否达到阈值 */
 	usage?: Usage,
 ) => {
+	// 先压缩N天前的消息
+	await summarizeNDay(messages);
+
+	// 再使用@nickyzj2023/ai的通用压缩方案
 	const result = await compact(messages, modelRef.current, {
 		usage,
 		...config.etc,
@@ -95,5 +139,3 @@ const autoCompact = async (
 		removeOldSummaries(messages);
 	}
 };
-
-export default autoCompact;

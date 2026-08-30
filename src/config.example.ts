@@ -27,19 +27,19 @@ export default {
 			model: "deepseek-v4-flash",
 			baseUrl: "https://api.deepseek.com",
 			apiKey: "sk-xxxxx",
-			inputs: ["text"],
+			modalities: ["text"],
 		},
 		{
 			model: "google/gemini-3.5-flash-lite",
 			baseUrl: "https://openrouter.ai/api/v1",
 			apiKey: "sk-or-v1-xxxxx",
-			inputs: ["text", "image", "audio", "video"],
+			modalities: ["text", "image", "audio", "video"],
 		},
 		{
 			model: "gemma-4-31b-it",
 			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
 			apiKey: "xxxxx",
-			inputs: ["text", "image", "audio", "video"],
+			modalities: ["text", "image", "audio", "video"],
 		},
 	] as Model[],
 
@@ -108,5 +108,7 @@ export default {
 		ratioToSummarize: 0.8,
 		/** 总结消息最长字数，超过时将删除日期最早的一段 */
 		limitOfSummary: 2200,
+		/** 自动压缩N天前的消息 */
+		summarizeNDay: 7,
 	},
 };
