@@ -100,7 +100,7 @@ app.post("/", async (c) => {
 			// 模型生成回复内容
 			const { content, ...rest } = await generateContent(messages);
 			usage = rest.usage;
-			if (!content) {
+			if (!content.trim()) {
 				throw new Error("模型生成了空消息，可能是故障或无语了");
 			}
 
