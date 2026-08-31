@@ -1,77 +1,8 @@
 import { compact, type Message, type Usage } from "@nickyzj2023/ai";
-import { extractXmlTagContent, hasXmlTag, logger } from "@nickyzj2023/utils";
+import { extractXmlTagContent, logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "./constants.js";
 import { modelRef } from "./model.js";
-
-/**
- * 如果总结消息的字数>limitOfSummary，则移除日期较早的日期段，直到字数达标。
- * 总结消息只要存在，其 content 格式见 src\openai\prompts\summarize.md
- *
- * 一条总结消息可能合并多天的内容（生产环境即是如此），
- * 各天之间用顶格的日期行（如 "2026年7月19日"）分隔，
- * 日期行本身也是"日期段"的起始标记，见 DATE_LINE_REGEX
- * @param messages 完整消息数组，会原地修改其中超长的总结消息
- */
-const removeOldSummaries = (messages: Message[]) => {
-	// ---- 私有 helper：只在本函数内使用，故定义在函数内部 ----
-
-	/**
-	 * 解析日期行（格式：2026年7月18日），返回毫秒时间戳。
-	 * 解析失败（格式异常）时返回 null，调用方应跳过该段，
-	 * 避免误删无法确认时间先后的摘要。
-	 */
-	const parseSummaryDate = (text: string): number | null => {
-		// split 结果必非空，这里防御性兜底为空字符串即可（match 会失败并返回 null）
-		const firstLine = text.trim().split("\n")[0] ?? "";
-		const matched = firstLine.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
-		if (!matched) return null;
-		const [, year, month, day] = matched;
-		// 用年月日显式构造 Date，避免字符串解析在不同运行时下的歧义
-		return new Date(Number(year), Number(month) - 1, Number(day)).getTime();
-	};
-
-	/**
-	 * 匹配顶格的日期行（如 "2026年7月18日"），作为各日期段的分隔标记。
-	 * 生产环境的总结消息是一个<summary>块内合并多天内容，各天用日期行分隔，
-	 * 格式说明见本函数上方注释。
-	 * 注意：带 g 标志的正则实例有状态（lastIndex），定义在函数内部可保证
-	 * 每次调用都创建新实例，杜绝跨调用状态残留。
-	 */
-	const DATE_LINE_REGEX = /^(\d{4}年\d{1,2}月\d{1,2}日)$/gm;
-
-	const summaryMessage = messages.find(
-		(message) =>
-			typeof message.content === "string" && hasXmlTag(message.content, "summary"),
-	);
-	// 超长时逐个删除日期最早的日期段，直到字数达标或只剩一个日期段（防止死循环）
-	while (
-		summaryMessage &&
-		typeof summaryMessage.content === "string" &&
-		summaryMessage.content.length > config.etc.limitOfSummary
-	) {
-		// 收集所有日期行的位置（能解析出日期的行才可作为日期段边界）
-		const dateLineStarts: number[] = [];
-		for (const match of summaryMessage.content.matchAll(DATE_LINE_REGEX)) {
-			// 正则匹配成功时捕获组必然存在；日期格式异常的不作为段边界
-			if (parseSummaryDate(match[0]!) !== null) {
-				dateLineStarts.push(match.index);
-			}
-		}
-		// 只剩一个日期段时无法继续精简，退出循环
-		if (dateLineStarts.length <= 1) break;
-
-		// 删除日期最早的日期段：该段从它的日期行开始，到下一个日期行之前结束
-		// 总结消息中的日期行按时间从旧到新排列（由总结生成逻辑保证），
-		// matchAll 按字符串位置返回，因此第一个位置就是最早的一段，无需排序
-		const earliest = dateLineStarts[0];
-		const next = dateLineStarts[1];
-		if (earliest === undefined || next === undefined) break;
-		summaryMessage.content =
-			summaryMessage.content.slice(0, earliest) +
-			summaryMessage.content.slice(next);
-	}
-};
 
 /**
  * 压缩{config.etc.summarizeNDay}天前的消息
@@ -81,9 +12,11 @@ const summarizeNDay = async (messages: Message[]) => {
 	// 1. 计算最大日期
 	const maxDate = new Date();
 	maxDate.setDate(maxDate.getDate() - config.etc.summarizeNDay);
+	maxDate.setHours(23);
+	maxDate.setMinutes(59);
+	maxDate.setSeconds(59);
 
-	// 2. 找到最后一条早于maxDate的消息
-	const lastCompressibleIndex = messages.findLastIndex((message) => {
+	const isLTEMaxDate = (message: Message) => {
 		if (typeof message.content !== "string") {
 			return false;
 		}
@@ -95,13 +28,26 @@ const summarizeNDay = async (messages: Message[]) => {
 			return true;
 		}
 		return false;
-	});
+	};
+
+	// 1.1 快速判断第一条含有time的消息，是否已经超过maxDate
+	const firstTimeMessage = messages.find(
+		(message) =>
+			typeof message.content === "string" &&
+			extractXmlTagContent(message.content, "time"),
+	);
+	if (!firstTimeMessage || !isLTEMaxDate(firstTimeMessage)) {
+		return;
+	}
+
+	// 2. 找到最后一条早于maxDate的消息
+	const lastCompressibleIndex = messages.findLastIndex(isLTEMaxDate);
 	if (lastCompressibleIndex === -1) {
 		return;
 	}
 
-	const compressible = messages.slice(0, lastCompressibleIndex);
-	const reserved = messages.slice(lastCompressibleIndex);
+	const compressible = messages.slice(0, lastCompressibleIndex + 1);
+	const reserved = messages.slice(lastCompressibleIndex + 1);
 
 	// 3. 压缩
 	await compact.summarizeMessages(compressible, {
@@ -111,7 +57,7 @@ const summarizeNDay = async (messages: Message[]) => {
 
 	// 4. 整理上下文
 	messages.splice(0, messages.length, ...compressible, ...reserved);
-	logger(`自动压缩了${maxDate.toLocaleDateString()}及之前的消息`);
+	logger(`自动压缩了${maxDate.toLocaleString()}及之前的消息`);
 };
 
 /**
@@ -126,16 +72,11 @@ export const autoCompact = async (
 	await summarizeNDay(messages);
 
 	// 再使用@nickyzj2023/ai的通用压缩方案
-	const result = await compact(messages, modelRef.current, {
+	await compact(messages, modelRef.current, {
 		usage,
 		...config.etc,
 		summarizeOptions: {
 			systemPrompt: SUMMARIZE_PROMPT,
 		},
 	});
-
-	// 多次总结后的消息可能很长，自动去掉日期较早的摘要
-	if (result.hasSummarized) {
-		removeOldSummaries(messages);
-	}
 };
