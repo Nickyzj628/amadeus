@@ -8,7 +8,7 @@ import {
 	WEBDAV_LOCAL_BASE,
 } from "@/common/webdav.js";
 import {
-	type GroupMessageEvent,
+	type ForwardMessageEvent,
 	isAtSegment,
 	isAudioSegment,
 	isForwardSegment,
@@ -136,7 +136,7 @@ export const onebotToOpenAI = async (
 				continue;
 			}
 
-			// 2. 对于多模态，直接使用 base64
+			// 2. 对于多模态，直接使用压缩后的base64
 			if (modalities?.includes("image")) {
 				imageItems.push(base64);
 			}
@@ -157,7 +157,7 @@ export const onebotToOpenAI = async (
 			const ext = filename.slice(filename.lastIndexOf(".") + 1);
 			const fallbackItem = "（无法识别视频）";
 
-			// 1. 检查 WebDav 是否存在相同视频
+			// 1. 检查WebDav是否存在相同视频
 			let webdavUrl = filename ? await checkSameFileName(filename) : "";
 			if (!webdavUrl) {
 				// 2. 上传到 WebDav
@@ -170,7 +170,7 @@ export const onebotToOpenAI = async (
 				webdavUrl = url;
 			}
 
-			// 3. 将WebDav视频转为 base64
+			// 3. 将WebDav视频转为base64
 			const [error2, base64Body] = await to(
 				readFile(`${WEBDAV_LOCAL_BASE}/${filename}`).then((buf) =>
 					buf.toString("base64"),
@@ -205,7 +205,7 @@ export const onebotToOpenAI = async (
 				continue;
 			}
 
-			// 2. 将本地音频文件转为 base64
+			// 2. 将本地音频文件转为base64
 			const [error2, base64Body] = await to(
 				readFile(record.file).then((buf) => buf.toString("base64")),
 			);
@@ -235,8 +235,10 @@ export const onebotToOpenAI = async (
 			const forwardMessages = await getForwardMessage(segment.data.id);
 
 			// 前序遍历消息段，直到全部消费完毕
-			const preorderTraverse = async (e: GroupMessageEvent) => {
-				const [firstMessage] = e.message;
+			const preorderTraverse = async (fme: ForwardMessageEvent) => {
+				// 把ForwardMessageEvenet伪造成GroupMessageEvent，统一数据结构
+				const mme: MinimalMessageEvent = { ...e, ...fme, message: fme.content };
+				const [firstMessage] = mme.message;
 				// 如果遇到嵌套的转发消息，则重复外层的解析操作
 				if (isForwardSegment(firstMessage)) {
 					const forwardMessages = await getForwardMessage(firstMessage.data.id);
@@ -244,7 +246,7 @@ export const onebotToOpenAI = async (
 						await preorderTraverse(e);
 					}
 				} else {
-					const messages = await onebotToOpenAI(e);
+					const messages = await onebotToOpenAI(mme);
 					quotedMessages.push(...messages);
 				}
 			};

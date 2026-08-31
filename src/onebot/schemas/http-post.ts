@@ -256,3 +256,41 @@ export type MinimalMessageEvent = {
 	sender: Sender;
 	message: Segment[];
 };
+
+/**
+ * 转发消息事件，和GroupMessageEventSchema的主要区别在于：
+ * 1. 没有self_id
+ * 2. message => content
+ */
+export const ForwardMessageEventSchema = object({
+	/** 消息段数组 */
+	content: pipe(
+		array(SegmentSchema),
+		// 过滤不支持的消息段类型和空文本消息
+		transform((segments) =>
+			segments.filter((segment) => {
+				if (isTextSegment(segment)) {
+					segment.data.text = normalizeText(segment.data.text);
+					return segment.data.text !== "";
+				}
+				if (isMiniProgramSegment(segment)) {
+					segment.data.data = JSON.parse(segment.data.data);
+					return true;
+				}
+				return (
+					isImageSegment(segment) ||
+					isVideoSegment(segment) ||
+					isAudioSegment(segment) ||
+					isAtSegment(segment) ||
+					isReplySegment(segment) ||
+					isForwardSegment(segment)
+				);
+			}),
+		),
+	),
+	/** 发送人信息 */
+	sender: SenderSchema,
+	/** 事件发生的时间戳（秒） */
+	time: number(),
+});
+export type ForwardMessageEvent = InferOutput<typeof ForwardMessageEventSchema>;
