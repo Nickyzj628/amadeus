@@ -1,55 +1,84 @@
 import type { Message } from "@nickyzj2023/ai";
-import { logger } from "@nickyzj2023/utils";
+import { createXMLText, logger } from "@nickyzj2023/utils";
 import { loadJSON, saveJSON } from "@/common/db.js";
 import config from "@/config.js";
 import { SYSTEM_PROMPT } from "./constants.js";
+import { modelRef } from "./model.js";
 
 const groupMessagesMap = new Map<number, Message[]>();
 
 /** 根据群号读取消息数组 */
-export const loadMessages = async (groupId: number) => {
+export const loadMessages = async (
+	groupId: number,
+	options?: {
+		/** 本地不存在此群消息时的回调，默认写入一条系统提示词 */
+		whenEmpty?: () => Message[];
+		/** 从本地硬盘载入时的回调，默认刷新系统提示词 + 追加一条当前模型名称的system-reminder */
+		whenLoadFromLocal?: (messages: Message[]) => void;
+	},
+) => {
+	const {
+		whenEmpty = () => [
+			{
+				role: "system",
+				content: SYSTEM_PROMPT,
+			},
+		],
+		whenLoadFromLocal = (messages: Message[]) => {
+			messages[0]!.content = SYSTEM_PROMPT;
+			messages.push({
+				role: "user",
+				content: createXMLText(
+					"system-reminder",
+					`当前使用的模型：${modelRef.current.model ?? config.models[0]?.model ?? "未知"}`,
+				),
+			});
+		},
+	} = options ?? {};
+
 	// 如果在内存里，则直接返回
-	if (groupMessagesMap.has(groupId)) {
-		return groupMessagesMap.get(groupId)!;
+	let messages = groupMessagesMap.get(groupId);
+	if (messages) {
+		return messages;
 	}
 
 	// 从本地读取群消息
-	const messages = await loadJSON<Message[]>(`/data/${groupId}.json`, {
-		fallbackData: [],
-	});
-	// 刷新系统提示词
-	messages[0] = {
-		role: "system",
-		content: SYSTEM_PROMPT,
-	};
+	let localMessages = await loadJSON<Message[]>(`/data/${groupId}.json`);
+	if (!localMessages) {
+		localMessages = whenEmpty();
+	}
+	whenLoadFromLocal(localMessages);
+
 	// 常驻内存
-	groupMessagesMap.set(groupId, messages);
+	groupMessagesMap.set(groupId, localMessages);
+	messages = localMessages;
 
 	// 释放内存中不活跃的群消息
 	if (groupMessagesMap.size > config.etc.maxActiveGroupCount) {
-		for (const [otherGroupId, messages] of groupMessagesMap) {
-			// 当前群刚加载进内存、马上要处理消息，跳过不释放
-			if (otherGroupId === groupId) {
+		for (const [id, messages] of groupMessagesMap) {
+			// 不释放当前群、因为刚载入内存，马上要处理
+			if (id === groupId) {
 				continue;
 			}
-			// 用 Web Locks 的 ifAvailable 探测该群是否空闲（没有排队/正在处理的消息请求）：
-			// 能立即拿到锁说明空闲，空闲且超量的群才释放。
-			// 锁名格式必须与 index.ts 请求锁时保持一致（`group-${groupId}`）
+
+			// 不释放正在处理的群
 			const isIdle = await navigator.locks.request(
-				`group-${otherGroupId}`,
-				{ ifAvailable: true },
-				(lock) => lock !== null,
+				`group-${id}`,
+				{ ifAvailable: true }, // 如果当前正在占用队列，会传递null给下面的回调
+				(lock) => lock !== null, // 队列空闲 => true
 			);
 			if (!isIdle) {
 				continue;
 			}
-			saveJSON(`/data/${otherGroupId}.json`, messages)
+
+			// 静默写回本地 + 释放群消息
+			saveJSON(`/data/${id}.json`, messages)
 				.then(() => {
-					groupMessagesMap.delete(otherGroupId);
-					logger(`已释放内存中不活跃的群消息：${otherGroupId}`);
+					groupMessagesMap.delete(id);
+					logger(`已释放不活跃的群消息：${id}`);
 				})
 				.catch((e) => {
-					logger(`未能释放内存中的群消息：${e.message}`);
+					logger(`未能释放群消息：${e.message}`);
 				});
 		}
 	}

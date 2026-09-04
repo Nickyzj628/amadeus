@@ -53,6 +53,7 @@ app.post("/", async (c) => {
 	const messages = await loadMessages(groupId);
 	const isAtSelf = e.message.some(isAtSelfSegment);
 
+	// 确保系统提示词没被吞（有些上下文操作方法在刚做出来时吞掉过）
 	if (messages[0]?.role !== "system") {
 		return c.body(null, 204);
 	}

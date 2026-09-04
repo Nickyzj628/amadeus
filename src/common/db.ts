@@ -7,26 +7,14 @@ export const saveJSON = async <T>(path: string, data: T) => {
 };
 
 /** 从项目目录中读取 JSON 配置 */
-export const loadJSON = async <T>(
-	path: string,
-	options?: {
-		/** 如果文件不存在，则使用提供的数据来创建 */
-		fallbackData?: T;
-	},
-) => {
-	const { fallbackData } = options ?? {};
+export const loadJSON = async <T>(path: string) => {
 	const fullPath = `${process.cwd()}${path}`;
-
 	try {
 		await access(fullPath, constants.F_OK);
 		const content = await readFile(fullPath, "utf-8");
 		return JSON.parse(content) as T;
 	} catch {
-		if (!fallbackData) {
-			throw new Error(`文件${fullPath}不存在`);
-		}
-		// 如果文件不存在，则使用 fallbackData 新建文件
-		await saveJSON(path, fallbackData);
-		return fallbackData;
+		// 如果文件不存在，则返回null，而非报错
+		return null;
 	}
 };

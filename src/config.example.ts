@@ -95,7 +95,7 @@ export default {
 		/** 未被@时的回复概率 */
 		replyProbabilityNotAt: 0.02,
 		/** 同时活跃的群聊数，超过时会释放不活跃的群聊消息内存 */
-		maxActiveGroupCount: 2,
+		maxActiveGroupCount: 3,
 		/** 安全词，在消息中检测到时添加人设锚点，修正人设 */
 		safeWord: "myfork",
 		/** 上下文>总上下文*ratio时压缩工具调用结果 */
