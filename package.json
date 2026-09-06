@@ -9,8 +9,8 @@
     "check": "biome check --diagnostic-level=error --write src/"
   },
   "dependencies": {
-    "@nickyzj2023/ai": "link:../ai",
-    "@nickyzj2023/utils": "link:../utils",
+    "@nickyzj2023/ai": "^1.4.2",
+    "@nickyzj2023/utils": "^1.0.95",
     "sharp": "^0.35.4",
     "valibot": "^1.4.2"
   },
