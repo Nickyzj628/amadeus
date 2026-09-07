@@ -36,6 +36,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # 配置文件
 config.ts
+pnpm-workspace.yaml
 
 # 消息文件
 data

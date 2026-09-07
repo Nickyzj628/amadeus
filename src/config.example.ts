@@ -3,8 +3,7 @@
  * 复制此文件为 config.ts 后填入你的实际配置
  */
 
-import type { Model } from "@nickyzj2023/ai";
-import type { McpServer } from "./openai/utils/mcp.js";
+import type { McpServer, Model } from "@nickyzj2023/ai";
 
 export default {
 	/** 机器人核心配置 */
