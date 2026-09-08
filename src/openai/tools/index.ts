@@ -3,12 +3,12 @@ import { logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import changeModel from "./changeModel.js";
 import decodeAbbr from "./decodeAbbr.js";
-import denyReply from "./denyReply.js";
 import forgetMemory from "./forgetMemory.js";
 import getWeather from "./getWeather.js";
 import saveMemory from "./saveMemory.js";
+import skipReply from "./skipReply.js";
 
-const functionTools = [changeModel, getWeather, decodeAbbr, denyReply];
+const functionTools = [changeModel, getWeather, decodeAbbr, skipReply];
 const mcpTools = await loadMCPTools(config.mcpServers ?? {});
 if (config.apiKeys.mem0ApiKey) {
 	functionTools.push(saveMemory, forgetMemory);

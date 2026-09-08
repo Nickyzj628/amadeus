@@ -20,7 +20,7 @@
 
 - `src/common/` — 基础设施：`db.ts`（JSON 读写 `./data/`，路径以 process.cwd() 为根）、`util.ts`（normalizeText 清洗文本 / compressImage 压图 / checkUrlType）、`http-server.ts`（原生 node:http 的极简 Hono 风格封装，仅支持精确路径匹配）、`bililive.ts`（B站直播轮询推送）、`webdav.ts`
 - `src/onebot/` — OneBot 协议端：`schemas/http-post.ts`（valibot 校验群消息事件 + 各消息段 Segment 类型）、`schemas/http.ts`（OneBot API 响应校验）、`utils/http.ts`（主动调用 OneBot API：发消息/取历史/取文件）、`utils/action.ts`（`replyLikeHuman` 模拟人类逐段回复）、`before-llm/`（无需模型的前置处理，如解析 B站链接直接回）
-- `src/openai/` — 与模型交互：`prompts/*.md`（系统提示词，支持 `{xxx}` 从 config 取值替换）、`utils/generate-content.ts`（chatCompletions + 工具循环 + `visionToText` 多模态翻译）、`utils/messages.ts`（每群消息常驻内存，落盘 `data/{groupId}.json`，刷新系统提示词，释放不活跃群）、`utils/compact.ts`（上下文自动压缩：工具结果/媒体/总结三档阈值）、`utils/memory.ts`（mem0 记忆注入）、`utils/mcp.ts`（MCPRouter 管理远程 MCP 客户端）、`tools/`（Function Calling 工具：changeModel/getWeather/decodeAbbr/denyReply/saveMemory/forgetMemory）
+- `src/openai/` — 与模型交互：`prompts/*.md`（系统提示词，支持 `{xxx}` 从 config 取值替换）、`utils/generate-content.ts`（chatCompletions + 工具循环 + `visionToText` 多模态翻译）、`utils/messages.ts`（每群消息常驻内存，落盘 `data/{groupId}.json`，刷新系统提示词，释放不活跃群）、`utils/compact.ts`（上下文自动压缩：工具结果/媒体/总结三档阈值）、`utils/memory.ts`（mem0 记忆注入）、`utils/mcp.ts`（MCPRouter 管理远程 MCP 客户端）、`tools/`（Function Calling 工具：changeModel/getWeather/decodeAbbr/skipReply/saveMemory/forgetMemory）
 - 请求链路：HTTP POST `/` → safeParse 校验 → `loadMessages` → `beforeLLM`（可短路直回）→ Web Locks 每群排队 → `onebotToOpenAI` 转格式 → `injectMemory` → `generateContent` → `replyLikeHuman` → `autoCompact` → `saveMessages`
 
 ## Conventions

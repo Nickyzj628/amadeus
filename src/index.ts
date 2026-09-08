@@ -131,7 +131,7 @@ app.post("/", async (c) => {
 		// 不用上报的异常
 		error.message === "" ||
 		// 模型拒绝回复
-		error.name === "denyReply"
+		error.name === "skipReply"
 	) {
 		return c.body(null, 204);
 	}
