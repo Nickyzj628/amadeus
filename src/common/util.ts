@@ -46,6 +46,9 @@ export const formatBytes = (bytes: number) => {
 /**
  * 移除文本中的不自然内容：
  * - 思考标签
+ * - 字面量换行 => 真换行
+ * - 各平台的换行符 => \n
+ * - 多重换行 => \n
  */
 export const normalizeText = (text: string) => {
 	return (
@@ -53,6 +56,10 @@ export const normalizeText = (text: string) => {
 			// 移除可能残留的思考标签及其内容
 			.replace(/<think>[\s\S]*?<\/think>/gi, "")
 			.replace(/<thought>[\s\S]*?<\/thought>/gi, "")
+			// 把字面量换行还原成真换行
+			.replace(/\\r\\n|\\n/g, "\n")
+			// 统一换行符，Windows的\r\n会在段落尾部残留\r
+			.replace(/\r\n?/g, "\n")
 			// 合并多重换行
 			.replace(/\n\s*\n/g, "\n")
 	);
