@@ -1,4 +1,4 @@
-import { loadMCPTools } from "@nickyzj2023/ai";
+import { estimateTextTokens, loadMCPTools } from "@nickyzj2023/ai";
 import { logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import changeModel from "./changeModel.js";
@@ -19,5 +19,7 @@ if (config.apiKeys.mem0ApiKey) {
  */
 export const openaiTools = [...functionTools, ...mcpTools];
 openaiTools.forEach((tool) => {
-	logger(`启用工具：${tool.function.name}`);
+	logger(
+		`启用工具：${tool.function.name}（~${estimateTextTokens(JSON.stringify(tool.function))}tokens）`,
+	);
 });
