@@ -26,25 +26,19 @@ export const generateContent = async (
 		throw new Error("当前没有可用的模型，请完善配置文件");
 	}
 
-	/**
-	 * 巩固人设
-	 * 如果最后一条用户发言包含安全词，则在其之前插入提示词
-	 */
-
-	let lastUserMessageIndex = messages.findLastIndex(
+	// 如果最新的用户发言中存在安全词，则巩固人设
+	const userMessageIndex = messages.findLastIndex(
 		(message) => message.role === "user",
 	);
-
-	const lastUserMessage = messages[lastUserMessageIndex];
+	const userMessage = messages[userMessageIndex];
 	if (
-		typeof lastUserMessage?.content === "string" &&
-		lastUserMessage.content.includes(config.etc.safeWord)
+		typeof userMessage?.content === "string" &&
+		userMessage.content.includes(config.etc.safeWord)
 	) {
-		messages.splice(lastUserMessageIndex, 0, {
+		messages.splice(userMessageIndex, 0, {
 			role: "system",
 			content: createXMLText("system-reminder", IDENTITY_ANCHOR),
 		});
-		lastUserMessageIndex++;
 	}
 
 	/**

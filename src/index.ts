@@ -11,10 +11,10 @@ import {
 } from "./onebot/schemas/http-post.js";
 import { makeReplyBody, replyLikeHuman } from "./onebot/utils/action.js";
 import { sendGroupMessage } from "./onebot/utils/http.js";
-import { autoCompact } from "./openai/utils/compact.js";
+import { afterTry } from "./openai/after-try/index.js";
 import { onebotToOpenAI } from "./openai/utils/convert.js";
 import { generateContent } from "./openai/utils/generate-content.js";
-import { injectMemory, removeInjectedMemory } from "./openai/utils/memory.js";
+import { injectMemory } from "./openai/utils/memory.js";
 import { loadMessages, saveMessages } from "./openai/utils/messages.js";
 
 const checkRequiredConfig = () => {
@@ -112,16 +112,12 @@ app.post("/", async (c) => {
 		} catch (error) {
 			return error;
 		} finally {
-			// 无论成败都收回本轮临时注入的<memory>消息：
-			// 它是每轮临时注入的参考，不应随历史持久化；
-			if (hasInjectedMemory) {
-				removeInjectedMemory(messages);
-			}
-			// 自动优化上下文
-			await to(autoCompact(messages, usage));
+			await afterTry(e, messages, {
+				shouldRemoveInjectedMemory: hasInjectedMemory,
+				usage,
+			});
 		}
-
-		// 保存消息（try成功+finally走完才能到这）
+		// 成功回复+afterResponse后保存消息
 		await to(saveMessages(groupId, messages));
 	});
 

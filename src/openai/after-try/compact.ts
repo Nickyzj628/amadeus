@@ -1,14 +1,14 @@
 import { compact, type Message, type Usage } from "@nickyzj2023/ai";
 import { extractXmlTagContent, logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
-import { SUMMARIZE_PROMPT } from "./constants.js";
-import { modelRef } from "./model.js";
+import { SUMMARIZE_PROMPT } from "../utils/constants.js";
+import { modelRef } from "../utils/model.js";
 
 /**
  * 压缩{config.etc.summarizeNDay}天前的消息
  * @param messages 完整消息数组，会原地修改它
  */
-const summarizeNDay = async (messages: Message[]) => {
+export const summarizeNDay = async (messages: Message[]) => {
 	// 1. 计算最大日期
 	const maxDate = new Date();
 	maxDate.setDate(maxDate.getDate() - config.etc.summarizeNDay);
@@ -58,25 +58,4 @@ const summarizeNDay = async (messages: Message[]) => {
 	// 4. 整理上下文
 	messages.splice(0, messages.length, ...compressible, ...reserved);
 	logger(`自动压缩了${maxDate.toLocaleString()}及之前的消息`);
-};
-
-/**
- * 自动优化上下文，类似AI Coding Agent的/compact命令
- */
-export const autoCompact = async (
-	messages: Message[],
-	/** 提供token消耗情况时，能更准确地判断上下文是否达到阈值 */
-	usage?: Usage,
-) => {
-	// 先压缩N天前的消息
-	await summarizeNDay(messages);
-
-	// 再使用@nickyzj2023/ai的通用压缩方案
-	await compact(messages, modelRef.current, {
-		usage,
-		...config.etc,
-		summarizeOptions: {
-			systemPrompt: SUMMARIZE_PROMPT,
-		},
-	});
 };

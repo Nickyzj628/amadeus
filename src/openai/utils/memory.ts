@@ -105,7 +105,7 @@ export const injectMemory = async (
  * 从上下文移除，避免失败轮次的记忆残留并被持久化到本地
  * @param messages 上下文消息数组
  */
-export const removeInjectedMemory = (messages: Message[]) => {
+export const deleteInjectedMemories = (messages: Message[]) => {
 	// 本轮注入的<memory>是数组里最后一条内容含<memory>标签的消息：
 	// 历史上成功轮次的<memory>也会留在数组里，但它们位置靠前，
 	// 所以从后往前查找只会命中本轮这条，不会误删历史记忆
