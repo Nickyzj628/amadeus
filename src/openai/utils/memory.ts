@@ -3,26 +3,50 @@ import {
 	createXMLText,
 	extractErrorMessage,
 	extractXmlTagContent,
+	fetcher,
 	logger,
 	to,
 } from "@nickyzj2023/utils";
 import {
-	type Memory,
-	MemoryClient,
-	type Message as MemoryMessage,
-} from "mem0ai";
+	array,
+	type InferOutput,
+	object,
+	optional,
+	record,
+	safeParse,
+	string,
+	unknown,
+} from "valibot";
 import config from "@/config.js";
-import forgetMemoryTool from "../tools/forgetMemory.js";
+import forgetMemoryTool from "../tools/deleteMemory.js";
 import saveMemoryTool from "../tools/saveMemory.js";
 import { COLLECT_MEMORIES_PROMPT } from "./constants.js";
 import { contentToMessage } from "./convert.js";
 import { modelRef } from "./model.js";
 
+const MemorySchema = object({
+	id: string(),
+	memory: string(),
+	user_id: optional(string()),
+	metadata: optional(record(string(), unknown())),
+	updated_at: optional(string()),
+	created_at: optional(string()),
+});
+type Memory = InferOutput<typeof MemorySchema>;
+
+const ReadSchema = object({
+	results: array(MemorySchema),
+});
+
 // { A: { uuid1: "24岁", uuid2: "是学生" }, B: {...} }
 type UserMemoryMap = Record<string, Record<string, string>>;
 
-const mem0 = new MemoryClient({ apiKey: config.apiKeys.mem0ApiKey });
-const hasMem0ApiKey = () => Boolean(config.apiKeys.mem0ApiKey);
+const mem0 = fetcher("https://api.mem0.ai", {
+	headers: {
+		Authorization: `Token ${config.apiKeys.mem0ApiKey}`,
+	},
+});
+const hasAPIKey = () => Boolean(config.apiKeys.mem0ApiKey);
 
 /**
  * 构造一条<memory>消息
@@ -33,10 +57,10 @@ const buildMemoryMessage = (memories?: Memory[]) => {
 	let serialized = "（暂无相关记忆）";
 
 	const map = memories?.reduce((acc, result) => {
-		const { userId, id, memory } = result;
-		if (userId && memory) {
-			acc[userId] ??= {};
-			acc[userId][id] = memory;
+		const { user_id, id, memory } = result;
+		if (user_id && memory) {
+			acc[user_id] ??= {};
+			acc[user_id][id] = memory;
 		}
 		return acc;
 	}, {} as UserMemoryMap);
@@ -68,7 +92,7 @@ export const injectMemory = async (
 	query: string,
 	userId?: number | string | (number | string)[],
 ) => {
-	if (!hasMem0ApiKey()) {
+	if (!hasAPIKey()) {
 		return;
 	}
 
@@ -82,15 +106,24 @@ export const injectMemory = async (
 
 	// https://docs.mem0.ai/api-reference/memory/search-memories
 	const [error, response] = await to(
-		mem0.search(query, {
+		mem0.post("/v3/memories/search/", {
+			query,
 			filters,
-			topK: 10,
+			top_k: 10,
 		}),
 	);
 	if (error) {
 		logger(`注入记忆失败：${error.message}`);
+		return;
 	}
-	messages.push(buildMemoryMessage(response?.results));
+
+	const validation = safeParse(ReadSchema, response);
+	if (!validation.success) {
+		logger(`注入记忆失败：${validation.issues[0].message}`);
+		return;
+	}
+
+	messages.push(buildMemoryMessage(validation.output.results));
 };
 
 /**
@@ -125,22 +158,20 @@ export const saveMemory = async (
 	memoryId?: string,
 ) => {
 	// 未配置 mem0 Key 时静默跳过，不保存也不报错
-	if (!hasMem0ApiKey()) {
+	if (!hasAPIKey()) {
 		return;
 	}
 
 	try {
 		if (!memoryId) {
-			await mem0.add(
-				[contentToMessage(text, { role: "assistant" })] as MemoryMessage[],
-				{
-					user_id: String(userId),
-					// 把text原封不动地存入记忆，无需mem0内置的模型来提取内容
-					infer: false,
-				},
-			);
+			await mem0.post("/v3/memories/add/", {
+				messages: [contentToMessage(text, { role: "assistant" })],
+				user_id: String(userId),
+				// 把text原封不动地存入记忆，无需mem0内置的模型来提取内容
+				infer: false,
+			});
 		} else {
-			await mem0.update(memoryId, {
+			await mem0.put(`/v1/memories/${memoryId}/`, {
 				text,
 			});
 		}
@@ -154,11 +185,11 @@ export const saveMemory = async (
  * @param memoryId 记忆UUID
  */
 export const deleteMemory = async (memoryId: string) => {
-	if (!hasMem0ApiKey()) {
+	if (!hasAPIKey()) {
 		return;
 	}
 
-	const [error] = await to(mem0.delete(memoryId));
+	const [error] = await to(mem0.delete(`/v1/memories/${memoryId}/`));
 	if (error) {
 		logger(`记忆删除失败：${error.message}`);
 	}
@@ -171,7 +202,7 @@ export const deleteMemory = async (memoryId: string) => {
  * @remarks 不抛异常；采集失败只记日志，不影响调用方继续压缩上下文
  */
 export const collectMemories = async (dyingMessages: Message[]) => {
-	if (!hasMem0ApiKey()) {
+	if (!hasAPIKey()) {
 		return;
 	}
 
@@ -192,7 +223,7 @@ export const collectMemories = async (dyingMessages: Message[]) => {
 	for (const message of collectable) {
 		const userId = extractXmlTagContent(message.content as string, "user_id");
 		if (userId) {
-			userId && userIds.add(userId.replaceAll("\n", ""));
+			userIds.add(userId.replaceAll("\n", ""));
 		}
 	}
 	if (!userIds.size) {
@@ -212,10 +243,15 @@ export const collectMemories = async (dyingMessages: Message[]) => {
 	// +相关记忆
 	const memories: Memory[] = [];
 	for (const userId of userIds) {
-		const byUser = await mem0.getAll({
+		const response = await mem0.post("/v3/memories/", {
 			filters: { user_id: userId },
 		});
-		memories.push(...byUser.results);
+		const validation = safeParse(ReadSchema, response);
+		if (!validation.success) {
+			logger(`查询记忆失败：${validation.issues[0].message}`);
+			continue;
+		}
+		memories.push(...validation.output.results);
 	}
 	buildMemoryMessage(memories);
 

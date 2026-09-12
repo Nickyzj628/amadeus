@@ -1,5 +1,4 @@
 import { defineTool } from "@nickyzj2023/ai";
-// utils 里的底层函数仍叫 deleteMemory，工具名 forgetMemory 是模型视角的语义
 import { deleteMemory } from "../utils/memory.js";
 
 export default defineTool(
