@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { logger } from "@nickyzj2023/utils";
-import sharp, { type SharpInput } from "sharp";
+import sharp from "sharp";
 
 /** 格式化数字为紧凑格式，例如 1000 显示为 1k */
 export const formatNumberCompact = (num: number) => {
@@ -88,12 +88,10 @@ export const get = (obj: Record<string, any>, path: string) => {
 };
 
 /**
- * 使用 sharp 压缩图片
+ * 使用sharp压缩图片，动图转gif，静态图转webp
  * @param input 支持任意地址、Buffer
  * @param options 压缩参数
  * @returns base64 Data URL
- * @throws 不支持的 input 会抛出异常
- * @throws 图片无法压缩到 maxSize 和 maxHeight 以内时抛出异常
  */
 export const compressImage = async (
 	input: string,
@@ -115,7 +113,7 @@ export const compressImage = async (
 	/**
 	 * 把图片统一处理成 Buffer，便于 sharp 解析
 	 */
-	let sharpInput: SharpInput;
+	let sharpInput: Buffer;
 	const inputType = checkUrlType(input);
 	switch (inputType) {
 		case "": {
@@ -138,38 +136,75 @@ export const compressImage = async (
 	}
 
 	const metadata = await sharp(sharpInput).metadata();
-	const isAnimated = (metadata.pages ?? 1) > 1;
-	let image = sharp(sharpInput, { animated: isAnimated });
+	const frames = metadata.pages ?? 1;
+	const isAnimated = frames > 1;
+	// 动图的metadata.height是全部帧堆叠的总高，要除以帧数才能还原出单帧高度
+	const frameHeight =
+		metadata.pageHeight ?? Math.round((metadata.height ?? 0) / frames);
 
-	/**
-	 * 压缩到 maxHeight 以内
-	 */
-	if (metadata.height && metadata.height > maxHeight) {
-		image = image.resize({
-			height: maxHeight,
-			fit: "inside",
-			withoutEnlargement: true,
-		});
-	}
+	let outputBuffer: Buffer;
+	let mime: string;
 
-	/**
-	 * 压缩到 maxSize 以内
-	 */
-	let outputBuffer: Buffer | null = null;
-	// 统一转为 webp（动图 → animated webp，静态图 → 静态 webp）
-	for (let quality = 80; quality >= 40; quality -= 10) {
-		outputBuffer = await image
-			.webp({ quality, loop: isAnimated ? 0 : undefined })
-			.toBuffer();
-		if (outputBuffer.length <= maxSize) {
-			break;
+	// 动图：压缩宽高、色数，输出gif
+	if (isAnimated) {
+		// 必须是gif（部分模型不认animated webp）
+		mime = "image/gif";
+
+		const sourceSize = metadata.size ?? Infinity;
+		const sourceWidth = metadata.width ?? 0;
+		let nextWidth =
+			frameHeight > maxHeight
+				? Math.max(1, Math.round((sourceWidth * maxHeight) / frameHeight))
+				: undefined;
+
+		// 尝试3次
+		const maxAttempts = 3;
+		const coloursSteps = [128, 64, 32];
+		let compressed: Buffer;
+		for (let attempt = 0; attempt < maxAttempts; attempt++) {
+			let image = sharp(sharpInput, { animated: true });
+			if (nextWidth) {
+				image = image.resize({ width: nextWidth });
+			}
+			for (const colours of coloursSteps) {
+				compressed = await image.gif({ colours, effort: 7, loop: 0 }).toBuffer();
+				if (compressed && compressed.length <= Math.min(sourceSize, maxSize)) {
+					break;
+				}
+			}
+			nextWidth = Math.max(1, Math.round((nextWidth ?? sourceWidth) * 0.6));
 		}
+		outputBuffer = compressed!;
 	}
-	if (!outputBuffer || outputBuffer.length > maxSize) {
-		throw new Error(`图片无法压缩到 ${formatBytes(maxSize)} 以内`);
+	// 静态图：压缩宽高、体积，输出webp
+	else {
+		mime = "image/webp";
+		let image = sharp(sharpInput);
+
+		/**
+		 * 压缩到maxHeight以内
+		 */
+		if (metadata.height && metadata.height > maxHeight) {
+			image = image.resize({
+				height: maxHeight,
+				fit: "inside",
+				withoutEnlargement: true,
+			});
+		}
+
+		/**
+		 * 压缩到maxSize以内
+		 */
+		let compressed: Buffer;
+		for (let quality = 80; quality >= 40; quality -= 10) {
+			compressed = await image.webp({ quality }).toBuffer();
+			if (compressed.length <= maxSize) {
+				break;
+			}
+		}
+		outputBuffer = compressed!;
 	}
 
-	const mime = "image/webp";
 	logger(
 		`压缩了一张${mime}图片：${formatBytes(metadata.size ?? 0)} => ${formatBytes(outputBuffer.length)}`,
 	);
