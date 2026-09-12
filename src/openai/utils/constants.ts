@@ -28,5 +28,8 @@ export const SUMMARIZE_PROMPT = loadPrompt("summarize");
 /** 常规聊天系统提示词 */
 export const SYSTEM_PROMPT = loadPrompt("base");
 
+/** 总结压缩前，从待丢弃的消息中采集记忆的系统提示词 */
+export const COLLECT_MEMORIES_PROMPT = loadPrompt("collect-memories");
+
 /** 图片翻译提示词 */
 export const VISION_UNDERSTANDING_PROMPT = loadPrompt("vision-understanding");

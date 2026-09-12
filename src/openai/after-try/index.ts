@@ -3,7 +3,7 @@ import { hasXmlTag, to } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import type { GroupMessageEvent } from "@/onebot/schemas/http-post.js";
 import { SUMMARIZE_PROMPT } from "../utils/constants.js";
-import { deleteInjectedMemories } from "../utils/memory.js";
+import { collectMemories, deleteInjectedMemories } from "../utils/memory.js";
 import { modelRef } from "../utils/model.js";
 import { summarizeNDay } from "./compact.js";
 
@@ -46,8 +46,10 @@ export const afterTry = async (
 		deleteOldReminders(messages);
 	}
 
+	// collectMemories: 总结前，采集待总结消息中的记忆点
+
 	// 无论成败，都压缩N天前的消息
-	await to(summarizeNDay(messages));
+	await to(summarizeNDay(messages, { beforeSummarize: collectMemories }));
 
 	// 无论成败，都调用@nickyzj2023/ai的通用压缩方案
 	await to(
@@ -56,8 +58,7 @@ export const afterTry = async (
 			...config.etc,
 			summarizeOptions: {
 				systemPrompt: SUMMARIZE_PROMPT,
-				// TODO: 总结前，更新记忆
-				beforeSummarize: () => {},
+				beforeSummarize: collectMemories,
 			},
 		}),
 	);

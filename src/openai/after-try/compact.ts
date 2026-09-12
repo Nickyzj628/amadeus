@@ -1,4 +1,4 @@
-import { compact, type Message, type Usage } from "@nickyzj2023/ai";
+import { compact, type Message } from "@nickyzj2023/ai";
 import { extractXmlTagContent, logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import { SUMMARIZE_PROMPT } from "../utils/constants.js";
@@ -8,7 +8,14 @@ import { modelRef } from "../utils/model.js";
  * 压缩{config.etc.summarizeNDay}天前的消息
  * @param messages 完整消息数组，会原地修改它
  */
-export const summarizeNDay = async (messages: Message[]) => {
+export const summarizeNDay = async (
+	messages: Message[],
+	options?: {
+		beforeSummarize?: Parameters<
+			typeof compact.summarizeMessages
+		>[1]["beforeSummarize"];
+	},
+) => {
 	// 1. 计算最大日期
 	const maxDate = new Date();
 	maxDate.setDate(maxDate.getDate() - config.etc.summarizeNDay);
@@ -53,6 +60,7 @@ export const summarizeNDay = async (messages: Message[]) => {
 	await compact.summarizeMessages(compressible, {
 		model: modelRef.current,
 		systemPrompt: SUMMARIZE_PROMPT,
+		beforeSummarize: options?.beforeSummarize,
 	});
 
 	// 4. 整理上下文
