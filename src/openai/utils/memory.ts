@@ -68,8 +68,8 @@ const buildMemoryMessage = (memories?: Memory[]) => {
 	if (map) {
 		serialized = Object.entries(map)
 			.map(([userId, value]) => {
-				return `${userId}:\n${Object.entries(value)
-					.map(([uuid, memory]) => `${uuid}: ${memory}`)
+				return `# ${userId}\n${Object.entries(value)
+					.map(([uuid, memory]) => `- ${uuid}: ${memory}`)
 					.join("\n")}`;
 			})
 			.join("\n");

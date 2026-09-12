@@ -3,33 +3,31 @@ import { saveMemory } from "../utils/memory.js";
 
 export default defineTool(
 	"saveMemory",
-	"把对话中值得长期记住的信息保存到记忆库，之后对话能回忆起来。\n何时调用（由你自主判断）：\n- 用户明确说“记住/别忘了”等\n- 对话中出现值得长期记住的个人信息（生日、偏好、称呼、地址、计划、重大事件等）\n- 已有记忆发生变化需要更新时（见memoryId说明）\n不要保存一次性或临时内容。",
+	"把值得长期记住的信息保存到向量库，即使上下文被压缩，之后的对话也能自动召回。\n何时调用：用户对你发出“记住/别忘了”等操纵记忆的指令",
 	{
 		text: {
 			type: "string",
 			description:
-				"要记住的信息内容，用自然语言描述，并保留细节。如：用户将于2026.8.3去上海青浦区出差，暂定9.1坐飞机回成都",
+				"要记住的内容，用自然语言简要描述，仅提炼关键细节。如：用户将于2026.8.3去上海青浦区出差，暂定9.1坐飞机回成都",
 			required: true,
 		},
 		userId: {
 			type: "number",
-			description:
-				"记忆归属用户的QQ号，不一定等于当前发言者。默认取当前发言者；若对话信息明确指向其他用户（如大家称呼某人“C哥”、谈论某人的信息），可从<user_id>、<mentioned_user_ids>或<memory>里已出现的用户ID中推断归属到该用户。无法确定时用当前发言者",
+			description: "当前用户消息中`<user_id>`标签内的一串数字，即QQ号",
 			required: true,
 		},
 		memoryId: {
 			type: "string",
 			description:
-				"要更新的已有记忆UUID。<memory>标签里是当前消息相关的已有记忆（含多个用户的记忆，已按用户ID分块），每条格式为“UUID: 内容”，若其中某条已过时或需要修改，取它的UUID填入此处更新，而不是新建重复记忆；<memory>里没有对应条目或不确定UUID时不要传，走新建",
+				"要更新的已有记忆ID。`<memory>`标签里包含部分已有记忆，若其中某条需要修改，取它的ID填入此处。不传则视为新增记忆",
 			required: false,
 		},
 	},
 	async ({ text, memoryId, userId }) => {
-		// 用户QQ号由模型从上下文推断（可能是当前发言者，也可能是对话中的其他用户），直接用于记忆归属
 		if (!userId) {
-			return "记忆保存失败：无法确定记忆归属用户的QQ号";
+			return "记忆保存失败：未提供记忆归属的QQ号";
 		}
 		await saveMemory(text, userId, memoryId);
-		return memoryId ? `已更新记忆 ${memoryId}` : "已记住这些信息，之后我会想起来";
+		return memoryId ? `已更新记忆${memoryId}` : "已记住这些信息，之后遇到相关问题会被自动召回";
 	},
 );
