@@ -49,7 +49,7 @@ const buildMemoryMessage = (memories?: Memory[]) => {
 					.join("\n")}`;
 			})
 			.join("\n");
-		logger("注入记忆", serialized);
+		logger(`注入记忆：\n${serialized}`);
 	}
 
 	// { role: "user", content: "<memory>\n{serialized}\n</memory>" }
@@ -78,7 +78,7 @@ export const injectMemory = async (
 					? { in: userId.map(String) }
 					: String(userId),
 			}
-		: {};
+		: undefined;
 
 	// https://docs.mem0.ai/api-reference/memory/search-memories
 	const [error, response] = await to(
@@ -179,7 +179,8 @@ export const collectMemories = async (dyingMessages: Message[]) => {
 	const collectable = dyingMessages.filter((message) => {
 		return (
 			typeof message.content === "string" &&
-			(message.role === "user" || message.role === "assistant")
+			(message.role === "user" || message.role === "assistant") &&
+			!message.tool_calls
 		);
 	});
 	if (!collectable.length) {
@@ -191,7 +192,7 @@ export const collectMemories = async (dyingMessages: Message[]) => {
 	for (const message of collectable) {
 		const userId = extractXmlTagContent(message.content as string, "user_id");
 		if (userId) {
-			userId && userIds.add(userId);
+			userId && userIds.add(userId.replaceAll("\n", ""));
 		}
 	}
 	if (!userIds.size) {
@@ -212,7 +213,7 @@ export const collectMemories = async (dyingMessages: Message[]) => {
 	const memories: Memory[] = [];
 	for (const userId of userIds) {
 		const byUser = await mem0.getAll({
-			filters: { userId },
+			filters: { user_id: userId },
 		});
 		memories.push(...byUser.results);
 	}
