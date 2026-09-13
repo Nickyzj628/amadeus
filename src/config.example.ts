@@ -3,7 +3,8 @@
  * 复制此文件为 config.ts 后填入你的实际配置
  */
 
-import type { McpServer, Model } from "@nickyzj2023/ai";
+import type { Model } from "@nickyzj2023/ai";
+import type { McpServer } from "@nickyzj2023/ai/mcp";
 
 export default {
 	/** 机器人核心配置 */

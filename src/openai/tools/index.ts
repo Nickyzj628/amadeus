@@ -1,4 +1,5 @@
-import { estimateTextTokens, loadMCPTools } from "@nickyzj2023/ai";
+import { estimateTextTokens } from "@nickyzj2023/ai";
+import { loadMCPTools } from "@nickyzj2023/ai/mcp";
 import { logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import changeModel from "./changeModel.js";
