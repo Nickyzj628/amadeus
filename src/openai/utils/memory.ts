@@ -23,6 +23,7 @@ import saveMemoryTool from "../tools/saveMemory.js";
 import { COLLECT_MEMORIES_PROMPT } from "./constants.js";
 import { contentToMessage } from "./convert.js";
 import { modelRef } from "./model.js";
+import skipReply from "../tools/skipReply.js";
 
 const MemorySchema = object({
 	id: string(),
@@ -260,6 +261,7 @@ export const collectMemories = async (dyingMessages: Message[]) => {
 	for await (const e of runAgent(modelRef.current, workingMessages, [
 		saveMemoryTool,
 		forgetMemoryTool,
+		skipReply,
 	])) {
 		switch (e.type) {
 			case "tool_call":
