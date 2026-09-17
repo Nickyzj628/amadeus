@@ -1,5 +1,4 @@
 import { defineTool } from "@nickyzj2023/ai";
-import { contentToMessage } from "../utils/convert.js";
 
 export default defineTool(
 	"skipReply",
@@ -15,12 +14,11 @@ export default defineTool(
 		// 手动推入一条工具调用结果
 		if (extraArgs?.messages) {
 			const toolCallId = extraArgs.messages.at(-1)?.tool_calls?.[0]?.id;
-			extraArgs.messages.push(
-				contentToMessage("已拒绝回复用户，下一条消息将会是用户发起的另一轮对话", {
-					role: "tool",
-					tool_call_id: toolCallId,
-				}),
-			);
+			extraArgs.messages.push({
+				role: "tool",
+				tool_call_id: toolCallId,
+				content: "已拒绝回复用户，下一条消息将会是用户发起的另一轮对话",
+			});
 		}
 
 		// 向上抛出 chatCompletions 异常，预期被 src\index.ts 接收

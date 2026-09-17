@@ -20,10 +20,10 @@ import {
 import config from "@/config.js";
 import forgetMemoryTool from "../tools/deleteMemory.js";
 import saveMemoryTool from "../tools/saveMemory.js";
+import skipReply from "../tools/skipReply.js";
 import { COLLECT_MEMORIES_PROMPT } from "./constants.js";
 import { contentToMessage } from "./convert.js";
 import { modelRef } from "./model.js";
-import skipReply from "../tools/skipReply.js";
 
 const MemorySchema = object({
 	id: string(),

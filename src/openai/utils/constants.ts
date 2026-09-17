@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { estimateTextTokens } from "@nickyzj2023/ai";
 import { logger } from "@nickyzj2023/utils";
 import { get } from "@/common/util.js";
 import config from "@/config.js";
@@ -15,7 +16,7 @@ const loadPrompt = (filename: string): string => {
 			const value = get(config, path);
 			return String(value || match);
 		});
-	logger(`载入提示词：${filename}`);
+	logger(`载入提示词：${filename}（~${estimateTextTokens(prompt)}tokens）`);
 	return prompt;
 };
 
