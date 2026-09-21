@@ -10,8 +10,8 @@ import {
 import {
 	array,
 	type InferOutput,
+	nullable,
 	object,
-	optional,
 	record,
 	safeParse,
 	string,
@@ -28,10 +28,10 @@ import { modelRef } from "./model.js";
 const MemorySchema = object({
 	id: string(),
 	memory: string(),
-	user_id: optional(string()),
-	metadata: optional(record(string(), unknown())),
-	updated_at: optional(string()),
-	created_at: optional(string()),
+	user_id: string(),
+	metadata: nullable(record(string(), unknown())),
+	updated_at: string(),
+	created_at: string(),
 });
 type Memory = InferOutput<typeof MemorySchema>;
 
