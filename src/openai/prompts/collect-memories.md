@@ -9,7 +9,7 @@
 3. 按需调用工具：
    - 看到`<memory>`里没有的新信息：调用`saveMemory`保存
    - 已有记忆和历史消息存在差异：调用`saveMemory`并带上它的`memoryId`原地更换
-   - 已有记忆过时、记错了：调用`forgetMemory`删掉它
+   - 已有记忆过时、记错了：调用`deleteMemory`删掉它
    - 没有需要更新/删除的记忆时，尝试调用`saveMemory(memoryId)`整理`<memory>`中的重复/冗余记忆
    - 实在没有必要操纵记忆时，调用`skipReply`跳过本次任务
 
