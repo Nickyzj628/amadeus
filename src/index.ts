@@ -91,12 +91,8 @@ app.post("/", async (c) => {
 			}
 
 			// 注入临时记忆
-			// 只用消息正文来搜索记忆，onebotToOpenAI返回的消息正文始终在最后（-1）
-			const bodyMessage = currentMessages?.at(-1);
-			if (typeof bodyMessage?.content === "string") {
-				await injectMemory(messages, bodyMessage.content, userId);
-				hasInjectedMemory = true;
-			}
+			await injectMemory(messages, userId);
+			hasInjectedMemory = true;
 
 			// 模型生成回复内容
 			const { content, ...rest } = await generateContent(messages);

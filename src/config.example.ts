@@ -24,21 +24,15 @@ export default {
 	 */
 	models: [
 		{
-			model: "deepseek-v4-flash",
+			model: "deepseek-flash",
 			baseUrl: "https://api.deepseek.com",
 			apiKey: "sk-xxxxx",
-			modalities: ["text"],
+			modalities: ["text", "image"],
 		},
 		{
 			model: "google/gemini-3.5-flash-lite",
 			baseUrl: "https://openrouter.ai/api/v1",
 			apiKey: "sk-or-v1-xxxxx",
-			modalities: ["text", "image", "audio", "video"],
-		},
-		{
-			model: "gemma-4-31b-it",
-			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-			apiKey: "xxxxx",
 			modalities: ["text", "image", "audio", "video"],
 		},
 	] as Model[],
@@ -51,11 +45,6 @@ export default {
 		 * @remarks 控制台 - 我的产品 - 免费版 - API 密钥 - 私钥
 		 */
 		seniversePrivateKey: "xxxxx",
-		/**
-		 * Mem0密钥，用于记录用户的习惯偏好
-		 * @see https://app.mem0.ai/dashboard/api-keys
-		 */
-		mem0ApiKey: "m0-xxxxx",
 	},
 
 	/**

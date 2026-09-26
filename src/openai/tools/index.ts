@@ -6,14 +6,20 @@ import changeModel from "./changeModel.js";
 import decodeAbbr from "./decodeAbbr.js";
 import deleteMemory from "./deleteMemory.js";
 import getWeather from "./getWeather.js";
+import loadMemory from "./loadMemory.js";
 import saveMemory from "./saveMemory.js";
 import skipReply from "./skipReply.js";
 
-const functionTools = [changeModel, getWeather, decodeAbbr, skipReply];
+const functionTools = [
+	changeModel,
+	getWeather,
+	decodeAbbr,
+	skipReply,
+	loadMemory,
+	saveMemory,
+	deleteMemory,
+];
 const mcpTools = await loadMCPTools(config.mcpServers ?? {});
-if (config.apiKeys.mem0ApiKey) {
-	functionTools.push(saveMemory, deleteMemory);
-}
 
 /**
  * 可直接传入 OpenAI API /chat-completions 的 tools 请求体

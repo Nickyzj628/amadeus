@@ -1,12 +1,18 @@
 import { access, constants, readFile, writeFile } from "node:fs/promises";
 
-/** 将数据保存为本地 JSON 文件 */
+/**
+ * 将数据保存为本地JSON文件
+ */
 export const saveJSON = async <T>(path: string, data: T) => {
 	const fullPath = `${process.cwd()}${path}`;
 	await writeFile(fullPath, JSON.stringify(data, null, 2), "utf-8");
 };
 
-/** 从项目目录中读取 JSON 配置 */
+/**
+ * 从项目目录中读取JSON数据
+ * @returns 成功时返回T类型的数据
+ * @returns 失败返回null
+ */
 export const loadJSON = async <T>(path: string) => {
 	const fullPath = `${process.cwd()}${path}`;
 	try {

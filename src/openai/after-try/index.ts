@@ -3,7 +3,7 @@ import { hasXmlTag, to } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import type { GroupMessageEvent } from "@/onebot/schemas/http-post.js";
 import { SUMMARIZE_PROMPT } from "../utils/constants.js";
-import { collectMemories, deleteInjectedMemories } from "../utils/memory.js";
+import { collectMemories, deleteInjectedMemory } from "../utils/memory.js";
 import { modelRef } from "../utils/model.js";
 import { summarizeNDay } from "./compact.js";
 
@@ -39,7 +39,7 @@ export const afterTry = async (
 
 	// 无论成败，都清理注入的记忆
 	if (shouldRemoveInjectedMemory) {
-		deleteInjectedMemories(messages);
+		deleteInjectedMemory(messages);
 	}
 	// 成功后，清理过时的系统提醒
 	if (usage) {

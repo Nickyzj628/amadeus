@@ -210,3 +210,12 @@ export const compressImage = async (
 	);
 	return `data:${mime};base64,${outputBuffer.toString("base64")}`;
 };
+
+/**
+ * 生成UUID
+ * @param needSafe 是否改用crypto.randomUUID()生成更安全的版本
+ * @remarks 默认基于时间戳生成
+ */
+export const generateUUID = (needSafe = false) => {
+	return needSafe ? crypto.randomUUID() : Date.now().toString(36);
+};
