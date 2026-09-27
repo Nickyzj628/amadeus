@@ -8,7 +8,7 @@ import {
 } from "@nickyzj2023/utils";
 import { loadJSON, saveJSON } from "@/common/db.js";
 import { generateUUID } from "@/common/util.js";
-import forgetMemoryTool from "../tools/deleteMemory.js";
+import deleteMemoryTool from "../tools/deleteMemory.js";
 import saveMemoryTool from "../tools/saveMemory.js";
 import skipReply from "../tools/skipReply.js";
 import { COLLECT_MEMORIES_PROMPT } from "./constants.js";
@@ -34,7 +34,6 @@ export const buildMemoryMessage = (usersMemory: UsersMemory) => {
 					.join("\n")}`;
 			})
 			.join("\n\n") || "（暂无相关记忆）";
-	logger(`注入记忆：\n${serialized}`);
 	return contentToMessage(createXMLText("memory", serialized));
 };
 
@@ -104,6 +103,7 @@ export const injectMemory = async (
 	userId: number | number[],
 ) => {
 	const usersMemory: UsersMemory = {};
+
 	const userIds = Array.isArray(userId) ? userId : [userId];
 	for (const userId of userIds) {
 		const um = await loadMemory(userId);
@@ -111,7 +111,10 @@ export const injectMemory = async (
 			usersMemory[userId] = um;
 		}
 	}
-	messages.push(buildMemoryMessage(usersMemory));
+
+	const message = buildMemoryMessage(usersMemory);
+	messages.push(message);
+	logger(`注入记忆：\n${message.content}`);
 };
 
 /**
@@ -184,27 +187,31 @@ export const collectMemories = async (dyingMessages: Message[]) => {
 		content: createXMLText("system-reminder", "请根据系统提示词，执行本次任务"),
 	};
 	workingMessages.push(buildMemoryMessage(usersMemory), instructionMessage);
+	logger("开始采集记忆");
 
 	// 交给大模型整理
 	let usage: Usage | undefined;
-	for await (const e of runAgent(modelRef.current, workingMessages, [
-		saveMemoryTool,
-		forgetMemoryTool,
-		skipReply,
-	])) {
-		switch (e.type) {
-			case "tool_call":
-				logger(`采集记忆：调用${e.name}`, e.args);
-				break;
-			case "tool_result":
-				logger(`采集记忆结果：${e.name}`, e.result);
-				break;
-			case "done":
-				usage = e.usage;
-				break;
-			case "error":
-				throw new Error(e.message);
+	try {
+		for await (const e of runAgent(modelRef.current, workingMessages, [
+			saveMemoryTool,
+			deleteMemoryTool,
+			skipReply,  // 它会抛异常，所以包一层try-catch
+		])) {
+			switch (e.type) {
+				case "tool_call":
+					logger(`采集记忆-调用工具${e.name}`, e.args);
+					break;
+				case "tool_result":
+					logger(`采集记忆-工具结果：${e.name}`, e.result);
+					break;
+				case "done":
+					usage = e.usage;
+					break;
+				case "error":
+					logger(`采集记忆失败：${e.message}`);
+					return;
+			}
 		}
-	}
-	usage && logger("采集记忆消耗：", usage, "\n");
+		logger("采集记忆消耗：", usage, "\n");
+	} catch {}
 };
