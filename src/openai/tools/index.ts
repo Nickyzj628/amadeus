@@ -1,11 +1,10 @@
-import { estimateTextTokens } from "@nickyzj2023/ai";
+import { estimateTextTokens, getWeather } from "@nickyzj2023/ai";
 import { loadMCPTools } from "@nickyzj2023/ai/mcp";
 import { logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import changeModel from "./changeModel.js";
 import decodeAbbr from "./decodeAbbr.js";
 import deleteMemory from "./deleteMemory.js";
-import getWeather from "./getWeather.js";
 import loadMemory from "./loadMemory.js";
 import saveMemory from "./saveMemory.js";
 import skipReply from "./skipReply.js";

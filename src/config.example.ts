@@ -37,16 +37,6 @@ export default {
 		},
 	] as Model[],
 
-	/** 各种工具需要的API密钥（可选） */
-	apiKeys: {
-		/**
-		 * 心知天气私钥，用于查询城市三日天气
-		 * @see https://www.seniverse.com/dashboard
-		 * @remarks 控制台 - 我的产品 - 免费版 - API 密钥 - 私钥
-		 */
-		seniversePrivateKey: "xxxxx",
-	},
-
 	/**
 	 * 远程 MCP 工具（可选）
 	 */
