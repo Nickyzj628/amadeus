@@ -122,8 +122,7 @@ app.post("/", async (c) => {
 		!Error.isError(error) ||
 		// 不用上报的异常
 		error.message === "" ||
-		// 模型拒绝回复
-		error.name === "skipReply"
+		error.name === "ignore"
 	) {
 		return c.body(null, 204);
 	}

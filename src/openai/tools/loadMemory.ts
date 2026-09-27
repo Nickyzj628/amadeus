@@ -2,7 +2,7 @@ import { defineTool } from "@nickyzj2023/ai";
 import { buildMemoryMessage, loadMemory } from "../utils/memory.js";
 
 export default defineTool(
-	"loadMemory",
+	"load_memory",
 	"手动召回用户相关记忆。何时调用：自动注入的`memory`消息不含本轮对话所需的用户记忆（例如本轮是用户A问你关于用户B的事情，但`memory`只注入了A的记忆，此时你可以调用本工具召回用户B的记忆）",
 	{
 		userId: {

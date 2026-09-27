@@ -1,7 +1,7 @@
 import { defineTool } from "@nickyzj2023/ai";
 
 export default defineTool(
-	"skipReply",
+	"skip_reply",
 	"不回复消息，调用后不会向用户输出任何内容。你应该在什么时候调用：\n- 用户主动要求终止对话时",
 	{
 		reason: {
@@ -21,9 +21,9 @@ export default defineTool(
 			});
 		}
 
-		// 向上抛出 chatCompletions 异常，预期被 src\index.ts 接收
+		// 向上抛出异常，应能被src\index.ts正确处理
 		const error = new Error(`模型拒绝回复消息，理由：${reason}`);
-		error.name = "skipReply";
+		error.name = "ignore";
 		throw error;
 	},
 );

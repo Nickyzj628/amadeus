@@ -2,7 +2,7 @@ import { defineTool } from "@nickyzj2023/ai";
 import { deleteMemory } from "../utils/memory.js";
 
 export default defineTool(
-	"deleteMemory",
+	"delete_memory",
 	"删除一条用户的记忆。\n何时调用：\n- 用户明确删除/弃用/否认某条记忆\n- 你在执行记忆采集/整理任务时\n何时不能调用：\n- `memory`标签里不存在相关记忆",
 	{
 		userId: {

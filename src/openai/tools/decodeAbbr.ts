@@ -10,7 +10,7 @@ const DecodeResponseSchema = array(
 );
 
 export default defineTool(
-	"decodeAbbr",
+	"decode_abbr",
 	"把用户输入的未知拼音缩写转换成可能的释义",
 	{
 		abbr: {

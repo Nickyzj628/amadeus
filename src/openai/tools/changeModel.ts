@@ -3,7 +3,7 @@ import config from "@/config.js";
 import { findModelByName, modelRef } from "@/openai/utils/model.js";
 
 export default defineTool(
-	"changeModel",
+	"change_model",
 	`切换大语言模型。可用的模型列表：\n${config.models.map((model, index) => `${index + 1}. ${model.model}`).join("\n")}`,
 	{
 		model: {

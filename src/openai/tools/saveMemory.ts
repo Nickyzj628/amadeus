@@ -3,7 +3,7 @@ import { compactStr } from "@nickyzj2023/utils";
 import { saveMemory } from "../utils/memory.js";
 
 export default defineTool(
-	"saveMemory",
+	"save_memory",
 	"长期记住一件用户的信息，即使之后新开对话也能想起来。\n何时调用：\n- 用户对你发出“记住/别忘了”等操纵记忆的指令\n- 你在执行记忆采集/整理任务时",
 	{
 		text: {
