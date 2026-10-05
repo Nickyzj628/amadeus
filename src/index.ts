@@ -4,7 +4,7 @@ import { safeParse } from "valibot";
 import { startBiliLiveTimer } from "./common/bililive.js";
 import { createApp, serve } from "./common/http-server.js";
 import config from "./config.js";
-import { beforeLLM } from "./onebot/before-llm/index.js";
+import { beforeLLM, beforeToolCall } from "./onebot/before-llm/index.js";
 import {
 	GroupMessageEventSchema,
 	isAtSelfSegment,
@@ -95,7 +95,9 @@ app.post("/", async (c) => {
 			hasInjectedMemory = true;
 
 			// 模型生成回复内容
-			const { content, ...rest } = await generateContent(messages);
+			const { content, ...rest } = await generateContent(messages, {
+				beforeToolCall: (tce) => beforeToolCall(e, tce),
+			});
 			usage = rest.usage;
 			if (!content.trim()) {
 				throw new Error("模型生成了空消息，可能是故障或无语了");
@@ -116,7 +118,7 @@ app.post("/", async (c) => {
 		// 成功回复+afterResponse后保存消息
 		await to(saveMessages(groupId, messages));
 	});
-
+	extractErrorMessage(error) && console.log(111, extractErrorMessage(error));
 	if (
 		// 没有异常，或并非当前Realm的异常
 		!Error.isError(error) ||

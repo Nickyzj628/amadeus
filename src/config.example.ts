@@ -38,6 +38,14 @@ export default {
 	] as Model[],
 
 	/**
+	 * 一些工具要求提供的apikey（可选）
+	 */
+	apiKeys: {
+		/** Agnes的文生图服务 */
+		agnes: "sk-xxxxx",
+	},
+
+	/**
 	 * 远程 MCP 工具（可选）
 	 */
 	mcpServers: {

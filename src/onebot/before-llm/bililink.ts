@@ -8,7 +8,7 @@ import {
 } from "@/common/schemas/bili.js";
 import { formatNumberCompact } from "@/common/util.js";
 import type { Segment } from "../schemas/http-post.js";
-import { srcToImageSegment, textToSegment } from "../utils/segment.js";
+import { textToSegment, urlToImageSegment } from "../utils/segment.js";
 
 const api = fetcher("https://api.bilibili.com/x/web-interface");
 
@@ -62,10 +62,8 @@ export const resolveBiliLink = async (text: string) => {
 
 		// 解析链接中携带的分p、空降参数
 		const params = [];
-		if (url.searchParams.has("p"))
-			params.push(`p=${url.searchParams.get("p")}`);
-		if (url.searchParams.has("t"))
-			params.push(`t=${url.searchParams.get("t")}`);
+		if (url.searchParams.has("p")) params.push(`p=${url.searchParams.get("p")}`);
+		if (url.searchParams.has("t")) params.push(`t=${url.searchParams.get("t")}`);
 
 		const cleanUrl = `${url.origin}${url.pathname}${params.length > 0 ? `?${params.join("&")}` : ""}`;
 		logger(`解析到B站视频：${cleanUrl}`);
@@ -92,7 +90,7 @@ export const resolveBiliLink = async (text: string) => {
 export const videoDetailToSegments = (videoDetail: GetVideoDetail["data"]) => {
 	const { pic, title, owner, duration, stat, pubdate, bvid } = videoDetail;
 	return [
-		srcToImageSegment(pic),
+		urlToImageSegment(pic),
 		textToSegment(
 			[
 				title,
@@ -118,7 +116,7 @@ export const roomInfoToSegments = (roomInfo: RoomInfo) => {
 	} = roomInfo;
 
 	return [
-		keyframe && srcToImageSegment(keyframe /** || user_cover */),
+		keyframe && urlToImageSegment(keyframe /** || user_cover */),
 		textToSegment(
 			[
 				title,

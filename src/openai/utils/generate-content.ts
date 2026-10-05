@@ -7,22 +7,27 @@ import {
 import { compactStr, createXMLText, logger } from "@nickyzj2023/utils";
 import { checkUrlType, normalizeText } from "@/common/util.js";
 import config from "@/config.js";
+import type { ToolCallEvent } from "@/onebot/before-llm/index.js";
 import { openaiTools } from "@/openai/tools/index.js";
 import { findModelByModality, modelRef } from "@/openai/utils/model.js";
 import { IDENTITY_ANCHOR, VISION_UNDERSTANDING_PROMPT } from "./constants.js";
 import { contentToMessage, urlToContentPart } from "./convert.js";
 
 /**
- * 传入 OpenAI API 兼容的 messages 数组，返回大模型最终回复内容
+ * 传入OpenAI API兼容的messages数组，返回大模型最终回复内容
  * @remarks 没有可用的模型/请求失败时会抛出异常
  */
 export const generateContent = async (
 	messages: Message[],
-	/** 默认使用当前模型发请求，可临时更改 */
-	model?: Model,
+	options?: {
+		/** 默认使用当前模型发请求，也可以临时更改 */
+		model?: Model;
+		/** 模型发出工具调用请求后、调用工具前的回调函数，可用于篡改e.args */
+		beforeToolCall?: (e: ToolCallEvent) => void | Promise<void>;
+	},
 ) => {
-	const _model = model ?? modelRef.current;
-	if (!_model) {
+	const { model = modelRef.current, beforeToolCall } = options ?? {};
+	if (!model) {
 		throw new Error("当前没有可用的模型，请完善配置文件");
 	}
 
@@ -47,7 +52,7 @@ export const generateContent = async (
 	let reasoning = "";
 	let content = "";
 	let usage: Usage | undefined;
-	for await (const e of runAgent(_model, messages, openaiTools)) {
+	for await (const e of runAgent(model, messages, openaiTools)) {
 		switch (e.type) {
 			case "content_delta":
 				content += e.delta;
@@ -56,6 +61,7 @@ export const generateContent = async (
 				reasoning += e.delta;
 				break;
 			case "tool_call":
+				await beforeToolCall?.(e);
 				logger(`调用工具：${e.name}`, e.args);
 				break;
 			case "tool_result":
@@ -108,7 +114,7 @@ export const visionToText = async (
 				{ type: "text", text: VISION_UNDERSTANDING_PROMPT },
 			]),
 		],
-		visionModel,
+		{ model: visionModel },
 	);
 	return content;
 };

@@ -10,7 +10,7 @@ export const textToSegment = (text: string): TextSegment => ({
 	data: { text },
 });
 
-/** 构造 @ 消息段 */
+/** 构造@消息段 */
 export const userIdToAtSegment = (
 	userId: string | number | "all",
 ): AtSegment => ({
@@ -18,8 +18,8 @@ export const userIdToAtSegment = (
 	data: { qq: String(userId) },
 });
 
-/** 从图片 URL 构造图片消息段 */
-export const srcToImageSegment = (src: string): ImageSegment => ({
+/** 从图片URL构造图片消息段 */
+export const urlToImageSegment = (url: string): ImageSegment => ({
 	type: "image",
-	data: { url: src },
+	data: { url },
 });

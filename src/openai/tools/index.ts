@@ -5,6 +5,7 @@ import config from "@/config.js";
 import changeModel from "./changeModel.js";
 import decodeAbbr from "./decodeAbbr.js";
 import deleteMemory from "./deleteMemory.js";
+import generateImage from "./generateImage.js";
 import loadMemory from "./loadMemory.js";
 import saveMemory from "./saveMemory.js";
 import skipReply from "./skipReply.js";
@@ -17,6 +18,7 @@ const functionTools = [
 	loadMemory,
 	saveMemory,
 	deleteMemory,
+	generateImage,
 ];
 const mcpTools = await loadMCPTools(config.mcpServers ?? {});
 

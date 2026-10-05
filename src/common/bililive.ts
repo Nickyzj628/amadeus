@@ -3,7 +3,7 @@ import { safeParse } from "valibot";
 import config from "@/config.js";
 import type { Segment } from "@/onebot/schemas/http-post.js";
 import { sendGroupMessage } from "../onebot/utils/http.js";
-import { srcToImageSegment, textToSegment } from "../onebot/utils/segment.js";
+import { textToSegment, urlToImageSegment } from "../onebot/utils/segment.js";
 import {
 	QueryRoomInfoResponseSchema,
 	QueryRoomStatusResponseSchema,
@@ -126,7 +126,7 @@ const checkAndSend = async () => {
 		const imgUrl = room.keyframe /** || room.cover_from_user || room.face */;
 		const roomUrl = `https://live.bilibili.com/${room.short_id || room.room_id}`;
 		const segments = [
-			imgUrl && srcToImageSegment(imgUrl),
+			imgUrl && urlToImageSegment(imgUrl),
 			textToSegment(`${room.uname}${action}：${room.title}\n${roomUrl}`),
 		].filter(Boolean) as Segment[];
 
