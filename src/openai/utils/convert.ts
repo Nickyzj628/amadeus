@@ -89,8 +89,28 @@ export const urlToContentPart = (
 	return contentPart as ContentPart;
 };
 
+export const buildMessageXML = (props: {
+	isQuoted?: boolean;
+	userId: number;
+	nickname: string;
+	body: string;
+	mentionedUserIds?: string[];
+}) => {
+	return createXMLText(
+		"message",
+		`
+					${props.isQuoted ? createXMLText("is_quoted", props.isQuoted) : ""}
+					${createXMLText("user_id", props.userId)}
+					${createXMLText("user_name", props.nickname)}
+					${createXMLText("body", props.body)}
+					${props.mentionedUserIds?.length ? createXMLText("mentioned_user_ids", props.mentionedUserIds.join(",")) : ""}
+					${createXMLText("time", new Date().toLocaleString())}
+					`,
+	).replace(/\t+|\n{2,}/g, "");
+};
+
 /**
- * 把消息格式从 OneBot 转成 OpenAI API
+ * 把消息格式从OneBot转成OpenAI API
  * @remarks 保证安全返回消息对象
  */
 export const onebotToOpenAI = async (
@@ -101,7 +121,7 @@ export const onebotToOpenAI = async (
 	},
 ) => {
 	const {
-		sender: { nickname, user_id },
+		sender: { nickname, user_id: userId },
 	} = e;
 	const { isQuoted = false } = options ?? {};
 
@@ -281,7 +301,7 @@ export const onebotToOpenAI = async (
 				type === "base64" || type === "remote"
 					? [urlToContentPart(item)]
 					: createXMLText("image", item, {
-							sender_id: user_id,
+							sender_id: userId,
 							sender_name: nickname,
 						});
 			return contentToMessage(content);
@@ -293,7 +313,7 @@ export const onebotToOpenAI = async (
 				type === "base64" || type === "remote"
 					? [urlToContentPart(item, { type: "video" })]
 					: createXMLText("video", item, {
-							sender_id: user_id,
+							sender_id: userId,
 							sender_name: nickname,
 						});
 			return contentToMessage(content);
@@ -305,7 +325,7 @@ export const onebotToOpenAI = async (
 				type === "base64" || type === "remote"
 					? [urlToContentPart(item, { type: "audio", format: "wav" })]
 					: createXMLText("audio", item, {
-							sender_id: user_id,
+							sender_id: userId,
 							sender_name: nickname,
 						});
 			return contentToMessage(content);
@@ -313,17 +333,13 @@ export const onebotToOpenAI = async (
 		// 文本消息
 		bodyItems.length > 0 &&
 			contentToMessage(
-				createXMLText(
-					"message",
-					`
-					${isQuoted ? createXMLText("is_quoted", isQuoted) : ""}
-					${createXMLText("user_id", user_id)}
-					${createXMLText("user_name", nickname)}
-					${createXMLText("body", bodyItems.join("\n").trim())}
-					${mentionedUserIds.length > 0 ? createXMLText("mentioned_user_ids", mentionedUserIds.join(",")) : ""}
-					${createXMLText("time", new Date().toLocaleString())}
-					`,
-				).replace(/\t+|\n{2,}/g, ""),
+				buildMessageXML({
+					userId,
+					nickname,
+					body: bodyItems.join("\n").trim(),
+					isQuoted,
+					mentionedUserIds,
+				}),
 			),
 	].filter(Boolean) as Message[];
 };

@@ -11,8 +11,13 @@ import {
 } from "./onebot/schemas/http-post.js";
 import { makeReplyBody, replyLikeHuman } from "./onebot/utils/action.js";
 import { sendGroupMessage } from "./onebot/utils/http.js";
+import { extractTextFromSegments } from "./onebot/utils/segment.js";
 import { afterTry } from "./openai/after-try/index.js";
-import { onebotToOpenAI } from "./openai/utils/convert.js";
+import {
+	buildMessageXML,
+	contentToMessage,
+	onebotToOpenAI,
+} from "./openai/utils/convert.js";
 import { generateContent } from "./openai/utils/generate-content.js";
 import { injectMemory } from "./openai/utils/memory.js";
 import { loadMessages, saveMessages } from "./openai/utils/messages.js";
@@ -61,6 +66,18 @@ app.post("/", async (c) => {
 	// 无需模型处理的消息，直接回复
 	const segments = await beforeLLM(e);
 	if (segments.length > 0) {
+		// 推入程序处理后的消息
+		const content = extractTextFromSegments(segments);
+		messages.push(
+			contentToMessage(
+				buildMessageXML({
+					userId: userId,
+					nickname: e.sender.nickname,
+					body: content,
+				}),
+			),
+		);
+		// 发出消息
 		if (isAtSelf) {
 			return c.json(makeReplyBody(...segments));
 		}

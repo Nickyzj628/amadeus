@@ -1,6 +1,7 @@
 import type {
 	AtSegment,
 	ImageSegment,
+	Segment,
 	TextSegment,
 } from "@/onebot/schemas/http-post.js";
 
@@ -23,3 +24,11 @@ export const urlToImageSegment = (url: string): ImageSegment => ({
 	type: "image",
 	data: { url },
 });
+
+/** 从消息段里提取出纯文本内容 */
+export const extractTextFromSegments = (segments: Segment[]) => {
+	return segments
+		.filter((segment) => segment.type === "text")
+		.map((segment) => segment.data.text)
+		.join("\n");
+};
