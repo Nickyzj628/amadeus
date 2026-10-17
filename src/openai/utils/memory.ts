@@ -42,12 +42,12 @@ export const buildMemoryMessage = (usersMemory: UsersMemory) => {
 // ================================
 
 /**
- * 从本地/data/{userId}.json读取用户记忆
+ * 从本地/data/user/{userId}.json读取用户记忆
  * @returns 文件存在时返回UserMemory
  * @returns 文件不存在时返回{}
  */
 export const loadMemory = async (userId: number) => {
-	const um = await loadJSON<UserMemory>(`/data/${userId}.json`);
+	const um = await loadJSON<UserMemory>(`/data/user/${userId}.json`);
 	return um ?? {};
 };
 
@@ -70,7 +70,7 @@ export const saveMemory = async (
 		} else {
 			um[memoryId] = text;
 		}
-		await saveJSON(`/data/${userId}.json`, um);
+		await saveJSON(`/data/user/${userId}.json`, um);
 	} catch (e) {
 		logger(`记忆保存失败：${extractErrorMessage(e)}`);
 	}
@@ -84,7 +84,7 @@ export const saveMemory = async (
 export const deleteMemory = async (userId: number, memoryId: string) => {
 	const um = await loadMemory(userId);
 	delete um[memoryId];
-	await saveJSON(`/data/${userId}.json`, um);
+	await saveJSON(`/data/user/${userId}.json`, um);
 };
 
 // ================================

@@ -43,7 +43,7 @@ export const loadMessages = async (
 	}
 
 	// 从本地读取群消息
-	let localMessages = await loadJSON<Message[]>(`/data/${groupId}.json`);
+	let localMessages = await loadJSON<Message[]>(`/data/group/${groupId}.json`);
 	if (!localMessages) {
 		localMessages = whenEmpty();
 	}
@@ -72,7 +72,7 @@ export const loadMessages = async (
 			}
 
 			// 静默写回本地 + 释放群消息
-			saveJSON(`/data/${id}.json`, messages)
+			saveJSON(`/data/group/${id}.json`, messages)
 				.then(() => {
 					groupMessagesMap.delete(id);
 					logger(`已释放不活跃的群消息：${id}`);
@@ -100,7 +100,7 @@ export const saveMessages = async (groupId?: number, messages?: Message[]) => {
 	}
 
 	await saveJSON(
-		`/data/${groupId}.json`,
+		`/data/group/${groupId}.json`,
 		messages ?? groupMessagesMap.get(groupId),
 	);
 };
