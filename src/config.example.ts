@@ -97,5 +97,10 @@ export default {
 		limitOfSummary: 2200,
 		/** 自动压缩N天前的消息 */
 		summarizeNDay: 7,
+		/**
+		 * 每个用户的记忆字数上限
+		 * @see 参考了hermes的[记忆容量管理](https://hermes-agent.nousresearch.com/docs/zh-Hans/user-guide/features/memory#%E5%AE%B9%E9%87%8F%E7%AE%A1%E7%90%86)
+		 */
+		perUserMemoryBudget: 1375,
 	},
 };

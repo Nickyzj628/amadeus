@@ -8,6 +8,7 @@ import {
 } from "@nickyzj2023/utils";
 import { loadJSON, saveJSON } from "@/common/db.js";
 import { generateUUID } from "@/common/util.js";
+import config from "@/config.js";
 import deleteMemoryTool from "../tools/deleteMemory.js";
 import saveMemoryTool from "../tools/saveMemory.js";
 import skipReply from "../tools/skipReply.js";
@@ -56,7 +57,7 @@ export const loadMemory = async (userId: number) => {
  * @param text 记忆内容
  * @param userId 用户QQ号
  * @param memoryId 记忆UUID，不传就是创建，传了就是更新
- * @remarks 即使保存失败，也不会抛异常
+ * @remarks 如果超出预算（1375字符），会抛异常
  */
 export const saveMemory = async (
 	text: string,
@@ -64,13 +65,25 @@ export const saveMemory = async (
 	memoryId?: string,
 ) => {
 	try {
-		const um = await loadMemory(userId);
+		const memory = await loadMemory(userId);
 		if (!memoryId) {
-			um[generateUUID()] = text;
+			memory[generateUUID()] = text;
 		} else {
-			um[memoryId] = text;
+			memory[memoryId] = text;
 		}
-		await saveJSON(`/data/user/${userId}.json`, um);
+
+		// 记忆容量检测
+		const memoryWords = Object.values(memory).reduce(
+			(acc, value) => acc + value.length,
+			0,
+		);
+		if (memoryWords > config.etc.perUserMemoryBudget) {
+			throw new Error(
+				`用户${userId}的记忆容量超出上限（${memoryWords}/${config.etc.perUserMemoryBudget}字符），请考虑删减过时的记忆（<memory>标签内的信息是按时间顺序存储的）`,
+			);
+		}
+
+		await saveJSON(`/data/user/${userId}.json`, memory);
 	} catch (e) {
 		logger(`记忆保存失败：${extractErrorMessage(e)}`);
 	}
@@ -142,60 +155,60 @@ export const deleteInjectedMemory = (messages: Message[]) => {
  * @remarks 不抛异常；采集失败只记日志，不影响调用方继续压缩上下文
  */
 export const collectMemories = async (dyingMessages: Message[]) => {
-	// 只把纯文本的user/assistant消息交给模型
-	const collectable = dyingMessages.filter((message) => {
-		return (
+	// 提取纯文本的user/assistant消息
+	const collectable = dyingMessages.filter(
+		(message) =>
 			typeof message.content === "string" &&
 			(message.role === "user" || message.role === "assistant") &&
-			!message.tool_calls
-		);
-	});
-	if (!collectable.length) {
-		return;
-	}
+			!message.tool_calls,
+	);
+	if (!collectable.length) return;
 
 	// 统计消息中出现过的QQ号
 	const userIds = new Set<number>();
 	for (const message of collectable) {
 		const userId = extractXmlTagContent(message.content as string, "user_id");
 		if (userId) {
+			// "\n1927139831\n" => 1927139831
 			userIds.add(Number(userId.replaceAll("\n", "")));
 		}
 	}
-	if (!userIds.size) {
-		return;
-	}
+	if (!userIds.size) return;
 
-	// 准备上下文：系统提示词+便于采集记忆的历史消息+用户指令
-	const workingMessages: Message[] = [
+	// 上下文 = 系统提示词 + 便于采集记忆的历史消息
+	const wipMessages: Message[] = [
 		{ role: "system", content: COLLECT_MEMORIES_PROMPT },
 		...collectable,
 	];
 
-	// +已有记忆
+	// + 用户已有记忆
 	const usersMemory: UsersMemory = {};
 	for (const userId of userIds) {
-		const um = await loadMemory(userId);
-		if (Object.keys(um).length > 0) {
-			usersMemory[userId] = um;
+		const memory = await loadMemory(userId);
+		if (Object.keys(memory).length > 0) {
+			usersMemory[userId] = memory;
 		}
 	}
+	wipMessages.push(buildMemoryMessage(usersMemory));
 
-	// +用户指令
+	// + 用户指令
 	const instructionMessage: Message = {
 		role: "user",
-		content: createXMLText("system-reminder", "请根据系统提示词，执行本次任务"),
+		content: createXMLText(
+			"system-reminder",
+			"请根据系统提示词，开始记忆采集任务",
+		),
 	};
-	workingMessages.push(buildMemoryMessage(usersMemory), instructionMessage);
-	logger("开始采集记忆");
+	wipMessages.push(instructionMessage);
 
 	// 交给大模型整理
 	let usage: Usage | undefined;
 	try {
-		for await (const e of runAgent(modelRef.current, workingMessages, [
+		logger("开始采集记忆");
+		for await (const e of runAgent(modelRef.current, wipMessages, [
 			saveMemoryTool,
 			deleteMemoryTool,
-			skipReply,  // 它会抛异常，所以包一层try-catch
+			skipReply, // 它会抛异常，所以包一层try-catch
 		])) {
 			switch (e.type) {
 				case "tool_call":
@@ -212,6 +225,6 @@ export const collectMemories = async (dyingMessages: Message[]) => {
 					return;
 			}
 		}
-		logger("采集记忆消耗：", usage, "\n");
+		usage && logger("采集记忆消耗：", usage, "\n");
 	} catch {}
 };

@@ -1,5 +1,5 @@
 import { defineTool } from "@nickyzj2023/ai";
-import { compactStr } from "@nickyzj2023/utils";
+import { compactStr, to } from "@nickyzj2023/utils";
 import { saveMemory } from "../utils/memory.js";
 
 export default defineTool(
@@ -9,7 +9,7 @@ export default defineTool(
 		text: {
 			type: "string",
 			description:
-				"要记住的内容，用自然语言简要描述，保留关键细节。如：小明将于2026.8.3去上海青浦区出差，暂定9.1坐飞机回成都",
+				"要记住的内容，用自然语言简要描述，去除主体名（另一个userId传参已经足够指代是谁的记忆了），保留关键细节。如：将于2026.8.3去上海青浦区出差，暂定9.1坐飞机回成都",
 			required: true,
 		},
 		userId: {
@@ -25,7 +25,9 @@ export default defineTool(
 		},
 	},
 	async ({ text, memoryId, userId }) => {
-		await saveMemory(text, userId, memoryId);
+		const [error] = await to(saveMemory(text, userId, memoryId));
+		if (error) return error.message;
+
 		return memoryId
 			? `已更新记忆${memoryId}`
 			: `已记住“${compactStr(text, { maxLength: 15, truncateMiddle: true })}”，之后会在需要时自动召回`;

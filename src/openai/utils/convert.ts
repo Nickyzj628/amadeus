@@ -104,8 +104,7 @@ export const buildMessageXML = (props: {
 					${createXMLText("user_name", props.nickname)}
 					${createXMLText("body", props.body)}
 					${props.mentionedUserIds?.length ? createXMLText("mentioned_user_ids", props.mentionedUserIds.join(",")) : ""}
-					${createXMLText("time", new Date().toLocaleString())}
-					`,
+					${createXMLText("time", new Date().toLocaleString())}`,
 	).replace(/\t+|\n{2,}/g, "");
 };
 
