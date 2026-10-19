@@ -55,9 +55,9 @@ export default {
 		 */
 		"deepseek-search": {
 			type: "streamable_http",
-			url: "https://mcp.api-inference.modelscope.net/ac60a6989dea4b/mcp",
+			url: "https://mcp.api-inference.modelscope.net/xxxxx/mcp",
 			headers: {
-				Authorization: "Bearer ms-d3466826-995a-401f-beae-127a853a4ddc",
+				Authorization: "Bearer xxxxx",
 			},
 		},
 	} satisfies Record<string, McpServer>,
