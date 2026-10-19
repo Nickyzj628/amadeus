@@ -50,14 +50,14 @@ export default {
 	 */
 	mcpServers: {
 		/**
-		 * exa 联网搜索
-		 * @see https://exa.ai/docs/reference/exa-mcp
+		 * deepseek-search 联网搜索
+		 * @see https://modelscope.cn/mcp/servers/weigu77/deepseek-search
 		 */
-		exa: {
+		"deepseek-search": {
 			type: "streamable_http",
-			url: "https://mcp.exa.ai/mcp",
+			url: "https://mcp.api-inference.modelscope.net/ac60a6989dea4b/mcp",
 			headers: {
-				"x-api-key": "xxxxx",
+				Authorization: "Bearer ms-d3466826-995a-401f-beae-127a853a4ddc",
 			},
 		},
 	} satisfies Record<string, McpServer>,
