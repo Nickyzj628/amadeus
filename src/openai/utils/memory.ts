@@ -64,29 +64,25 @@ export const saveMemory = async (
 	userId: number,
 	memoryId?: string,
 ) => {
-	try {
-		const memory = await loadMemory(userId);
-		if (!memoryId) {
-			memory[generateUUID()] = text;
-		} else {
-			memory[memoryId] = text;
-		}
-
-		// 记忆容量检测
-		const memoryWords = Object.values(memory).reduce(
-			(acc, value) => acc + value.length,
-			0,
-		);
-		if (memoryWords > config.etc.perUserMemoryBudget) {
-			throw new Error(
-				`用户${userId}的记忆容量超出上限（${memoryWords}/${config.etc.perUserMemoryBudget}字符），请考虑删减过时的记忆（<memory>标签内的信息是按时间顺序存储的）`,
-			);
-		}
-
-		await saveJSON(`/data/user/${userId}.json`, memory);
-	} catch (e) {
-		logger(`记忆保存失败：${extractErrorMessage(e)}`);
+	const memory = await loadMemory(userId);
+	if (!memoryId) {
+		memory[generateUUID()] = text;
+	} else {
+		memory[memoryId] = text;
 	}
+
+	// 记忆容量检测
+	const memoryWords = Object.values(memory).reduce(
+		(acc, value) => acc + value.length,
+		0,
+	);
+	if (memoryWords > config.etc.perUserMemoryBudget) {
+		throw new Error(
+			`用户${userId}的记忆容量超出上限（${memoryWords}/${config.etc.perUserMemoryBudget}字符），请考虑删减过时的记忆（<memory>标签内的信息是按时间顺序存储的）`,
+		);
+	}
+
+	await saveJSON(`/data/user/${userId}.json`, memory);
 };
 
 /**
@@ -204,7 +200,6 @@ export const collectMemories = async (dyingMessages: Message[]) => {
 	// 交给大模型整理
 	let usage: Usage | undefined;
 	try {
-		logger("开始采集记忆");
 		for await (const e of runAgent(modelRef.current, wipMessages, [
 			saveMemoryTool,
 			deleteMemoryTool,
