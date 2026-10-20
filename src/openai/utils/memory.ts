@@ -1,5 +1,6 @@
 import { type Message, runAgent, type Usage } from "@nickyzj2023/ai";
 import {
+	compactStr,
 	createXMLText,
 	extractErrorMessage,
 	extractXmlTagContent,
@@ -123,7 +124,9 @@ export const injectMemory = async (
 
 	const message = buildMemoryMessage(usersMemory);
 	messages.push(message);
-	logger(`注入记忆：\n${message.content}`);
+	logger(
+		`注入记忆：\n${compactStr(message.content as string, { maxLength: 50, truncateMiddle: true })}`,
+	);
 };
 
 /**
