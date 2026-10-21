@@ -2,7 +2,6 @@ import { type Message, runAgent, type Usage } from "@nickyzj2023/ai";
 import {
 	compactStr,
 	createXMLText,
-	extractErrorMessage,
 	extractXmlTagContent,
 	hasXmlTag,
 	logger,
@@ -10,9 +9,9 @@ import {
 import { loadJSON, saveJSON } from "@/common/db.js";
 import { generateUUID } from "@/common/util.js";
 import config from "@/config.js";
-import deleteMemoryTool from "../tools/deleteMemory.js";
-import saveMemoryTool from "../tools/saveMemory.js";
-import skipReply from "../tools/skipReply.js";
+import deleteMemoryTool from "../tools/delete-memory.js";
+import saveMemoryTool from "../tools/save-memory.js";
+import skipReply from "../tools/skip-reply.js";
 import { COLLECT_MEMORIES_PROMPT } from "./constants.js";
 import { contentToMessage } from "./convert.js";
 import { modelRef } from "./model.js";

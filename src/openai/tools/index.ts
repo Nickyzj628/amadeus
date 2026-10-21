@@ -2,12 +2,12 @@ import { estimateTextTokens, getWeather } from "@nickyzj2023/ai";
 import { loadMCPTools } from "@nickyzj2023/ai/mcp";
 import { logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
-import changeModel from "./changeModel.js";
-import decodeAbbr from "./decodeAbbr.js";
-import deleteMemory from "./deleteMemory.js";
-import loadMemory from "./loadMemory.js";
-import saveMemory from "./saveMemory.js";
-import skipReply from "./skipReply.js";
+import changeModel from "./change-model.js";
+import decodeAbbr from "./decode-abbr.js";
+import deleteMemory from "./delete-memory.js";
+import loadMemory from "./load-memory.js";
+import saveMemory from "./save-memory.js";
+import skipReply from "./skip-reply.js";
 import webFetch from "./web-fetch.js";
 import webSearch from "./web-search.js";
 
