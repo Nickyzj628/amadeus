@@ -8,6 +8,8 @@ import deleteMemory from "./deleteMemory.js";
 import loadMemory from "./loadMemory.js";
 import saveMemory from "./saveMemory.js";
 import skipReply from "./skipReply.js";
+import webFetch from "./web-fetch.js";
+import webSearch from "./web-search.js";
 
 const functionTools = [
 	changeModel,
@@ -17,6 +19,8 @@ const functionTools = [
 	loadMemory,
 	saveMemory,
 	deleteMemory,
+	webSearch,
+	webFetch,
 ];
 const mcpTools = await loadMCPTools(config.mcpServers ?? {});
 

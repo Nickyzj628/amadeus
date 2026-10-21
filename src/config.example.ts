@@ -41,6 +41,8 @@ export default {
 	 * 一些工具要求提供的apikey（可选）
 	 */
 	apiKeys: {
+		/** DeepSeek的联网搜索工具 */
+		deepseek: "sk-xxxxx",
 		/** Agnes的文生图服务 */
 		agnes: "sk-xxxxx",
 	},
@@ -50,16 +52,16 @@ export default {
 	 */
 	mcpServers: {
 		/**
-		 * deepseek-search 联网搜索
-		 * @see https://modelscope.cn/mcp/servers/weigu77/deepseek-search
+		 * exa联网搜索，和上面apiKeys.deepseek的搜索工具二选一
+		 * @see https://exa.ai/docs/get-started/exa-mcp
 		 */
-		"deepseek-search": {
-			type: "streamable_http",
-			url: "https://mcp.api-inference.modelscope.net/xxxxx/mcp",
-			headers: {
-				Authorization: "Bearer xxxxx",
-			},
-		},
+		// "exa": {
+		// 	type: "streamable_http",
+		// 	url: "https://mcp.exa.ai/mcp",
+		// 	headers: {
+		// 		"x-api-key":"xxxxx",
+		// 	},
+		// },
 	} satisfies Record<string, McpServer>,
 
 	/**
