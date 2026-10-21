@@ -60,7 +60,7 @@ export const FileSegmentSchema = object({
 		file: string(),
 		file_id: string(),
 		/** 单位字节 */
-		file_size: string(),
+		file_size: optional(string()),
 	}),
 });
 export type FileSegment = InferOutput<typeof FileSegmentSchema>;
@@ -76,7 +76,7 @@ export const VideoSegmentSchema = object({
 	data: object({
 		file: string(),
 		/** 单位字节 */
-		file_size: string(),
+		file_size: optional(string()),
 		/** 临时地址，会过期 */
 		url: string(),
 	}),
@@ -101,7 +101,7 @@ export const AudioSegmentSchema = object({
 		 */
 		path: string(),
 		/** 单位字节 */
-		file_size: string(),
+		file_size: optional(string()),
 	}),
 });
 export type AudioSegment = InferOutput<typeof AudioSegmentSchema>;

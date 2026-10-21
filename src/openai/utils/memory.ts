@@ -124,7 +124,7 @@ export const injectMemory = async (
 	const message = buildMemoryMessage(usersMemory);
 	messages.push(message);
 	logger(
-		`注入记忆：\n${compactStr(message.content as string, { maxLength: 100, truncateMiddle: true })}`,
+		`注入记忆：\n${compactStr(message.content as string, { maxLength: 80, truncateMiddle: true })}`,
 	);
 };
 
