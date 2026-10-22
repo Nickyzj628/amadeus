@@ -24,11 +24,11 @@ import { loadMessages, saveMessages } from "./openai/utils/messages.js";
 
 const checkRequiredConfig = () => {
 	if (!config.bot.selfId) {
-		throw new Error("请在/src/config.ts中填写机器人QQ号（bot.selfId）");
+		throw new Error("请在config.json中填写机器人QQ号（bot.selfId）");
 	}
 	if (!config.bot.onebotHttpPostPort) {
 		throw new Error(
-			"请在/src/config.ts中填写从协议端接收消息的端口号（bot.onebotHttpPostPort）",
+			"请在config.json中填写从协议端接收消息的端口号（bot.onebotHttpPostPort）",
 		);
 	}
 };

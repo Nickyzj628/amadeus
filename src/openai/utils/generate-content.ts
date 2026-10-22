@@ -104,7 +104,7 @@ export const visionToText = async (
 
 	const visionModel = findModelByModality(type);
 	if (!visionModel) {
-		throw new Error(`未配置支持${type}的多模态模型，请完善/src/config.ts`);
+		throw new Error(`未配置支持${type}的多模态模型，请完善config.json`);
 	}
 
 	const { content } = await generateContent(

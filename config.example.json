@@ -1,0 +1,43 @@
+{
+	"$schema": "./config.schema.json",
+	"bot": {
+		"selfId": "12345678",
+		"onebotHttpPort": 7280,
+		"onebotHttpPostPort": 8210
+	},
+	"models": [
+		{
+			"model": "deepseek-flash",
+			"baseUrl": "https://api.deepseek.com",
+			"apiKey": "sk-xxxxx",
+			"modalities": ["text", "image"]
+		},
+		{
+			"model": "google/gemini-3.5-flash-lite",
+			"baseUrl": "https://openrouter.ai/api/v1",
+			"apiKey": "sk-or-v1-xxxxx",
+			"modalities": ["text", "image", "audio", "video"]
+		}
+	],
+	"apiKeys": {
+		"deepseek": "sk-xxxxx",
+		"agnes": "sk-xxxxx"
+	},
+	"mcpServers": {},
+	"brec": {
+		"uids": [63231, 433351, 1340190821],
+		"groupIds": [1234567890]
+	},
+	"etc": {
+		"replyProbabilityNotAt": 0.02,
+		"maxActiveGroupCount": 3,
+		"safeWord": "myfork",
+		"ratioToCompactToolResult": 0.5,
+		"ratioToCompactMedia": 0.6,
+		"ratioToClearSoftDeletedMessages": 0.7,
+		"ratioToSummarize": 0.8,
+		"limitOfSummary": 2200,
+		"summarizeNDay": 7,
+		"perUserMemoryBudget": 1375
+	}
+}

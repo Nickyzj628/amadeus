@@ -35,7 +35,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .DS_Store
 
 # 配置文件
-config.ts
+/config.json
 pnpm-workspace.yaml
 
 # 本地 lockfile 记录着 link:../ai 这类本地 overrides，共享会让其他人装依赖失败
@@ -43,3 +43,6 @@ pnpm-lock.yaml
 
 # 消息文件
 data
+
+# AI
+.reasonix

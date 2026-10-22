@@ -1,0 +1,225 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "amadeus配置",
+	"description": "QQ群聊机器人的配置文件，字段说明见各属性的description",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"$schema": {
+			"type": "string",
+			"description": "编辑器类型提示用的JSON Schema地址"
+		},
+		"bot": {
+			"type": "object",
+			"description": "机器人核心配置",
+			"additionalProperties": false,
+			"properties": {
+				"selfId": {
+					"type": "string",
+					"description": "机器人QQ号（写字符串，例如\"12345678\"）"
+				},
+				"onebotHttpPort": {
+					"type": "integer",
+					"minimum": 1,
+					"maximum": 65535,
+					"description": "OneBot HTTP服务端口号（用于机器人主动发送请求）"
+				},
+				"onebotHttpPostPort": {
+					"type": "integer",
+					"minimum": 1,
+					"maximum": 65535,
+					"description": "OneBot HTTP POST服务端口号（用于机器人接收消息）"
+				}
+			},
+			"required": ["selfId", "onebotHttpPort", "onebotHttpPostPort"]
+		},
+		"models": {
+			"type": "array",
+			"description": "模型列表，需满足：兼容OpenAI API请求格式；至少提供一个能理解图片的模型；最好支持工具调用，否则无法调用Function Calling和MCP工具",
+			"minItems": 1,
+			"items": {
+				"type": "object",
+				"description": "模型配置。除下面列出的字段外，还可以写任意自定义请求体字段（每轮请求都会带上）",
+				"additionalProperties": true,
+				"properties": {
+					"model": {
+						"type": "string",
+						"description": "模型名。不填会尝试用GET {baseUrl}/models返回的第一个模型"
+					},
+					"baseUrl": {
+						"type": "string",
+						"description": "OpenAI兼容接口地址，例如https://api.deepseek.com"
+					},
+					"apiKey": {
+						"type": "string",
+						"description": "接口密钥。用本地llama.cpp等服务时可以不填"
+					},
+					"modalities": {
+						"type": "array",
+						"description": "模型支持的消息输入类型，默认[\"text\"]",
+						"items": {
+							"type": "string",
+							"enum": ["text", "image", "audio", "video"]
+						},
+						"uniqueItems": true
+					},
+					"context": {
+						"type": "integer",
+						"minimum": 1,
+						"description": "模型最大上下文，默认131072"
+					}
+				},
+				"required": ["baseUrl"]
+			}
+		},
+		"apiKeys": {
+			"type": "object",
+			"description": "一些工具要求提供的apikey（可选）",
+			"additionalProperties": false,
+			"properties": {
+				"deepseek": {
+					"type": "string",
+					"description": "DeepSeek的联网搜索工具"
+				},
+				"agnes": {
+					"type": "string",
+					"description": "Agnes的文生图服务"
+				}
+			}
+		},
+		"mcpServers": {
+			"type": "object",
+			"description": "远程MCP工具（可选）。键名随便取，值是单个MCP服务配置",
+			"additionalProperties": {
+				"$ref": "#/definitions/mcpServer"
+			}
+		},
+		"brec": {
+			"type": "object",
+			"description": "B站直播通知推送（可选）",
+			"additionalProperties": false,
+			"properties": {
+				"uids": {
+					"type": "array",
+					"description": "要订阅哪些UP主的直播（填写用户主页上的UID）",
+					"items": {
+						"type": "integer"
+					}
+				},
+				"groupIds": {
+					"type": "array",
+					"description": "要推送到哪些QQ群",
+					"items": {
+						"type": "integer"
+					}
+				}
+			},
+			"required": ["uids", "groupIds"]
+		},
+		"etc": {
+			"type": "object",
+			"description": "一些优化体验的杂项（建议默认）",
+			"additionalProperties": false,
+			"properties": {
+				"replyProbabilityNotAt": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1,
+					"description": "未被@时的回复概率"
+				},
+				"maxActiveGroupCount": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "同时活跃的群聊数，超过时会释放不活跃的群聊消息内存"
+				},
+				"safeWord": {
+					"type": "string",
+					"description": "安全词，在消息中检测到时添加人设锚点，修正人设"
+				},
+				"ratioToCompactToolResult": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1,
+					"description": "上下文>总上下文*ratio时压缩工具调用结果"
+				},
+				"ratioToCompactMedia": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1,
+					"description": "上下文>总上下文*ratio时压缩图片/音频/视频消息"
+				},
+				"ratioToClearSoftDeletedMessages": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1,
+					"description": "上下文>总上下文*ratio时清理软删除残留的占位消息"
+				},
+				"ratioToSummarize": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1,
+					"description": "上下文>总上下文*ratio时总结消息"
+				},
+				"limitOfSummary": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "总结消息最长字数，超过时将删除日期最早的一段"
+				},
+				"summarizeNDay": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "自动压缩N天前的消息"
+				},
+				"perUserMemoryBudget": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "每个用户的记忆字数上限，参考了hermes的记忆容量管理"
+				}
+			},
+			"required": [
+				"replyProbabilityNotAt",
+				"maxActiveGroupCount",
+				"safeWord",
+				"ratioToCompactToolResult",
+				"ratioToCompactMedia",
+				"ratioToClearSoftDeletedMessages",
+				"ratioToSummarize",
+				"limitOfSummary",
+				"summarizeNDay",
+				"perUserMemoryBudget"
+			]
+		}
+	},
+	"required": ["bot", "models", "apiKeys", "etc"],
+	"definitions": {
+		"mcpServer": {
+			"type": "object",
+			"description": "单个远程MCP服务配置",
+			"additionalProperties": false,
+			"properties": {
+				"type": {
+					"type": "string",
+					"enum": ["streamable_http", "sse"],
+					"description": "连接方式"
+				},
+				"url": {
+					"type": "string",
+					"description": "MCP服务地址"
+				},
+				"headers": {
+					"type": "object",
+					"description": "请求头，例如{\"x-api-key\": \"xxxxx\"}",
+					"additionalProperties": true
+				},
+				"ignoredToolNames": {
+					"type": "array",
+					"description": "不加载的工具名",
+					"items": {
+						"type": "string"
+					}
+				}
+			},
+			"required": ["type", "url"]
+		}
+	}
+}

@@ -10,7 +10,7 @@
 
 ### 配置环境变量、模型、MCP、...
 
-将`src/config.example.ts`改名为`src/config.ts`，参照其中注释完善配置
+将`config.example.json`复制为`config.json`，字段说明和类型提示来自`config.schema.json`（VSCode等编辑器会自动识别）
 
 ### 安装依赖:
 
