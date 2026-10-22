@@ -7,14 +7,15 @@
 - 技术栈：TypeScript(strict) + Node.js ESM(NodeNext)，pnpm 管理，tsx 运行，tsdown 打包，valibot 校验，sharp 压缩图片
 - `@nickyzj2023/ai`（`runAgent`/`compact`/`defineTool`/MCP 客户端）和 `@nickyzj2023/utils`（logger/fetcher/XML 工具）由 `pnpm-workspace.yaml` 里 `link:../ai`、`link:../utils` 链到仓库外的源码目录，要改这两个包得去同级目录改
 - 入口：`src/index.ts`（HTTP POST `/` 接收 OneBot 群消息事件，启动时做必填配置检查）
-- 配置：根目录`config.json`（gitignored，需从`config.example.json`复制后修改，字段提示见`config.schema.json`）；由`src/config.ts`读取并用 valibot 校验，相对`process.cwd()`定位，`pnpm build`会把两者复制进`dist/`
+- 配置：`dist/config.json`（gitignored，需把 `dist/config.example.json` 改名后填写）；`src/config-schema.ts` 是唯一真源（valibot，导出`ConfigSchema`/`Config`）；`config.example.json` 和 `config.schema.json` 只在`pnpm build`时进`dist/`；`src/config.ts` 固定读`process.cwd()/dist/config.json`并校验
 - 路径别名：`@/*` → `src/*`，但 import 必须带 `.js` 后缀（如 `@/common/db.js`）
 - `data/*.json` 和 `src/openai/prompts/*.md` 都按 `process.cwd()` 定位，必须在仓库根启动
 
 ## Commands
 
 - `pnpm dev` — tsx watch 热重载运行 `src/index.ts`
-- `pnpm build` — tsdown 打包到 `dist/`（ESM + minify，另把 `src/openai/prompts/**/*.md` 复制进 `dist/`）
+- `pnpm build` — 跑 `scripts/build.ts`：先备份 `dist/config.json`，再 tsdown 打包（ESM + minify，复制 prompts 和 `scripts/config.example.json`），构建完还原配置并生成 `dist/config.schema.json`
+- `pnpm schema` — 从 `src/config-schema.ts` 生成 `dist/config.schema.json`（`pnpm build` 时会自动跑，开发时用不到）
 - `pnpm start` — `node dist/index.mjs` 运行生产版（需先 build）
 - `pnpm check` — biome check --write 自动修复 `src/**/*.ts`；biome 2.5.13 已装可用，但 biome.json 要求 CRLF 行尾（本地文件是 LF），跑一次会把 src 下几乎每个文件都重写
 
@@ -49,7 +50,7 @@
 - type-only 导入用 `import type`（verbatimModuleSyntax）；import 一律带 `.js` 后缀
 - 注释用中文，解释"为什么"而非"做了什么"；日志统一用 `logger`（@nickyzj2023/utils）
 - 错误处理：async 函数抛异常由调用方 catch；不重要的错误可用 `to()` 包装吞掉
-- `data/`、`dist/`、根目录`config.json`、`pnpm-workspace.yaml`、`pnpm-lock.yaml` 均在 .gitignore，勿提交
+- `data/`、`dist/config.json`、`pnpm-workspace.yaml`、`pnpm-lock.yaml` 均在 .gitignore，勿提交（`dist/` 其余构建产物要提交分发）
 - 新增模型须满足 OpenAI API Compatible；多模态任务用 `findModelByModality` 选模型
 - 新工具在 `src/openai/tools/` 下建文件并用 `defineTool` 定义，在 `tools/index.ts` 注册
 

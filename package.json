@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsdown",
+    "build": "tsx scripts/build.ts",
+    "schema": "tsx scripts/generate-config-schema.ts",
     "start": "node dist/index.mjs",
     "check": "biome check --diagnostic-level=error --write src/"
   },
@@ -17,6 +18,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@types/node": "^26.6.4",
+    "@valibot/to-json-schema": "^1.8.0",
     "tsdown": "^0.22.14",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"

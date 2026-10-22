@@ -1,6 +1,6 @@
 @echo off
 title amadeus
 
-pnpm start
+node dist/index.mjs
 
 pause

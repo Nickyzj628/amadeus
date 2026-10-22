@@ -1,0 +1,247 @@
+{
+	"type": "object",
+	"properties": {
+		"$schema": {
+			"type": "string",
+			"description": "编辑器类型提示用的JSON Schema地址，不用改"
+		},
+		"bot": {
+			"type": "object",
+			"properties": {
+				"selfId": {
+					"type": "string",
+					"description": "机器人QQ号，写字符串，比如\"12345678\""
+				},
+				"onebotHttpPort": {
+					"type": "integer",
+					"minimum": 1,
+					"maximum": 65535,
+					"description": "OneBot HTTP服务端口号，用于机器人主动发送请求"
+				},
+				"onebotHttpPostPort": {
+					"type": "integer",
+					"minimum": 1,
+					"maximum": 65535,
+					"description": "OneBot HTTP POST服务端口号，用于机器人接收消息"
+				}
+			},
+			"required": [
+				"selfId",
+				"onebotHttpPort",
+				"onebotHttpPostPort"
+			],
+			"additionalProperties": false,
+			"description": "机器人核心配置"
+		},
+		"models": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"baseUrl": {
+						"type": "string",
+						"description": "OpenAI兼容接口地址，比如https://api.deepseek.com"
+					},
+					"model": {
+						"type": "string",
+						"description": "模型名，不填会尝试用GET {baseUrl}/models返回的第一个模型"
+					},
+					"apiKey": {
+						"type": "string",
+						"description": "接口密钥，本地llama.cpp这类服务可以不填"
+					},
+					"modalities": {
+						"type": "array",
+						"items": {
+							"enum": [
+								"text",
+								"image",
+								"audio",
+								"video"
+							],
+							"type": "string"
+						},
+						"description": "模型支持的消息输入类型，默认只有text"
+					},
+					"context": {
+						"type": "integer",
+						"minimum": 1,
+						"description": "模型最大上下文，默认131072"
+					}
+				},
+				"required": [
+					"baseUrl"
+				]
+			},
+			"minItems": 1,
+			"description": "模型列表，需满足：兼容OpenAI API请求格式；至少有一个能理解图片；最好支持工具调用"
+		},
+		"apiKeys": {
+			"type": "object",
+			"properties": {
+				"deepseek": {
+					"type": "string",
+					"description": "DeepSeek的联网搜索工具"
+				},
+				"agnes": {
+					"type": "string",
+					"description": "Agnes的文生图服务"
+				}
+			},
+			"required": [],
+			"additionalProperties": false,
+			"description": "一些工具要求提供的apikey（可选）"
+		},
+		"mcpServers": {
+			"type": "object",
+			"propertyNames": {
+				"type": "string"
+			},
+			"additionalProperties": {
+				"type": "object",
+				"properties": {
+					"type": {
+						"enum": [
+							"streamable_http",
+							"sse"
+						],
+						"type": "string",
+						"description": "连接方式"
+					},
+					"url": {
+						"type": "string",
+						"description": "MCP服务地址"
+					},
+					"headers": {
+						"type": "object",
+						"propertyNames": {
+							"type": "string"
+						},
+						"additionalProperties": {},
+						"description": "请求头，比如{\"x-api-key\":\"xxxxx\"}"
+					},
+					"ignoredToolNames": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "不加载的工具名"
+					}
+				},
+				"required": [
+					"type",
+					"url"
+				]
+			},
+			"description": "远程MCP工具（可选），键名随便取，值是单个MCP服务配置"
+		},
+		"brec": {
+			"type": "object",
+			"properties": {
+				"uids": {
+					"type": "array",
+					"items": {
+						"type": "number"
+					},
+					"description": "要订阅哪些UP主的直播，填用户主页上的UID"
+				},
+				"groupIds": {
+					"type": "array",
+					"items": {
+						"type": "number"
+					},
+					"description": "要推送到哪些QQ群"
+				}
+			},
+			"required": [
+				"uids",
+				"groupIds"
+			],
+			"additionalProperties": false,
+			"description": "B站直播通知推送（可选）"
+		},
+		"etc": {
+			"type": "object",
+			"properties": {
+				"replyProbabilityNotAt": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1,
+					"description": "未被@时的回复概率"
+				},
+				"maxActiveGroupCount": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "同时活跃的群聊数，超过时会释放不活跃群聊的消息内存"
+				},
+				"safeWord": {
+					"type": "string",
+					"description": "安全词，消息里检测到时添加人设锚点，修正人设"
+				},
+				"ratioToCompactToolResult": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1,
+					"description": "上下文超过总上下文这个比例时，压缩工具调用结果"
+				},
+				"ratioToCompactMedia": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1,
+					"description": "上下文超过总上下文这个比例时，压缩图片/音频/视频消息"
+				},
+				"ratioToClearSoftDeletedMessages": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1,
+					"description": "上下文超过总上下文这个比例时，清理软删除残留的占位消息"
+				},
+				"ratioToSummarize": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1,
+					"description": "上下文超过总上下文这个比例时，总结消息"
+				},
+				"limitOfSummary": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "总结消息最长字数，超过时删掉日期最早的一段"
+				},
+				"summarizeNDay": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "自动压缩N天前的消息"
+				},
+				"perUserMemoryBudget": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "每个用户的记忆字数上限"
+				}
+			},
+			"required": [
+				"replyProbabilityNotAt",
+				"maxActiveGroupCount",
+				"safeWord",
+				"ratioToCompactToolResult",
+				"ratioToCompactMedia",
+				"ratioToClearSoftDeletedMessages",
+				"ratioToSummarize",
+				"limitOfSummary",
+				"summarizeNDay",
+				"perUserMemoryBudget"
+			],
+			"additionalProperties": false,
+			"description": "一些优化体验的杂项（建议默认）"
+		}
+	},
+	"required": [
+		"bot",
+		"models",
+		"apiKeys",
+		"etc"
+	],
+	"additionalProperties": false,
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "amadeus配置",
+	"description": "QQ群聊机器人amadeus的配置文件"
+}

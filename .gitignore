@@ -3,9 +3,13 @@ node_modules
 
 # output
 out
-dist
 dist-prod
 *.tgz
+
+# dist要提交分发，但里面这份带密钥的本地配置别跟上去
+/dist/config.json
+# 构建时临时备份的配置
+/.config.json.bak
 
 # code coverage
 coverage

@@ -10,24 +10,13 @@
 
 ### 配置环境变量、模型、MCP、...
 
-将`config.example.json`复制为`config.json`，字段说明和类型提示来自`config.schema.json`（VSCode等编辑器会自动识别）
+将dist目录下的`config.example.json`改名为`config.json`后填写配置
 
-### 安装依赖:
-
-```bash
-pnpm install
-```
+建议用VSCode等IDE打开配置文件，鼠标移到字段名上可以看到类型提示
 
 ### 运行:
 
-可以直接运行，也可以先打包再启动（体积小一些）
-
-```bash
-pnpm dev
-
-# 或者
-pnpm build && pnpm start
-```
+`./run.bat`
 
 ### LLBot连不上的备用方案（SnowLuma）
 
