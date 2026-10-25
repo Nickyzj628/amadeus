@@ -52,14 +52,11 @@ export const generateContent = async (
 	let reasoning = "";
 	let content = "";
 	let usage: Usage | undefined;
-	for await (const e of runAgent(model, messages, openaiTools)) {
+	for await (const e of runAgent(model, messages, {
+		stream: false,
+		tools: openaiTools,
+	})) {
 		switch (e.type) {
-			case "content_delta":
-				content += e.delta;
-				break;
-			case "reasoning_delta":
-				reasoning += e.delta;
-				break;
 			case "tool_call":
 				await beforeToolCall?.(e);
 				logger(`调用工具：${e.name}`, e.args);
@@ -68,6 +65,8 @@ export const generateContent = async (
 				logger(`工具结果：${e.name}`, e.result);
 				break;
 			case "done":
+				reasoning = e.reasoning ?? "";
+				content = e.content;
 				usage = e.usage;
 				break;
 			case "error":

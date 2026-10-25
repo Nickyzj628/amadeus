@@ -202,11 +202,14 @@ export const collectMemories = async (dyingMessages: Message[]) => {
 	// 交给大模型整理
 	let usage: Usage | undefined;
 	try {
-		for await (const e of runAgent(modelRef.current, wipMessages, [
-			saveMemoryTool,
-			deleteMemoryTool,
-			skipReply, // 它会抛异常，所以包一层try-catch
-		])) {
+		for await (const e of runAgent(modelRef.current, wipMessages, {
+			stream: false,
+			tools: [
+				saveMemoryTool,
+				deleteMemoryTool,
+				skipReply, // 它会抛异常，所以要包一层try-catch
+			],
+		})) {
 			switch (e.type) {
 				case "tool_call":
 					logger(`采集记忆-调用工具${e.name}`, e.args);

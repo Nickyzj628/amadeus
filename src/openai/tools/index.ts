@@ -1,5 +1,6 @@
-import { estimateTextTokens, getWeather } from "@nickyzj2023/ai";
+import { estimateTextTokens } from "@nickyzj2023/ai";
 import { loadMCPTools } from "@nickyzj2023/ai/mcp";
+import { getWeather } from "@nickyzj2023/ai/tools";
 import { logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import changeModel from "./change-model.js";
