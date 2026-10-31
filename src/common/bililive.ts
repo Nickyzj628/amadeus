@@ -123,7 +123,7 @@ const checkAndSend = async () => {
 			action = "换标题了";
 		}
 
-		const imgUrl = room.keyframe /** || room.cover_from_user || room.face */;
+		const imgUrl = "" /** room.keyframe */ /** || room.cover_from_user || room.face */;
 		const roomUrl = `https://live.bilibili.com/${room.short_id || room.room_id}`;
 		const segments = [
 			imgUrl && urlToImageSegment(imgUrl),
