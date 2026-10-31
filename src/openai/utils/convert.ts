@@ -190,20 +190,20 @@ export const onebotToOpenAI = async (
 			}
 
 			// 3. 将WebDav视频转为base64
-			const [error2, base64Body] = await to(
-				readFile(`${WEBDAV_LOCAL_BASE}/${filename}`).then((buf) =>
-					buf.toString("base64"),
-				),
-			);
-			if (error2) {
-				logger(`读取视频文件失败：${error2.message}`);
-				videoItems.push(fallbackItem);
-				continue;
-			}
+			// const [error2, base64Body] = await to(
+			// 	readFile(`${WEBDAV_LOCAL_BASE}/${filename}`).then((buf) =>
+			// 		buf.toString("base64"),
+			// 	),
+			// );
+			// if (error2) {
+			// 	logger(`读取视频文件失败：${error2.message}`);
+			// 	videoItems.push(fallbackItem);
+			// 	continue;
+			// }
 
 			// 4. 使用多模态单独翻译后的自然语言
-			const base64 = `data:video/${ext};base64,${base64Body}`;
-			const [error3, text] = await to(visionToText(base64, "video"));
+			// const base64 = `data:video/${ext};base64,${base64Body}`;
+			const [error3, text] = await to(visionToText(webdavUrl, "video"));
 			if (error3) {
 				logger(`视频翻译失败：${error3.message}`);
 				videoItems.push(fallbackItem);
