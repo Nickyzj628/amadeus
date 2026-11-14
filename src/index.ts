@@ -60,6 +60,7 @@ app.post("/", async (c) => {
 
 	// 确保系统提示词没被吞（有些上下文操作方法在刚做出来时吞掉过）
 	if (messages[0]?.role !== "system") {
+		logger(`${groupId}的系统提示词被吞了`);
 		return c.body(null, 204);
 	}
 
@@ -135,7 +136,7 @@ app.post("/", async (c) => {
 		// 成功回复+afterResponse后保存消息
 		await to(saveMessages(groupId, messages));
 	});
-	extractErrorMessage(error) && console.log(111, extractErrorMessage(error));
+
 	if (
 		// 没有异常，或并非当前Realm的异常
 		!Error.isError(error) ||

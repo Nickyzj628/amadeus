@@ -69,7 +69,7 @@ export const queryRoomInfo = async (roomId: number | string) => {
 
 const checkAndSend = async () => {
 	if (!GROUP_IDS.length || !UIDS.length) {
-		logger("未配置 brec.groupIds / brec.roomIds");
+		logger("未配置brec.groupIds或brec.roomIds");
 		return;
 	}
 
@@ -99,6 +99,8 @@ const checkAndSend = async () => {
 				changedField = "live_status";
 			} else if (prevRoomStatus.title !== room.title) {
 				changedField = "title";
+			} else if (prevRoomStatus.cover_from_user !== room.cover_from_user) {
+				changedField = "cover_from_user";
 			} else {
 				return result;
 			}
@@ -121,12 +123,14 @@ const checkAndSend = async () => {
 			action = "播了";
 		} else if (room.changedField === "title") {
 			action = "换标题了";
+		} else if (room.changedField === "cover_from_user") {
+			action = "换封面了";
 		}
 
-		const imgUrl = "" /** room.keyframe */ /** || room.cover_from_user || room.face */;
+		// const imgUrl = room.keyframe || room.cover_from_user || room.face;
 		const roomUrl = `https://live.bilibili.com/${room.short_id || room.room_id}`;
 		const segments = [
-			imgUrl && urlToImageSegment(imgUrl),
+			// imgUrl && urlToImageSegment(imgUrl),
 			textToSegment(`${room.uname}${action}：${room.title}\n${roomUrl}`),
 		].filter(Boolean) as Segment[];
 
