@@ -1,5 +1,10 @@
 import type { Usage } from "@nickyzj2023/ai";
-import { extractErrorMessage, logger, to } from "@nickyzj2023/utils";
+import {
+	createXMLText,
+	extractErrorMessage,
+	logger,
+	to,
+} from "@nickyzj2023/utils";
 import { safeParse } from "valibot";
 import { startBiliLiveTimer } from "./common/bililive.js";
 import { createApp, serve } from "./common/http-server.js";
@@ -72,16 +77,11 @@ app.post("/", async (c) => {
 	const segments = await beforeLLM(e);
 	if (segments.length > 0) {
 		// 推入程序处理后的消息
-		const content = extractTextFromSegments(segments);
-		messages.push(
-			contentToMessage(
-				buildMessageXML({
-					userId: userId,
-					nickname: e.sender.nickname,
-					body: content,
-				}),
-			),
-		);
+		const content = createXMLText("video", extractTextFromSegments(segments), {
+			sender_id: userId,
+			sender_name: e.sender.nickname,
+		});
+		messages.push(contentToMessage(content));
 		// 发出消息
 		if (isAtSelf) {
 			return c.json(makeReplyBody(...segments));
@@ -99,9 +99,9 @@ app.post("/", async (c) => {
 		let usage: Usage | undefined;
 		try {
 			// 调试模式
-			if (groupId !== 669751957) {
-				throw new Error("🚧施工中");
-			}
+			// if (groupId !== 669751957) {
+			// 	throw new Error("🚧施工中");
+			// }
 
 			// 转换消息到OpenAI API格式
 			const currentMessages = await onebotToOpenAI(e);
