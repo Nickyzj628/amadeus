@@ -1,7 +1,7 @@
 import { estimateTextTokens } from "@nickyzj2023/ai";
 import { loadMCPTools } from "@nickyzj2023/ai/mcp";
 import { getWeather } from "@nickyzj2023/ai/tools";
-import { logger } from "@nickyzj2023/utils";
+import { isObject, logger } from "@nickyzj2023/utils";
 import config from "@/config.js";
 import changeModel from "./change-model.js";
 import decodeAbbr from "./decode-abbr.js";
@@ -35,7 +35,7 @@ if (config.apiKeys.agnes) {
 }
 
 // 提供了MCP Servers时，启用MCP工具
-if (config.mcpServers) {
+if (Object.keys(config.mcpServers ?? {}).length > 0) {
 	openaiTools.push(...(await loadMCPTools(config.mcpServers)));
 }
 

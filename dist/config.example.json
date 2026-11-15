@@ -20,8 +20,8 @@
 		}
 	],
 	"apiKeys": {
-		"deepseek": "sk-xxxxx",
-		"agnes": "sk-xxxxx"
+		"deepseek": "要使用本项目内置的deepseek联网搜索，请填写，否则请移除这一行",
+		"agnes": "要使用本项目内置的agnes文生图，请填写，否则请移除这一行"
 	},
 	"mcpServers": {},
 	"brec": {
