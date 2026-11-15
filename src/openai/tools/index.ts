@@ -35,7 +35,7 @@ if (config.apiKeys.agnes) {
 }
 
 // 提供了MCP Servers时，启用MCP工具
-if (Object.keys(config.mcpServers ?? {}).length > 0) {
+if (Object.keys(config.mcpServers).length > 0) {
 	openaiTools.push(...(await loadMCPTools(config.mcpServers)));
 }
 

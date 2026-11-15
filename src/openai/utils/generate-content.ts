@@ -4,10 +4,10 @@ import {
 	runAgent,
 	type Usage,
 } from "@nickyzj2023/ai";
+import type { ToolCallEvent, ToolResultEvent } from "@nickyzj2023/ai/agent";
 import { compactStr, createXMLText, logger } from "@nickyzj2023/utils";
 import { checkUrlType, normalizeText } from "@/common/util.js";
 import config from "@/config.js";
-import type { ToolCallEvent } from "@/onebot/before-llm/index.js";
 import { openaiTools } from "@/openai/tools/index.js";
 import { findModelByModality, modelRef } from "@/openai/utils/model.js";
 import { IDENTITY_ANCHOR, VISION_UNDERSTANDING_PROMPT } from "./constants.js";
@@ -24,9 +24,18 @@ export const generateContent = async (
 		model?: Model;
 		/** 模型发出工具调用请求后、调用工具前的回调函数，可用于篡改e.args */
 		beforeToolCall?: (e: ToolCallEvent) => void | Promise<void>;
+		/** 调用工具后的回调函数，可用于篡改e.result */
+		afterToolResult?: (
+			e: ToolResultEvent,
+			options: { turn: number },
+		) => void | Promise<void>;
 	},
 ) => {
-	const { model = modelRef.current, beforeToolCall } = options ?? {};
+	const {
+		model = modelRef.current,
+		beforeToolCall,
+		afterToolResult,
+	} = options ?? {};
 	if (!model) {
 		throw new Error("当前没有可用的模型，请完善配置文件");
 	}
@@ -52,6 +61,7 @@ export const generateContent = async (
 	let reasoning = "";
 	let content = "";
 	let usage: Usage | undefined;
+	let turn = 1;
 	for await (const e of runAgent(model, messages, {
 		stream: false,
 		tools: openaiTools,
@@ -62,12 +72,14 @@ export const generateContent = async (
 				logger(`调用工具：${e.name}`, e.args);
 				break;
 			case "tool_result":
+				await afterToolResult?.(e, { turn });
 				logger(`工具结果：${e.name}`, e.result);
 				break;
 			case "done":
 				reasoning = e.reasoning ?? "";
 				content = e.content;
 				usage = e.usage;
+				turn++;
 				break;
 			case "error":
 				content = `模型处理异常：${e.message}`;

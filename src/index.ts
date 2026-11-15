@@ -4,7 +4,11 @@ import { safeParse } from "valibot";
 import { startBiliLiveTimer } from "./common/bililive.js";
 import { createApp, serve } from "./common/http-server.js";
 import config from "./config.js";
-import { beforeLLM, beforeToolCall } from "./onebot/before-llm/index.js";
+import {
+	afterToolResult,
+	beforeLLM,
+	beforeToolCall,
+} from "./onebot/before-llm/index.js";
 import {
 	GroupMessageEventSchema,
 	isAtSelfSegment,
@@ -95,9 +99,9 @@ app.post("/", async (c) => {
 		let usage: Usage | undefined;
 		try {
 			// 调试模式
-			// if (groupId !== 669751957) {
-			// 	throw new Error("🚧施工中");
-			// }
+			if (groupId !== 669751957) {
+				throw new Error("🚧施工中");
+			}
 
 			// 转换消息到OpenAI API格式
 			const currentMessages = await onebotToOpenAI(e);
@@ -115,6 +119,7 @@ app.post("/", async (c) => {
 			// 模型生成回复内容
 			const { content, ...rest } = await generateContent(messages, {
 				beforeToolCall: (tce) => beforeToolCall(e, tce),
+				afterToolResult: (tre, options) => afterToolResult(e, tre, options),
 			});
 			usage = rest.usage;
 			if (!content.trim()) {

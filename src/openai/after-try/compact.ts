@@ -18,7 +18,7 @@ export const summarizeNDay = async (
 ) => {
 	// 1. 计算最大日期
 	const maxDate = new Date();
-	maxDate.setDate(maxDate.getDate() - config.etc.summarizeNDay);
+	maxDate.setDate(maxDate.getDate() - config.etc.NDayToSummarize);
 	maxDate.setHours(23);
 	maxDate.setMinutes(59);
 	maxDate.setSeconds(59);

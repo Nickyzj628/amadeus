@@ -104,11 +104,9 @@ export const ConfigSchema = strictObject({
 		}),
 		description("一些工具要求提供的apikey（可选）"),
 	),
-	mcpServers: optional(
-		pipe(
-			record(string(), McpServerSchema),
-			description("远程MCP工具（可选），键名随便取，值是单个MCP服务配置"),
-		),
+	mcpServers: pipe(
+		record(string(), McpServerSchema),
+		description("远程MCP工具（可选），键名随便取，值是单个MCP服务配置"),
 	),
 	brec: optional(
 		pipe(
@@ -164,23 +162,29 @@ export const ConfigSchema = strictObject({
 				maxValue(1),
 				description("上下文超过总上下文这个比例时，总结消息"),
 			),
-			limitOfSummary: pipe(
+			budgetOfSummary: pipe(
 				number(),
 				integer(),
 				minValue(1),
 				description("总结消息最长字数，超过时删掉日期最早的一段"),
 			),
-			summarizeNDay: pipe(
+			NDayToSummarize: pipe(
 				number(),
 				integer(),
 				minValue(1),
-				description("自动压缩N天前的消息"),
+				description("自动压缩N天前的消息（和ratioToSummarize是不同的压缩策略，这个是始终压缩N天前的消息，那个是上下文到阈值了就全部压缩）"),
 			),
-			perUserMemoryBudget: pipe(
+			budgetOfUserMemory: pipe(
 				number(),
 				integer(),
 				minValue(1),
-				description("每个用户的记忆字数上限"),
+				description("每个用户的最长记忆字数"),
+			),
+			maxTurnsToReply: pipe(
+				number(),
+				integer(),
+				minValue(1),
+				description("确定回复前和模型的最大往返次数"),
 			),
 		}),
 		description("一些优化体验的杂项（建议默认）"),

@@ -76,9 +76,9 @@ export const saveMemory = async (
 		(acc, value) => acc + value.length,
 		0,
 	);
-	if (memoryWords > config.etc.perUserMemoryBudget) {
+	if (memoryWords > config.etc.budgetOfUserMemory) {
 		throw new Error(
-			`用户${userId}的记忆容量超出上限（${memoryWords}/${config.etc.perUserMemoryBudget}字），请考虑：\n1. 精简历史记忆中的冗余信息\n2. 清理过时记忆\n提示：<memory>标签内的信息已按时间顺序排列`,
+			`用户${userId}的记忆容量超出上限（${memoryWords}/${config.etc.budgetOfUserMemory}字），请考虑：\n1. 精简历史记忆中的冗余信息\n2. 清理过时记忆\n提示：<memory>标签内的信息已按时间顺序排列`,
 		);
 	}
 

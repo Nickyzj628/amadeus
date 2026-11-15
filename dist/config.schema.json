@@ -202,20 +202,25 @@
 					"maximum": 1,
 					"description": "上下文超过总上下文这个比例时，总结消息"
 				},
-				"limitOfSummary": {
+				"budgetOfSummary": {
 					"type": "integer",
 					"minimum": 1,
 					"description": "总结消息最长字数，超过时删掉日期最早的一段"
 				},
-				"summarizeNDay": {
+				"NDayToSummarize": {
 					"type": "integer",
 					"minimum": 1,
-					"description": "自动压缩N天前的消息"
+					"description": "自动压缩N天前的消息（和ratioToSummarize是不同的压缩策略，这个是始终压缩N天前的消息，那个是上下文到阈值了就全部压缩）"
 				},
-				"perUserMemoryBudget": {
+				"budgetOfUserMemory": {
 					"type": "integer",
 					"minimum": 1,
-					"description": "每个用户的记忆字数上限"
+					"description": "每个用户的最长记忆字数"
+				},
+				"maxTurnsToReply": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "确定回复前和模型的最大往返次数"
 				}
 			},
 			"required": [
@@ -226,9 +231,10 @@
 				"ratioToCompactMedia",
 				"ratioToClearSoftDeletedMessages",
 				"ratioToSummarize",
-				"limitOfSummary",
-				"summarizeNDay",
-				"perUserMemoryBudget"
+				"budgetOfSummary",
+				"NDayToSummarize",
+				"budgetOfUserMemory",
+				"maxTurnsToReply"
 			],
 			"additionalProperties": false,
 			"description": "一些优化体验的杂项（建议默认）"
@@ -238,6 +244,7 @@
 		"bot",
 		"models",
 		"apiKeys",
+		"mcpServers",
 		"etc"
 	],
 	"additionalProperties": false,

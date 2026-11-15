@@ -36,8 +36,9 @@
 		"ratioToCompactMedia": 0.6,
 		"ratioToClearSoftDeletedMessages": 0.7,
 		"ratioToSummarize": 0.8,
-		"limitOfSummary": 2200,
-		"summarizeNDay": 7,
-		"perUserMemoryBudget": 1375
+		"budgetOfSummary": 2200,
+		"NDayToSummarize": 7,
+		"budgetOfUserMemory": 1375,
+		"maxTurnsToReply": 4
 	}
 }
