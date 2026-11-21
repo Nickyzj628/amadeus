@@ -122,17 +122,17 @@ export const ConfigSchema = strictObject({
 	),
 	etc: pipe(
 		strictObject({
-			replyProbabilityNotAt: pipe(
-				number(),
-				minValue(0),
-				maxValue(1),
-				description("未被@时的回复概率"),
-			),
 			maxActiveGroupCount: pipe(
 				number(),
 				integer(),
 				minValue(1),
 				description("同时活跃的群聊数，超过时会释放不活跃群聊的消息内存"),
+			),
+			replyProbabilityNotAt: pipe(
+				number(),
+				minValue(0),
+				maxValue(1),
+				description("未被@时的回复概率"),
 			),
 			safeWord: pipe(
 				string(),
@@ -172,7 +172,9 @@ export const ConfigSchema = strictObject({
 				number(),
 				integer(),
 				minValue(1),
-				description("自动压缩N天前的消息（和ratioToSummarize是不同的压缩策略，这个是始终压缩N天前的消息，那个是上下文到阈值了就全部压缩）"),
+				description(
+					"自动压缩N天前的消息（和ratioToSummarize是不同的压缩策略，这个是始终压缩N天前的消息，那个是上下文到阈值了就全部压缩）",
+				),
 			),
 			budgetOfUserMemory: pipe(
 				number(),

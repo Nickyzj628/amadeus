@@ -29,8 +29,8 @@
 		"groupIds": [1234567890]
 	},
 	"etc": {
+	  "maxActiveGroupCount": 3,
 		"replyProbabilityNotAt": 0.02,
-		"maxActiveGroupCount": 3,
 		"safeWord": "myfork",
 		"ratioToCompactToolResult": 0.5,
 		"ratioToCompactMedia": 0.6,

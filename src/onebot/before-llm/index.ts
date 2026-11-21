@@ -61,7 +61,7 @@ export const afterToolResult = async (
 	options: { turn: number },
 ): Promise<void> => {
 	// 单轮对话超过一定次数，提醒模型早停
-	if (options.turn >= config.etc.maxTurnsToReply) {
+	if (options.turn > config.etc.maxTurnsToReply) {
 		tre.result = createXMLText(
 			"system-reminder",
 			`本次对话已达轮次上限，请立即停止并回复用户，可以询问用户是否继续调查`,

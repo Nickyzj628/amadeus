@@ -163,16 +163,16 @@
 		"etc": {
 			"type": "object",
 			"properties": {
+				"maxActiveGroupCount": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "同时活跃的群聊数，超过时会释放不活跃群聊的消息内存"
+				},
 				"replyProbabilityNotAt": {
 					"type": "number",
 					"minimum": 0,
 					"maximum": 1,
 					"description": "未被@时的回复概率"
-				},
-				"maxActiveGroupCount": {
-					"type": "integer",
-					"minimum": 1,
-					"description": "同时活跃的群聊数，超过时会释放不活跃群聊的消息内存"
 				},
 				"safeWord": {
 					"type": "string",
@@ -224,8 +224,8 @@
 				}
 			},
 			"required": [
-				"replyProbabilityNotAt",
 				"maxActiveGroupCount",
+				"replyProbabilityNotAt",
 				"safeWord",
 				"ratioToCompactToolResult",
 				"ratioToCompactMedia",

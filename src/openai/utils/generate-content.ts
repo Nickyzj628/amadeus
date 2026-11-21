@@ -62,28 +62,50 @@ export const generateContent = async (
 	let content = "";
 	let usage: Usage | undefined;
 	let turn = 1;
-	for await (const e of runAgent(model, messages, {
-		stream: false,
-		tools: openaiTools,
-	})) {
-		switch (e.type) {
-			case "tool_call":
-				await beforeToolCall?.(e);
-				logger(`调用工具：${e.name}`, e.args);
-				break;
-			case "tool_result":
-				await afterToolResult?.(e, { turn });
-				logger(`工具结果：${e.name}`, e.result);
-				break;
-			case "done":
-				reasoning = e.reasoning ?? "";
-				content = e.content;
-				usage = e.usage;
-				turn++;
-				break;
-			case "error":
-				content = `模型处理异常：${e.message}`;
-				break;
+	let pass = false;
+	while (!pass) {
+		for await (const e of runAgent(model, messages, {
+			stream: false,
+			tools: openaiTools,
+		})) {
+			switch (e.type) {
+				case "tool_call":
+					await beforeToolCall?.(e);
+					logger(`调用工具：${e.name}`, e.args);
+					break;
+				case "tool_result":
+					await afterToolResult?.(e, { turn });
+					logger(
+						`工具结果：${e.name}`,
+						compactStr(e.result, { maxLength: 300, truncateMiddle: true }),
+					);
+					break;
+				case "done":
+					reasoning = e.reasoning ?? "";
+					content = e.content;
+					usage = e.usage;
+					turn++;
+					break;
+				case "error":
+					content = `模型处理异常：${e.message}`;
+					break;
+			}
+		}
+
+		// 检查回复内容有几行
+		const lineCount = content.split(/\n+/).filter(Boolean).length;
+		if (lineCount > 4) {
+			messages.push(
+				contentToMessage(
+					createXMLText(
+						"system-reminder",
+						`说话风格与系统提示词里的不一致，请删减回复行数（${lineCount}行，最多4行）`,
+					),
+				),
+			);
+			logger(`回复行数超过限制，准备全修（${lineCount}行，最多4行）`);
+		} else {
+			pass = true;
 		}
 	}
 
